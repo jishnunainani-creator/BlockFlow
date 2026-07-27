@@ -247,20 +247,7 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
             />
           )}
 
-          {/* Duration & Category Pill */}
-          <div className="flex items-center gap-1 flex-wrap text-[9px] sm:text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-            {/* Category Pill (Hidden on Mobile, Visible on Desktop) */}
-            <span className="hidden sm:inline-block px-1.5 py-0.2 rounded-md bg-slate-800/80 text-indigo-300 border border-indigo-500/30 font-bold uppercase tracking-wider text-[9px]">
-              {categoryLabel}
-            </span>
 
-            <span className="text-slate-400 hidden sm:inline">•</span>
-
-            {/* Scheduled Duration Badge */}
-            <span className="font-bold px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700/50">
-              {formatDuration(liveDuration)}
-            </span>
-          </div>
 
           {/* Reminder Menu */}
           {showReminderMenu && (
