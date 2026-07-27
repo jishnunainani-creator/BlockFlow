@@ -179,23 +179,27 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     setSelectedBlockId(null);
   };
 
+  // Render Horizontal Hour Lines & Translucent 30-min Half-Hour Lines
   const renderSubGridLines = () => {
     const lines = [];
-    const stepMinutes = resolution;
+    const stepMinutes = Math.min(30, resolution); // Ensure 30-min half-hour line is always rendered!
     const totalMinutes = hoursCount * 60;
 
     for (let m = 0; m < totalMinutes; m += stepMinutes) {
       const topPx = (m / 60) * hourHeight;
       const isMajorHour = m % 60 === 0;
+      const isHalfHour = m % 60 === 30;
 
       lines.push(
         <div
           key={`line-${m}`}
           style={{ top: `${topPx}px` }}
-          className={`absolute left-0 right-0 pointer-events-none ${
+          className={`absolute left-0 right-0 pointer-events-none transition-colors ${
             isMajorHour
               ? 'border-b border-slate-800/90'
-              : 'border-b border-dashed border-slate-800/40'
+              : isHalfHour
+              ? 'border-b border-dashed border-indigo-500/25 dark:border-slate-800/70'
+              : 'border-b border-dotted border-slate-800/30'
           }`}
         />
       );
@@ -244,7 +248,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         ))}
       </div>
 
-      {/* Grid Header (5 columns on Mobile, 7 columns on Desktop) */}
+      {/* Grid Header (5 columns on Mobile, 7 columns on Desktop) with Translucent Column Dividers */}
       <div className="flex border-b border-slate-800/90 bg-slate-900/90 backdrop-blur-md shrink-0 pr-2 z-10">
         <div className="w-14 sm:w-20 border-r border-slate-800/80 p-2 sm:p-3 text-center shrink-0">
           <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -253,7 +257,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         </div>
 
         {/* Mobile View: 5 Weekdays (or 1 Day). Desktop: All 7 Days */}
-        <div className="flex-1 grid grid-cols-5 sm:grid-cols-7 divide-x divide-slate-800/80">
+        <div className="flex-1 grid grid-cols-5 sm:grid-cols-7 divide-x divide-slate-800/60 dark:divide-slate-800/80 border-r border-slate-800/40">
           {/* Mobile Display Days (Mon-Fri) */}
           <div className="contents sm:hidden">
             {mobileDisplayDays.map((day) => (
@@ -324,26 +328,40 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       {/* Grid Printable Area */}
       <div id="timetable-printable-area" className="flex-1 overflow-y-auto relative scrollbar-thin">
         <div className="flex relative" style={{ height: `${totalHeight}px` }}>
-          {/* Time Axis */}
+          {/* Time Axis with 30-min indicators */}
           <div className="w-14 sm:w-20 border-r border-slate-800/80 bg-slate-900/40 shrink-0 relative">
             {timeLabels.map(({ hour, label }) => {
               const topPx = (hour - startHour) * hourHeight;
+              const halfTopPx = topPx + hourHeight / 2;
               return (
-                <div
-                  key={hour}
-                  style={{ top: `${topPx}px` }}
-                  className="absolute left-0 right-0 -translate-y-2.5 text-center px-0.5 sm:px-1"
-                >
-                  <span className="text-[10px] sm:text-[11px] font-mono font-semibold text-slate-400">
-                    {label}
-                  </span>
-                </div>
+                <React.Fragment key={hour}>
+                  <div
+                    style={{ top: `${topPx}px` }}
+                    className="absolute left-0 right-0 -translate-y-2.5 text-center px-0.5 sm:px-1"
+                  >
+                    <span className="text-[10px] sm:text-[11px] font-mono font-semibold text-slate-400">
+                      {label}
+                    </span>
+                  </div>
+
+                  {/* 30-min Half Hour Label */}
+                  {hour < endHour && (
+                    <div
+                      style={{ top: `${halfTopPx}px` }}
+                      className="absolute left-0 right-0 -translate-y-2 text-center px-0.5 sm:px-1 pointer-events-none"
+                    >
+                      <span className="text-[8px] sm:text-[9px] font-mono text-slate-600 dark:text-slate-500">
+                        :30
+                      </span>
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
 
-          {/* Grid Columns (5 columns on Mobile, 7 columns on Desktop) */}
-          <div className="flex-1 grid grid-cols-5 sm:grid-cols-7 divide-x divide-slate-800/80 relative">
+          {/* Grid Columns with Translucent Dividers */}
+          <div className="flex-1 grid grid-cols-5 sm:grid-cols-7 divide-x divide-slate-800/60 dark:divide-slate-800/80 border-r border-slate-800/40 relative">
             {/* Mobile View Columns (Mon-Fri 5 days) */}
             <div className="contents sm:hidden">
               {mobileDisplayDays.map((day) => {
