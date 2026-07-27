@@ -162,38 +162,40 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
         }}
       />
 
-      <div className="p-1.5 sm:p-2 h-full flex flex-col justify-between relative z-10">
+      <div className="p-1 sm:p-2 h-full flex flex-col justify-between relative z-10">
         <div>
-          <div className="flex items-start justify-between gap-1">
-            <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
-              {/* Single-tap Status Badge Button */}
+          <div className="flex items-start justify-between gap-0.5 sm:gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1.5 min-w-0 flex-1">
+              {/* Single-tap Status Badge Button — tiny on mobile */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowStatusPicker(!showStatusPicker);
                 }}
-                className={`px-1 py-0.5 sm:px-1.5 rounded-lg text-[10px] sm:text-xs font-bold shrink-0 flex items-center justify-center transition-all ${statusCfg.bgClass} hover:scale-115`}
+                className={`text-[9px] sm:text-[10px] font-bold shrink-0 flex items-center justify-center transition-all rounded ${statusCfg.bgClass} hover:scale-110 leading-none px-0.5 py-0.5 sm:px-1`}
                 title={`Status: ${statusCfg.label} (Click to change)`}
               >
                 <span>{statusCfg.badge}</span>
               </button>
 
+              {/* Icon — hidden on mobile to save space */}
               <div
-                className="p-0.5 sm:p-1 rounded-md text-white shrink-0 shadow-sm"
+                className="hidden sm:flex p-1 rounded-md text-white shrink-0 shadow-sm"
                 style={{ backgroundColor: block.color }}
               >
-                <IconComp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                <IconComp className="w-3 h-3" />
               </div>
 
-              {/* Activity Name (Bold & Visible on Mobile) */}
-              <h5 className={`text-xs sm:text-xs font-black text-slate-900 dark:text-white truncate drop-shadow-xs flex items-center gap-1 leading-tight ${
-                isCompleted ? 'line-through opacity-90' : ''
-              }`}>
-                <span className="truncate">{block.title}</span>
+              {/* Activity Name — prominent on mobile, takes full remaining width */}
+              <h5
+                style={{ color: block.color }}
+                className={`text-[10px] sm:text-xs font-black truncate leading-tight flex-1 min-w-0 ${
+                  isCompleted ? 'line-through opacity-70' : ''
+                }`}
+              >
+                {block.title}
                 {isConflicting && (
-                  <span title={conflictData?.message}>
-                    <AlertTriangle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-500 shrink-0 animate-bounce" />
-                  </span>
+                  <AlertTriangle className="inline w-2.5 h-2.5 ml-0.5 text-rose-500 animate-bounce" />
                 )}
               </h5>
             </div>
