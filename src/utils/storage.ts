@@ -1,0 +1,226 @@
+import { LibraryBlock, ScheduledBlock, Resolution } from '../types/timetable';
+import { getISOWeekString } from './timeUtils';
+
+const STORAGE_KEYS = {
+  LIBRARY_BLOCKS: 'timetable_library_blocks_v1',
+  SCHEDULED_BLOCKS: 'timetable_scheduled_blocks_v1',
+  RESOLUTION: 'timetable_resolution_v1',
+  THEME: 'timetable_theme_v1',
+};
+
+export const INITIAL_LIBRARY_BLOCKS: LibraryBlock[] = [
+  {
+    id: 'block-dsa',
+    title: 'DSA Practice',
+    description: 'LeetCode, Data Structures & Algorithms problem solving',
+    color: '#EF4444',
+    priority: 'high',
+    defaultDuration: 90,
+    icon: 'code',
+  },
+  {
+    id: 'block-internship',
+    title: 'Internship Work',
+    description: 'Feature development, standups, and codebase tasks',
+    color: '#F97316',
+    priority: 'high',
+    defaultDuration: 120,
+    icon: 'briefcase',
+  },
+  {
+    id: 'block-gym',
+    title: 'Gym & Workout',
+    description: 'Weightlifting and fitness training session',
+    color: '#3B82F6',
+    priority: 'personal',
+    defaultDuration: 60,
+    icon: 'dumbbell',
+  },
+  {
+    id: 'block-reading',
+    title: 'Reading & Learning',
+    description: 'Tech blogs, non-fiction books & tech docs',
+    color: '#10B981',
+    priority: 'low',
+    defaultDuration: 45,
+    icon: 'book',
+  },
+  {
+    id: 'block-cat',
+    title: 'CAT Preparation',
+    description: 'Quantitative Aptitude, DILR & VARC mock tests',
+    color: '#EC4899',
+    priority: 'high',
+    defaultDuration: 90,
+    icon: 'target',
+  },
+  {
+    id: 'block-revision',
+    title: 'Daily Revision',
+    description: 'Reviewing key concepts, notes, and active recall',
+    color: '#8B5CF6',
+    priority: 'medium',
+    defaultDuration: 60,
+    icon: 'brain',
+  },
+];
+
+export function getDefaultScheduledBlocks(currentWeekId: string): ScheduledBlock[] {
+  return [
+    {
+      id: 'sched-1',
+      blockId: 'block-gym',
+      title: 'Gym & Workout',
+      description: 'Morning workout session',
+      color: '#3B82F6',
+      priority: 'personal',
+      icon: 'dumbbell',
+      dayOfWeek: 0, // Mon
+      startMinutes: 360, // 06:00
+      duration: 60,
+      weekId: currentWeekId,
+    },
+    {
+      id: 'sched-2',
+      blockId: 'block-dsa',
+      title: 'DSA Practice',
+      description: 'Graphs & Dynamic Programming',
+      color: '#EF4444',
+      priority: 'high',
+      icon: 'code',
+      dayOfWeek: 0, // Mon
+      startMinutes: 480, // 08:00
+      duration: 90,
+      weekId: currentWeekId,
+    },
+    {
+      id: 'sched-3',
+      blockId: 'block-internship',
+      title: 'Internship Work',
+      description: 'Sprint tasks & API integration',
+      color: '#F97316',
+      priority: 'high',
+      icon: 'briefcase',
+      dayOfWeek: 0, // Mon
+      startMinutes: 600, // 10:00
+      duration: 120,
+      weekId: currentWeekId,
+    },
+    {
+      id: 'sched-4',
+      blockId: 'block-cat',
+      title: 'CAT Preparation',
+      description: 'Mock test & QA speed drills',
+      color: '#EC4899',
+      priority: 'high',
+      icon: 'target',
+      dayOfWeek: 1, // Tue
+      startMinutes: 480, // 08:00
+      duration: 90,
+      weekId: currentWeekId,
+    },
+    {
+      id: 'sched-5',
+      blockId: 'block-internship',
+      title: 'Internship Work',
+      description: 'Code review & team meeting',
+      color: '#F97316',
+      priority: 'high',
+      icon: 'briefcase',
+      dayOfWeek: 1, // Tue
+      startMinutes: 600, // 10:00
+      duration: 120,
+      weekId: currentWeekId,
+    },
+    {
+      id: 'sched-6',
+      blockId: 'block-revision',
+      title: 'Daily Revision',
+      description: 'System design & operating systems',
+      color: '#8B5CF6',
+      priority: 'medium',
+      icon: 'brain',
+      dayOfWeek: 2, // Wed
+      startMinutes: 480, // 08:00
+      duration: 60,
+      weekId: currentWeekId,
+    },
+    {
+      id: 'sched-7',
+      blockId: 'block-reading',
+      title: 'Reading & Learning',
+      description: 'System Architecture notes',
+      color: '#10B981',
+      priority: 'low',
+      icon: 'book',
+      dayOfWeek: 3, // Thu
+      startMinutes: 540, // 09:00
+      duration: 45,
+      weekId: currentWeekId,
+    },
+  ];
+}
+
+export function loadLibraryBlocks(): LibraryBlock[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.LIBRARY_BLOCKS);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to load library blocks from storage', e);
+  }
+  return INITIAL_LIBRARY_BLOCKS;
+}
+
+export function saveLibraryBlocks(blocks: LibraryBlock[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.LIBRARY_BLOCKS, JSON.stringify(blocks));
+  } catch (e) {
+    console.error('Failed to save library blocks to storage', e);
+  }
+}
+
+export function loadScheduledBlocks(currentWeekId: string): ScheduledBlock[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.SCHEDULED_BLOCKS);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load scheduled blocks from storage', e);
+  }
+  return getDefaultScheduledBlocks(currentWeekId);
+}
+
+export function saveScheduledBlocks(blocks: ScheduledBlock[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.SCHEDULED_BLOCKS, JSON.stringify(blocks));
+  } catch (e) {
+    console.error('Failed to save scheduled blocks to storage', e);
+  }
+}
+
+export function loadResolution(): Resolution {
+  try {
+    const res = localStorage.getItem(STORAGE_KEYS.RESOLUTION);
+    if (res && [15, 30, 45, 60].includes(Number(res))) {
+      return Number(res) as Resolution;
+    }
+  } catch (e) {
+    console.error('Failed to load resolution', e);
+  }
+  return 60;
+}
+
+export function saveResolution(resolution: Resolution): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.RESOLUTION, resolution.toString());
+  } catch (e) {
+    console.error('Failed to save resolution', e);
+  }
+}
