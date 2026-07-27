@@ -190,7 +190,9 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
               }`}>
                 <span>{block.title}</span>
                 {isConflicting && (
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 animate-bounce" title={conflictData?.message} />
+                  <span title={conflictData?.message}>
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 animate-bounce" />
+                  </span>
                 )}
               </h5>
             </div>

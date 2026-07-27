@@ -149,7 +149,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose 
                 const heightPct = maxDailyMinutes > 0 ? (d.minutes / maxDailyMinutes) * 100 : 0;
                 return (
                   <div key={d.day} className="flex flex-col items-center gap-2 h-full justify-end">
-                    <span className="text-[10px] font-bold text-slate-300">{d.hours > 0 ? `${d.hours}h` : ''}</span>
+                    <span className="text-[10px] font-bold text-slate-300">{d.minutes > 0 ? `${d.hours}h` : ''}</span>
                     <div className="w-full bg-slate-800 rounded-lg overflow-hidden h-full flex flex-col justify-end">
                       <div
                         style={{ height: `${Math.max(5, heightPct)}%` }}
