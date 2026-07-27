@@ -84,182 +84,176 @@ export const AppHeader: React.FC = () => {
   };
 
   return (
-    <header className="h-16 bg-slate-900/90 border-b border-slate-800/80 px-4 flex items-center justify-between gap-3 shrink-0 select-none backdrop-blur-xl z-30">
+    <header className="min-h-16 bg-slate-900/90 border-b border-slate-800/80 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0 select-none backdrop-blur-xl z-30">
       {/* Official BlockFlow Brand & Logo */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <BlockFlowLogo size="md" />
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-extrabold text-white tracking-tight">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
               BlockFlow
             </h1>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-0.5">
               <Sparkles className="w-2.5 h-2.5" />
               <span>v3.0 AI</span>
             </span>
           </div>
-          <p className="text-[11px] text-slate-400 font-medium">
+          <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium hidden sm:block">
             Plan visually. Execute consistently. Improve intelligently.
           </p>
         </div>
       </div>
 
-      {/* Center: Week Navigation & Date Range */}
-      <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
-        <button
-          onClick={handlePrevWeek}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-          title="Previous Week"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
+      {/* Center & Right Action Controls Toolbar */}
+      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-none max-w-full py-0.5">
+        {/* Week Navigation */}
+        <div className="flex items-center gap-1 sm:gap-1.5 bg-slate-950/80 p-1 rounded-xl sm:rounded-2xl border border-slate-800 shadow-inner shrink-0">
+          <button
+            onClick={handlePrevWeek}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            title="Previous Week"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
 
-        <div className="flex items-center gap-2 px-2">
-          <span className="text-xs font-bold text-slate-200 tracking-wide">
-            {dateRangeLabel}
-          </span>
-          {currentWeekId === thisWeekId && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Current
+          <div className="flex items-center gap-1 px-1">
+            <span className="text-[11px] sm:text-xs font-bold text-slate-200 tracking-wide whitespace-nowrap">
+              {dateRangeLabel}
             </span>
+            {currentWeekId === thisWeekId && (
+              <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hidden sm:inline">
+                Current
+              </span>
+            )}
+          </div>
+
+          <button
+            onClick={handleNextWeek}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            title="Next Week"
+          >
+            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+
+          {currentWeekId !== thisWeekId && (
+            <button
+              onClick={handleTodayWeek}
+              className="text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+            >
+              Today
+            </button>
           )}
+
+          <button
+            onClick={handleDuplicateWeek}
+            className="p-1 sm:px-2.5 sm:py-0.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-[10px] sm:text-xs font-semibold flex items-center gap-1"
+            title="Duplicate Week"
+          >
+            <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="hidden lg:inline">Duplicate</span>
+          </button>
+
+          <button
+            onClick={clearCurrentWeek}
+            className="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+            title="Clear Week"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <button
-          onClick={handleNextWeek}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-          title="Next Week"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-
-        {currentWeekId !== thisWeekId && (
-          <button
-            onClick={handleTodayWeek}
-            className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-          >
-            Today
-          </button>
-        )}
-
-        {/* Duplicate Week */}
-        <button
-          onClick={handleDuplicateWeek}
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition-all"
-          title="Copy this timetable to next week"
-        >
-          <Copy className="w-3.5 h-3.5" />
-          <span className="hidden md:inline">Duplicate Week</span>
-        </button>
-
-        {/* Clear Week */}
-        <button
-          onClick={clearCurrentWeek}
-          className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-xl transition-colors"
-          title="Clear active week schedule"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Right AI & Controls Triggers */}
-      <div className="flex items-center gap-2">
         {/* AI Insights Panel Trigger */}
         <button
           onClick={() => setIsAIInsightsOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 border border-indigo-400/30 active:scale-95 transition-all"
-          title="Open AI Productivity Intelligence & Smart Schedule"
+          className="flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-[11px] sm:text-xs shadow-md border border-indigo-400/30 shrink-0"
+          title="AI Insights"
         >
           <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-          <span className="hidden lg:inline">AI Insights</span>
+          <span>AI Insights</span>
         </button>
 
         {/* Weekly AI Report Modal Trigger */}
         <button
           onClick={() => setIsAIReportOpen(true)}
-          className="p-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 shadow transition-all"
+          className="p-1.5 sm:p-2 rounded-xl bg-purple-600/20 text-purple-300 border border-purple-500/30 shrink-0"
           title="Weekly AI Review Report"
         >
-          <Award className="w-4 h-4" />
+          <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
         {/* Resolution Selector */}
         <ResolutionSelector />
 
-        {/* Analytics Dashboard Trigger */}
+        {/* Analytics */}
         <button
           onClick={() => setIsAnalyticsOpen(true)}
-          className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 shadow transition-all"
-          title="Productivity Analytics Dashboard"
+          className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-slate-700/60 shrink-0"
+          title="Analytics"
         >
-          <PieChart className="w-4 h-4 text-indigo-400" />
+          <PieChart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />
         </button>
 
-        {/* Templates Trigger */}
+        {/* Templates */}
         <button
           onClick={() => setIsTemplatesOpen(true)}
-          className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 shadow transition-all"
-          title="Saved Timetable Templates"
+          className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-slate-700/60 shrink-0"
+          title="Templates"
         >
-          <Bookmark className="w-4 h-4 text-purple-400" />
+          <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" />
         </button>
 
-        {/* Cloud Sync Trigger */}
+        {/* Cloud Sync */}
         <button
           onClick={() => setIsSyncOpen(true)}
-          className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 shadow transition-all"
-          title="Cloud Backup & Sync"
+          className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-slate-700/60 shrink-0"
+          title="Cloud Sync"
         >
-          <Cloud className="w-4 h-4 text-emerald-400" />
+          <Cloud className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
         </button>
 
-        {/* Notifications Toggle */}
+        {/* Notifications */}
         <button
           onClick={enableNotifications}
-          className={`p-2 rounded-xl border transition-all ${
+          className={`p-1.5 sm:p-2 rounded-xl border shrink-0 ${
             notificationsEnabled
               ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-              : 'bg-slate-800/80 text-slate-400 border-slate-700/60 hover:text-slate-200'
+              : 'bg-slate-800/80 text-slate-400 border-slate-700/60'
           }`}
-          title={notificationsEnabled ? 'Notifications active' : 'Enable browser notifications'}
+          title="Notifications"
         >
-          <Bell className="w-4 h-4" />
+          <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
-        {/* Theme Switcher Toggle */}
+        {/* Theme Switcher */}
         <button
           onClick={cycleTheme}
-          className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 shadow transition-all"
-          title={`Theme: ${theme.toUpperCase()} (Click to toggle)`}
+          className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-slate-700/60 shrink-0"
+          title={`Theme: ${theme.toUpperCase()}`}
         >
-          {theme === 'dark' && <Moon className="w-4 h-4 text-indigo-400" />}
-          {theme === 'light' && <Sun className="w-4 h-4 text-amber-400" />}
-          {theme === 'system' && <Monitor className="w-4 h-4 text-sky-400" />}
+          {theme === 'dark' && <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400" />}
+          {theme === 'light' && <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />}
+          {theme === 'system' && <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400" />}
         </button>
 
         {/* Undo & Redo */}
-        <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-0.5 bg-slate-950/80 p-0.5 rounded-xl border border-slate-800 shrink-0">
           <button
             onClick={undo}
             disabled={!canUndo}
-            className={`p-1.5 rounded-lg flex items-center gap-1 text-xs font-medium transition-all ${
-              canUndo
-                ? 'text-slate-200 hover:bg-slate-800 hover:text-white'
-                : 'text-slate-600 cursor-not-allowed opacity-50'
+            className={`p-1 rounded-lg transition-all ${
+              canUndo ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-600 opacity-50'
             }`}
-            title="Undo (Ctrl+Z)"
+            title="Undo"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={redo}
             disabled={!canRedo}
-            className={`p-1.5 rounded-lg flex items-center gap-1 text-xs font-medium transition-all ${
-              canRedo
-                ? 'text-slate-200 hover:bg-slate-800 hover:text-white'
-                : 'text-slate-600 cursor-not-allowed opacity-50'
+            className={`p-1 rounded-lg transition-all ${
+              canRedo ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-600 opacity-50'
             }`}
-            title="Redo (Ctrl+Y)"
+            title="Redo"
           >
             <RotateCw className="w-3.5 h-3.5" />
           </button>
@@ -268,9 +262,9 @@ export const AppHeader: React.FC = () => {
         {/* Export Button */}
         <button
           onClick={() => setIsExportOpen(true)}
-          className="flex items-center gap-2 py-2 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700/80 shadow-md active:scale-95 transition-all"
+          className="flex items-center gap-1.5 py-1 sm:py-2 px-2.5 sm:px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700/80 shadow-md shrink-0"
         >
-          <Download className="w-4 h-4 text-indigo-400" />
+          <Download className="w-3.5 h-3.5 text-indigo-400" />
           <span className="hidden sm:inline">Export</span>
         </button>
       </div>

@@ -104,7 +104,7 @@ export const BlockLibrary: React.FC = () => {
   };
 
   return (
-    <aside className="w-80 bg-slate-900/90 border-r border-slate-800/80 flex flex-col h-full shrink-0 select-none backdrop-blur-xl">
+    <aside className="w-full md:w-80 bg-slate-900/90 border-r border-slate-800/80 flex flex-col h-full shrink-0 select-none backdrop-blur-xl">
       {/* Header & Create Button */}
       <div className="p-4 border-b border-slate-800/80 space-y-3">
         <div className="flex items-center justify-between">

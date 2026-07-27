@@ -36,6 +36,9 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
   const [dragOverTime, setDragOverTime] = useState<number | null>(null);
 
+  // Mobile Single Day vs All 7 Days Filter State
+  const [mobileActiveDay, setMobileActiveDay] = useState<number | 'all'>('all');
+
   const daysWithDates = getWeekDaysWithDates(currentWeekId);
 
   const hoursCount = endHour - startHour + 1;
@@ -199,32 +202,69 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     return lines;
   };
 
+  const visibleDays = mobileActiveDay === 'all' 
+    ? daysWithDates 
+    : daysWithDates.filter(d => d.index === mobileActiveDay);
+
   return (
     <div
       onClick={deselectAll}
       className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 select-none relative"
     >
+      {/* Mobile Day Selector Bar (Visible on mobile screens < 640px) */}
+      <div className="sm:hidden bg-slate-900 border-b border-slate-800 p-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 z-20">
+        <button
+          onClick={() => setMobileActiveDay('all')}
+          className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-all ${
+            mobileActiveDay === 'all'
+              ? 'bg-indigo-600 text-white shadow'
+              : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          All 7 Days
+        </button>
+
+        {daysWithDates.map((day) => (
+          <button
+            key={day.index}
+            onClick={() => setMobileActiveDay(day.index)}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-all flex items-center gap-1 ${
+              mobileActiveDay === day.index
+                ? 'bg-indigo-600 text-white shadow'
+                : day.isToday
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span>{day.short}</span>
+            <span className="text-[10px] opacity-75">{day.dateNum}</span>
+          </button>
+        ))}
+      </div>
+
       {/* 7-Day Header with Day + Date */}
       <div className="flex border-b border-slate-800/90 bg-slate-900/90 backdrop-blur-md shrink-0 pr-2 z-10">
-        <div className="w-16 sm:w-20 border-r border-slate-800/80 p-3 text-center shrink-0">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+        <div className="w-14 sm:w-20 border-r border-slate-800/80 p-2 sm:p-3 text-center shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
             Time
           </span>
         </div>
 
-        <div className="flex-1 grid grid-cols-7 divide-x divide-slate-800/80">
-          {daysWithDates.map((day) => (
+        <div className={`flex-1 grid divide-x divide-slate-800/80 ${
+          mobileActiveDay === 'all' ? 'grid-cols-7' : 'grid-cols-1'
+        }`}>
+          {visibleDays.map((day) => (
             <div
               key={day.index}
-              className={`p-2 text-center transition-colors relative ${
+              className={`p-1.5 sm:p-2 text-center transition-colors relative ${
                 day.isToday
                   ? 'bg-gradient-to-b from-indigo-950/60 via-indigo-950/30 to-transparent border-t-2 border-emerald-400'
                   : 'hover:bg-slate-800/40'
               }`}
             >
-              <div className="flex flex-col items-center justify-center gap-1">
+              <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
                 <div className="flex items-center gap-1">
-                  <span className={`text-xs font-extrabold uppercase tracking-wider ${
+                  <span className={`text-[10px] sm:text-xs font-extrabold uppercase tracking-wider ${
                     day.isToday ? 'text-emerald-400' : 'text-slate-200'
                   }`}>
                     {day.short}
@@ -237,7 +277,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                   )}
                 </div>
 
-                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full transition-all ${
+                <span className={`text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full transition-all ${
                   day.isToday
                     ? 'bg-emerald-500 text-slate-950 font-black shadow-lg ring-2 ring-emerald-400/50'
                     : 'text-slate-300 bg-slate-800/80 border border-slate-700/50'
@@ -254,16 +294,16 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       <div id="timetable-printable-area" className="flex-1 overflow-y-auto relative scrollbar-thin">
         <div className="flex relative" style={{ height: `${totalHeight}px` }}>
           {/* Time Axis */}
-          <div className="w-16 sm:w-20 border-r border-slate-800/80 bg-slate-900/40 shrink-0 relative">
+          <div className="w-14 sm:w-20 border-r border-slate-800/80 bg-slate-900/40 shrink-0 relative">
             {timeLabels.map(({ hour, label }) => {
               const topPx = (hour - startHour) * hourHeight;
               return (
                 <div
                   key={hour}
                   style={{ top: `${topPx}px` }}
-                  className="absolute left-0 right-0 -translate-y-2.5 text-center px-1"
+                  className="absolute left-0 right-0 -translate-y-2.5 text-center px-0.5 sm:px-1"
                 >
-                  <span className="text-[11px] font-mono font-semibold text-slate-400">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-semibold text-slate-400">
                     {label}
                   </span>
                 </div>
@@ -271,9 +311,11 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
             })}
           </div>
 
-          {/* 7 Day Columns */}
-          <div className="flex-1 grid grid-cols-7 divide-x divide-slate-800/80 relative">
-            {daysWithDates.map((day) => {
+          {/* Day Columns */}
+          <div className={`flex-1 grid divide-x divide-slate-800/80 relative ${
+            mobileActiveDay === 'all' ? 'grid-cols-7' : 'grid-cols-1'
+          }`}>
+            {visibleDays.map((day) => {
               const dayBlocks = currentWeekScheduledBlocks.filter(
                 (sb) => sb.dayOfWeek === day.index
               );
