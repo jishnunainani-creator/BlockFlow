@@ -3,6 +3,8 @@ import { useTimetable } from '../../context/TimetableContext';
 import { getWeekDaysWithDates, minutesToTimeStr, snapToResolution } from '../../utils/timeUtils';
 import { ScheduledBlockItem } from './ScheduledBlockItem';
 import { ConflictBanner } from '../Conflict/ConflictBanner';
+import { MobileAddBlockSheet } from './MobileAddBlockSheet';
+import { Plus } from 'lucide-react';
 
 interface TimetableGridProps {
   startHour?: number;
@@ -35,6 +37,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
 
   const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
   const [dragOverTime, setDragOverTime] = useState<number | null>(null);
+  const [showMobileAddSheet, setShowMobileAddSheet] = useState(false);
 
   // Mobile Single Day vs 5 Weekdays Filter State
   const [mobileActiveDay, setMobileActiveDay] = useState<number | 'weekdays'>('weekdays');
@@ -480,6 +483,25 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
 
       {/* Conflict Warning Drawer */}
       <ConflictBanner />
+
+      {/* Mobile FAB: Add Block */}
+      <button
+        onClick={() => setShowMobileAddSheet(true)}
+        className="sm:hidden fixed bottom-6 right-5 z-40 w-14 h-14 rounded-full text-white shadow-2xl flex items-center justify-center transition-all active:scale-90 hover:scale-105"
+        style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+        title="Add block to timetable"
+      >
+        <Plus className="w-7 h-7" />
+      </button>
+
+      {/* Mobile Add Block Bottom Sheet */}
+      {showMobileAddSheet && (
+        <MobileAddBlockSheet
+          onClose={() => setShowMobileAddSheet(false)}
+          startHour={startHour}
+          endHour={endHour}
+        />
+      )}
     </div>
   );
 };
