@@ -36,10 +36,11 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const [dragOverColumn, setDragOverColumn] = useState<number | null>(null);
   const [dragOverTime, setDragOverTime] = useState<number | null>(null);
 
-  // Mobile Single Day vs All 7 Days Filter State
-  const [mobileActiveDay, setMobileActiveDay] = useState<number | 'all'>('all');
+  // Mobile Single Day vs 5 Weekdays Filter State
+  const [mobileActiveDay, setMobileActiveDay] = useState<number | 'weekdays'>('weekdays');
 
   const daysWithDates = getWeekDaysWithDates(currentWeekId);
+  const weekdayDays = daysWithDates.filter((d) => d.index < 5); // Mon to Fri (0 to 4)
 
   const hoursCount = endHour - startHour + 1;
   const totalHeight = hoursCount * hourHeight;
@@ -202,8 +203,9 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     return lines;
   };
 
-  const visibleDays = mobileActiveDay === 'all' 
-    ? daysWithDates 
+  // Mobile Days (5 Weekdays by default on mobile)
+  const mobileDisplayDays = mobileActiveDay === 'weekdays' 
+    ? weekdayDays 
     : daysWithDates.filter(d => d.index === mobileActiveDay);
 
   return (
@@ -214,17 +216,17 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       {/* Mobile Day Selector Bar (Visible on mobile screens < 640px) */}
       <div className="sm:hidden bg-slate-900 border-b border-slate-800 p-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 z-20">
         <button
-          onClick={() => setMobileActiveDay('all')}
+          onClick={() => setMobileActiveDay('weekdays')}
           className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-all ${
-            mobileActiveDay === 'all'
+            mobileActiveDay === 'weekdays'
               ? 'bg-indigo-600 text-white shadow'
               : 'bg-slate-800 text-slate-400 hover:text-slate-200'
           }`}
         >
-          All 7 Days
+          5 Days (Mon-Fri)
         </button>
 
-        {daysWithDates.map((day) => (
+        {weekdayDays.map((day) => (
           <button
             key={day.index}
             onClick={() => setMobileActiveDay(day.index)}
@@ -242,7 +244,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         ))}
       </div>
 
-      {/* 7-Day Header with Day + Date */}
+      {/* Grid Header (5 columns on Mobile, 7 columns on Desktop) */}
       <div className="flex border-b border-slate-800/90 bg-slate-900/90 backdrop-blur-md shrink-0 pr-2 z-10">
         <div className="w-14 sm:w-20 border-r border-slate-800/80 p-2 sm:p-3 text-center shrink-0">
           <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -250,43 +252,72 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
           </span>
         </div>
 
-        <div className={`flex-1 grid divide-x divide-slate-800/80 ${
-          mobileActiveDay === 'all' ? 'grid-cols-7' : 'grid-cols-1'
-        }`}>
-          {visibleDays.map((day) => (
-            <div
-              key={day.index}
-              className={`p-1.5 sm:p-2 text-center transition-colors relative ${
-                day.isToday
-                  ? 'bg-gradient-to-b from-indigo-950/60 via-indigo-950/30 to-transparent border-t-2 border-emerald-400'
-                  : 'hover:bg-slate-800/40'
-              }`}
-            >
-              <div className="flex flex-col items-center justify-center gap-0.5 sm:gap-1">
-                <div className="flex items-center gap-1">
-                  <span className={`text-[10px] sm:text-xs font-extrabold uppercase tracking-wider ${
+        {/* Mobile View: 5 Weekdays (or 1 Day). Desktop: All 7 Days */}
+        <div className="flex-1 grid grid-cols-5 sm:grid-cols-7 divide-x divide-slate-800/80">
+          {/* Mobile Display Days (Mon-Fri) */}
+          <div className="contents sm:hidden">
+            {mobileDisplayDays.map((day) => (
+              <div
+                key={day.index}
+                className={`p-1 text-center transition-colors relative ${
+                  day.isToday
+                    ? 'bg-gradient-to-b from-indigo-950/60 via-indigo-950/30 to-transparent border-t-2 border-emerald-400'
+                    : 'hover:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex flex-col items-center justify-center gap-0.5">
+                  <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
                     day.isToday ? 'text-emerald-400' : 'text-slate-200'
                   }`}>
                     {day.short}
                   </span>
-                  {day.isToday && (
-                    <span className="flex h-2 w-2 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                    </span>
-                  )}
+                  <span className={`text-[9px] font-bold px-1 py-0.2 rounded-full ${
+                    day.isToday ? 'bg-emerald-500 text-slate-950 font-black' : 'text-slate-400'
+                  }`}>
+                    {day.dateNum}
+                  </span>
                 </div>
-
-                <span className={`text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full transition-all ${
-                  day.isToday
-                    ? 'bg-emerald-500 text-slate-950 font-black shadow-lg ring-2 ring-emerald-400/50'
-                    : 'text-slate-300 bg-slate-800/80 border border-slate-700/50'
-                }`}>
-                  {day.monthShort} {day.dateNum}
-                </span>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          {/* Desktop Display Days (All 7 Days) */}
+          <div className="contents hidden sm:contents">
+            {daysWithDates.map((day) => (
+              <div
+                key={day.index}
+                className={`p-2 text-center transition-colors relative ${
+                  day.isToday
+                    ? 'bg-gradient-to-b from-indigo-950/60 via-indigo-950/30 to-transparent border-t-2 border-emerald-400'
+                    : 'hover:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs font-extrabold uppercase tracking-wider ${
+                      day.isToday ? 'text-emerald-400' : 'text-slate-200'
+                    }`}>
+                      {day.short}
+                    </span>
+                    {day.isToday && (
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                    )}
+                  </div>
+
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full transition-all ${
+                    day.isToday
+                      ? 'bg-emerald-500 text-slate-950 font-black shadow-lg ring-2 ring-emerald-400/50'
+                      : 'text-slate-300 bg-slate-800/80 border border-slate-700/50'
+                  }`}>
+                    {day.monthShort} {day.dateNum}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -311,70 +342,120 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
             })}
           </div>
 
-          {/* Day Columns */}
-          <div className={`flex-1 grid divide-x divide-slate-800/80 relative ${
-            mobileActiveDay === 'all' ? 'grid-cols-7' : 'grid-cols-1'
-          }`}>
-            {visibleDays.map((day) => {
-              const dayBlocks = currentWeekScheduledBlocks.filter(
-                (sb) => sb.dayOfWeek === day.index
-              );
-              const isOverThisDay = dragOverColumn === day.index;
+          {/* Grid Columns (5 columns on Mobile, 7 columns on Desktop) */}
+          <div className="flex-1 grid grid-cols-5 sm:grid-cols-7 divide-x divide-slate-800/80 relative">
+            {/* Mobile View Columns (Mon-Fri 5 days) */}
+            <div className="contents sm:hidden">
+              {mobileDisplayDays.map((day) => {
+                const dayBlocks = currentWeekScheduledBlocks.filter(
+                  (sb) => sb.dayOfWeek === day.index
+                );
+                const isOverThisDay = dragOverColumn === day.index;
 
-              return (
-                <div
-                  key={day.index}
-                  onClick={(e) => handleCellClick(e, day.index)}
-                  onDragOver={(e) => handleDragOver(e, day.index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, day.index)}
-                  className={`relative transition-colors ${
-                    day.isToday ? 'bg-indigo-950/15' : ''
-                  } ${
-                    isOverThisDay ? 'bg-indigo-950/30 ring-1 ring-indigo-500/40' : 'hover:bg-slate-900/20'
-                  }`}
-                  style={{ height: `${totalHeight}px` }}
-                >
-                  {renderSubGridLines()}
+                return (
+                  <div
+                    key={day.index}
+                    onClick={(e) => handleCellClick(e, day.index)}
+                    onDragOver={(e) => handleDragOver(e, day.index)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, day.index)}
+                    className={`relative transition-colors ${
+                      day.isToday ? 'bg-indigo-950/15' : ''
+                    } ${
+                      isOverThisDay ? 'bg-indigo-950/30 ring-1 ring-indigo-500/40' : 'hover:bg-slate-900/20'
+                    }`}
+                    style={{ height: `${totalHeight}px` }}
+                  >
+                    {renderSubGridLines()}
 
-                  {/* Selected Cell Box Indicator */}
-                  {selectedCell && selectedCell.dayOfWeek === day.index && (
-                    <div
-                      style={{
-                        top: `${((selectedCell.startMinutes - startHour * 60) / 60) * hourHeight}px`,
-                        height: `${(resolution / 60) * hourHeight}px`,
-                      }}
-                      className="absolute left-0.5 right-0.5 border-2 border-indigo-500 bg-indigo-500/10 rounded-lg pointer-events-none z-10 shadow-lg"
-                    />
-                  )}
+                    {/* Selected Cell Box Indicator */}
+                    {selectedCell && selectedCell.dayOfWeek === day.index && (
+                      <div
+                        style={{
+                          top: `${((selectedCell.startMinutes - startHour * 60) / 60) * hourHeight}px`,
+                          height: `${(resolution / 60) * hourHeight}px`,
+                        }}
+                        className="absolute left-0.5 right-0.5 border-2 border-indigo-500 bg-indigo-500/10 rounded-lg pointer-events-none z-10 shadow-lg"
+                      />
+                    )}
 
-                  {/* Drag Target Highlight */}
-                  {isOverThisDay && dragOverTime !== null && (
-                    <div
-                      style={{
-                        top: `${((dragOverTime - startHour * 60) / 60) * hourHeight}px`,
-                        height: `${(60 / 60) * hourHeight}px`,
-                      }}
-                      className="absolute left-1 right-1 bg-indigo-500/20 border-2 border-dashed border-indigo-400 rounded-xl z-20 pointer-events-none flex items-center justify-center animate-pulse"
-                    >
-                      <span className="text-xs font-bold text-indigo-300 bg-slate-900/90 px-2 py-1 rounded-md border border-indigo-500/40">
-                        Drop at {minutesToTimeStr(dragOverTime)}
-                      </span>
-                    </div>
-                  )}
+                    {/* Scheduled Block Items */}
+                    {dayBlocks.map((block) => (
+                      <ScheduledBlockItem
+                        key={block.id}
+                        block={block}
+                        startHour={startHour}
+                        hourHeight={hourHeight}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
 
-                  {/* Scheduled Block Items */}
-                  {dayBlocks.map((block) => (
-                    <ScheduledBlockItem
-                      key={block.id}
-                      block={block}
-                      startHour={startHour}
-                      hourHeight={hourHeight}
-                    />
-                  ))}
-                </div>
-              );
-            })}
+            {/* Desktop View Columns (All 7 days) */}
+            <div className="contents hidden sm:contents">
+              {daysWithDates.map((day) => {
+                const dayBlocks = currentWeekScheduledBlocks.filter(
+                  (sb) => sb.dayOfWeek === day.index
+                );
+                const isOverThisDay = dragOverColumn === day.index;
+
+                return (
+                  <div
+                    key={day.index}
+                    onClick={(e) => handleCellClick(e, day.index)}
+                    onDragOver={(e) => handleDragOver(e, day.index)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, day.index)}
+                    className={`relative transition-colors ${
+                      day.isToday ? 'bg-indigo-950/15' : ''
+                    } ${
+                      isOverThisDay ? 'bg-indigo-950/30 ring-1 ring-indigo-500/40' : 'hover:bg-slate-900/20'
+                    }`}
+                    style={{ height: `${totalHeight}px` }}
+                  >
+                    {renderSubGridLines()}
+
+                    {/* Selected Cell Box Indicator */}
+                    {selectedCell && selectedCell.dayOfWeek === day.index && (
+                      <div
+                        style={{
+                          top: `${((selectedCell.startMinutes - startHour * 60) / 60) * hourHeight}px`,
+                          height: `${(resolution / 60) * hourHeight}px`,
+                        }}
+                        className="absolute left-0.5 right-0.5 border-2 border-indigo-500 bg-indigo-500/10 rounded-lg pointer-events-none z-10 shadow-lg"
+                      />
+                    )}
+
+                    {/* Drag Target Highlight */}
+                    {isOverThisDay && dragOverTime !== null && (
+                      <div
+                        style={{
+                          top: `${((dragOverTime - startHour * 60) / 60) * hourHeight}px`,
+                          height: `${(60 / 60) * hourHeight}px`,
+                        }}
+                        className="absolute left-1 right-1 bg-indigo-500/20 border-2 border-dashed border-indigo-400 rounded-xl z-20 pointer-events-none flex items-center justify-center animate-pulse"
+                      >
+                        <span className="text-xs font-bold text-indigo-300 bg-slate-900/90 px-2 py-1 rounded-md border border-indigo-500/40">
+                          Drop at {minutesToTimeStr(dragOverTime)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Scheduled Block Items */}
+                    {dayBlocks.map((block) => (
+                      <ScheduledBlockItem
+                        key={block.id}
+                        block={block}
+                        startHour={startHour}
+                        hourHeight={hourHeight}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

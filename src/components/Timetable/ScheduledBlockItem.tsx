@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ScheduledBlock, COMPLETION_STATUS_CONFIG, CompletionStatus } from '../../types/timetable';
+import { ScheduledBlock, COMPLETION_STATUS_CONFIG, CompletionStatus, PRIORITY_CONFIG } from '../../types/timetable';
 import { useTimetable } from '../../context/TimetableContext';
 import { formatDuration, minutesToTimeStr, snapToResolution } from '../../utils/timeUtils';
 import { AVAILABLE_ICONS } from '../Library/BlockModal';
@@ -13,7 +13,7 @@ import {
   Check,
   AlertTriangle,
   Bell,
-  BellRing,
+  Tag,
 } from 'lucide-react';
 
 interface ScheduledBlockItemProps {
@@ -133,6 +133,7 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
   };
 
   const endMinutes = block.startMinutes + liveDuration;
+  const categoryLabel = PRIORITY_CONFIG[block.priority]?.label || block.priority;
 
   return (
     <div
@@ -162,36 +163,36 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
         }}
       />
 
-      <div className="p-2 h-full flex flex-col justify-between relative z-10">
+      <div className="p-1.5 sm:p-2 h-full flex flex-col justify-between relative z-10">
         <div>
           <div className="flex items-start justify-between gap-1">
-            <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
               {/* Single-tap Status Badge Button */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowStatusPicker(!showStatusPicker);
                 }}
-                className={`px-1.5 py-0.5 rounded-lg text-xs font-bold shrink-0 flex items-center justify-center transition-all ${statusCfg.bgClass} hover:scale-115`}
+                className={`px-1 py-0.5 sm:px-1.5 rounded-lg text-[10px] sm:text-xs font-bold shrink-0 flex items-center justify-center transition-all ${statusCfg.bgClass} hover:scale-115`}
                 title={`Status: ${statusCfg.label} (Click to change)`}
               >
                 <span>{statusCfg.badge}</span>
               </button>
 
               <div
-                className="p-1 rounded-md text-white shrink-0 shadow-sm"
+                className="p-0.5 sm:p-1 rounded-md text-white shrink-0 shadow-sm"
                 style={{ backgroundColor: block.color }}
               >
-                <IconComp className="w-3 h-3" />
+                <IconComp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
               </div>
 
-              <h5 className={`text-xs font-bold text-slate-900 dark:text-white truncate drop-shadow-xs flex items-center gap-1 ${
+              <h5 className={`text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white truncate drop-shadow-xs flex items-center gap-1 ${
                 isCompleted ? 'line-through opacity-90' : ''
               }`}>
                 <span>{block.title}</span>
                 {isConflicting && (
                   <span title={conflictData?.message}>
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 animate-bounce" />
+                    <AlertTriangle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-500 shrink-0 animate-bounce" />
                   </span>
                 )}
               </h5>
@@ -244,14 +245,16 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
             />
           )}
 
-          {/* Time range & duration */}
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-            <Clock className="w-3 h-3 text-slate-500 shrink-0" />
-            <span>
-              {minutesToTimeStr(block.startMinutes)} – {minutesToTimeStr(endMinutes)}
+          {/* Category Badge & Duration */}
+          <div className="flex items-center gap-1 flex-wrap text-[9px] sm:text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
+            {/* Category Pill */}
+            <span className="px-1.5 py-0.2 rounded-md bg-slate-800/80 text-indigo-300 border border-indigo-500/30 font-bold uppercase tracking-wider text-[9px]">
+              {categoryLabel}
             </span>
-            <span className="text-slate-400">•</span>
-            <span className="font-bold px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700/50">
+
+            <span className="text-slate-400 hidden sm:inline">•</span>
+
+            <span className="font-bold px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700/50">
               {formatDuration(liveDuration)}
             </span>
           </div>
@@ -278,7 +281,7 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
             </div>
           )}
 
-          {/* Notes */}
+          {/* Notes (Visible on desktop/tablet, hidden on narrow mobile) */}
           {isEditingNotes ? (
             <div className="mt-1.5 flex items-center gap-1">
               <input
@@ -296,7 +299,7 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
             </div>
           ) : (
             block.description && (
-              <p className="text-[10px] text-slate-700 dark:text-slate-300/90 font-medium truncate mt-1 line-clamp-1">
+              <p className="text-[10px] text-slate-700 dark:text-slate-300/90 font-medium truncate mt-1 line-clamp-1 hidden sm:block">
                 {block.description}
               </p>
             )
