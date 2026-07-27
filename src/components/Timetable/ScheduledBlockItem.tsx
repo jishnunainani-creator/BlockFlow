@@ -13,7 +13,6 @@ import {
   Check,
   AlertTriangle,
   Bell,
-  Tag,
 } from 'lucide-react';
 
 interface ScheduledBlockItemProps {
@@ -186,10 +185,11 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
                 <IconComp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
               </div>
 
-              <h5 className={`text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white truncate drop-shadow-xs flex items-center gap-1 ${
+              {/* Activity Name (Bold & Visible on Mobile) */}
+              <h5 className={`text-xs sm:text-xs font-black text-slate-900 dark:text-white truncate drop-shadow-xs flex items-center gap-1 leading-tight ${
                 isCompleted ? 'line-through opacity-90' : ''
               }`}>
-                <span>{block.title}</span>
+                <span className="truncate">{block.title}</span>
                 {isConflicting && (
                   <span title={conflictData?.message}>
                     <AlertTriangle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-500 shrink-0 animate-bounce" />
@@ -245,15 +245,16 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
             />
           )}
 
-          {/* Category Badge & Duration */}
+          {/* Duration & Category Pill */}
           <div className="flex items-center gap-1 flex-wrap text-[9px] sm:text-[10px] text-slate-700 dark:text-slate-300 font-semibold mt-1">
-            {/* Category Pill */}
-            <span className="px-1.5 py-0.2 rounded-md bg-slate-800/80 text-indigo-300 border border-indigo-500/30 font-bold uppercase tracking-wider text-[9px]">
+            {/* Category Pill (Hidden on Mobile, Visible on Desktop) */}
+            <span className="hidden sm:inline-block px-1.5 py-0.2 rounded-md bg-slate-800/80 text-indigo-300 border border-indigo-500/30 font-bold uppercase tracking-wider text-[9px]">
               {categoryLabel}
             </span>
 
             <span className="text-slate-400 hidden sm:inline">•</span>
 
+            {/* Scheduled Duration Badge */}
             <span className="font-bold px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700/50">
               {formatDuration(liveDuration)}
             </span>
