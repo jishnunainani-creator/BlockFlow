@@ -7,12 +7,11 @@ export const ResolutionSelector: React.FC = () => {
   const { resolution, setResolution } = useTimetable();
 
   const options: { value: Resolution; label: string }[] = [
-    { value: 240, label: '4h' },
-    { value: 120, label: '2h' },
-    { value: 60, label: '60m' },
-    { value: 45, label: '45m' },
-    { value: 30, label: '30m' },
-    { value: 15, label: '15m' },
+    { value: 120, label: '2 hr' },
+    { value: 60, label: '1 hr' },
+    { value: 45, label: '45 mins' },
+    { value: 30, label: '30 mins' },
+    { value: 15, label: '15 mins' },
   ];
 
   return (

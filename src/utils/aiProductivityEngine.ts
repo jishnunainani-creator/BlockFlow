@@ -256,3 +256,70 @@ export function generateAISmartSchedule(
 
   return generated;
 }
+
+// ── EXECUTION OS ENGINE FUNCTIONS ──
+
+export function calculateCompletionProbability(block: ScheduledBlock): number {
+  let probability = 85; // Base probability
+
+  // Morning (6 AM - 12 PM) vs Evening (After 8 PM) adjustment
+  if (block.startMinutes >= 360 && block.startMinutes <= 720) {
+    probability += 9;
+  } else if (block.startMinutes >= 1200) {
+    probability -= 14;
+  }
+
+  // Duration impact: long sessions (>90m) have higher skip risk
+  if (block.duration > 90) {
+    probability -= 8;
+  } else if (block.duration <= 60) {
+    probability += 4;
+  }
+
+  // Priority adjustment
+  if (block.priority === 'high' || block.priority === 'Study') {
+    probability += 3;
+  }
+
+  return Math.min(99, Math.max(45, probability));
+}
+
+export function calculateExecutionScore(blocks: ScheduledBlock[]) {
+  if (blocks.length === 0) {
+    return {
+      score: 92,
+      consistencyRating: 'Excellent' as const,
+      focusRating: 'Good' as const,
+      timeAccuracyPct: 91,
+      goalProgressPct: 78,
+    };
+  }
+
+  const metrics = calculateAdherenceMetrics(blocks);
+  const score = Math.min(100, Math.max(40, metrics.adherenceScore));
+
+  let consistencyRating: 'Excellent' | 'Good' | 'Fair' | 'Needs Focus' = 'Good';
+  if (score >= 90) consistencyRating = 'Excellent';
+  else if (score >= 75) consistencyRating = 'Good';
+  else if (score >= 60) consistencyRating = 'Fair';
+  else consistencyRating = 'Needs Focus';
+
+  return {
+    score,
+    consistencyRating,
+    focusRating: score >= 85 ? ('Excellent' as const) : ('Good' as const),
+    timeAccuracyPct: Math.min(98, score + 4),
+    goalProgressPct: Math.min(95, Math.round(score * 0.85)),
+  };
+}
+
+export function getProductivityDNA() {
+  return {
+    peakFocusWindow: '9:00 AM – 11:30 AM',
+    preferredSessionMinutes: 75,
+    maxEffectiveDailyHours: 5.5,
+    mostProductiveDay: 'Tuesday',
+    leastProductiveTime: 'After 9:00 PM',
+  };
+}
+

@@ -14,6 +14,7 @@ import {
   saveScheduledBlocks,
   loadResolution,
   saveResolution,
+  INITIAL_LIBRARY_BLOCKS,
 } from '../utils/storage';
 import { getISOWeekString, snapToResolution } from '../utils/timeUtils';
 import { useUndoRedo } from '../hooks/useUndoRedo';
@@ -25,6 +26,8 @@ import {
   requestNotificationPermission,
 } from '../utils/notificationUtils';
 import { generateAISmartSchedule } from '../utils/aiProductivityEngine';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { migrateBlockFlowJSON } from '../utils/migration/dataMigrator';
 
 export interface ToastMessage {
   id: string;
@@ -44,8 +47,73 @@ const CUSTOM_CATEGORIES_KEY = 'timetable_custom_categories_v1';
 
 export const DEFAULT_TEMPLATES: TimetableTemplate[] = [
   {
+    id: 'tmpl-college-sem3',
+    name: 'College Semester 3 Official Timetable',
+    description: 'CSE213, ENR211, ENR209, CSE305, MGT111, ENR207, ENR215 Lab, Self Study, Fitness, DSA & CAT (2026-W32)',
+    createdAt: Date.now(),
+    blocks: [
+      // Monday (dayOfWeek: 0)
+      { blockId: 'block-1785180426499', title: 'WAKE UP', description: 'WAKE UP', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 0, startMinutes: 420, duration: 30 },
+      { blockId: 'block-1785178488270', title: 'CSE 213 SEC-1', description: 'CSE 213 SEC-1', color: '#06B6D4', priority: 'medium', icon: 'code', dayOfWeek: 0, startMinutes: 570, duration: 90 },
+      { blockId: 'block-1785178924907', title: 'ENR211 SEC-2', description: 'ENR211 SEC-2', color: '#10B981', priority: 'medium', icon: 'brain', dayOfWeek: 0, startMinutes: 660, duration: 90 },
+      { blockId: 'block-1785180327130', title: 'LUNCH BREAK', description: 'Lunch Break', color: '#EF4444', priority: 'medium', icon: 'coffee', dayOfWeek: 0, startMinutes: 750, duration: 30 },
+      { blockId: 'block-1785179085804', title: 'ENR209 SEC-2', description: 'ENR209 SEC-2', color: '#F97316', priority: 'medium', icon: 'brain', dayOfWeek: 0, startMinutes: 780, duration: 90 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 0, startMinutes: 900, duration: 60 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 0, startMinutes: 960, duration: 60 },
+      { blockId: 'block-1785181271512', title: 'Fitness', description: 'Gym,Cricket,Pickleball,TT.', color: '#64748B', priority: 'Fitness', icon: 'code', dayOfWeek: 0, startMinutes: 1140, duration: 90 },
+      { blockId: 'block-dsa', title: 'DSA Practice', description: 'LeetCode, Data Structures & Algorithms problem solving', color: '#EF4444', priority: 'high', icon: 'code', dayOfWeek: 0, startMinutes: 1230, duration: 90 },
+      { blockId: 'block-cat', title: 'CAT Preparation', description: 'Quantitative Aptitude, DILR & VARC mock tests', color: '#EC4899', priority: 'high', icon: 'target', dayOfWeek: 0, startMinutes: 1320, duration: 60 },
+
+      // Tuesday (dayOfWeek: 1)
+      { blockId: 'block-1785180426499', title: 'WAKE UP', description: 'WAKE UP', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 1, startMinutes: 420, duration: 30 },
+      { blockId: 'block-1785179503902', title: 'CSE305 SEC-1', description: 'CSE305 SEC-1(Data Structure and Algorithms)', color: '#8B5CF6', priority: 'medium', icon: 'code', dayOfWeek: 1, startMinutes: 570, duration: 90 },
+      { blockId: 'block-1785179761029', title: 'MGT111 SEC-2', description: 'SEC-2 Identity and Behaviour', color: '#F97316', priority: 'medium', icon: 'brain', dayOfWeek: 1, startMinutes: 660, duration: 90 },
+      { blockId: 'block-1785180327130', title: 'LUNCH BREAK', description: 'Lunch Break', color: '#EF4444', priority: 'medium', icon: 'coffee', dayOfWeek: 1, startMinutes: 750, duration: 30 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 1, startMinutes: 840, duration: 60 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 1, startMinutes: 900, duration: 60 },
+      { blockId: 'block-1785179966798', title: 'ENR207 SEC-2', description: 'ENR207 SEC-2', color: '#10B981', priority: 'medium', icon: 'brain', dayOfWeek: 1, startMinutes: 960, duration: 90 },
+      { blockId: 'block-1785179085804', title: 'ENR209 SEC-2', description: 'ENR209 SEC-2', color: '#F97316', priority: 'medium', icon: 'brain', dayOfWeek: 1, startMinutes: 1050, duration: 90 },
+      { blockId: 'block-dsa', title: 'DSA Practice', description: 'LeetCode, Data Structures & Algorithms problem solving', color: '#EF4444', priority: 'high', icon: 'code', dayOfWeek: 1, startMinutes: 1290, duration: 90 },
+      { blockId: 'block-cat', title: 'CAT Preparation', description: 'Quantitative Aptitude, DILR & VARC mock tests', color: '#EC4899', priority: 'high', icon: 'target', dayOfWeek: 1, startMinutes: 1380, duration: 60 },
+
+      // Wednesday (dayOfWeek: 2)
+      { blockId: 'block-1785180426499', title: 'WAKE UP', description: 'WAKE UP', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 2, startMinutes: 420, duration: 30 },
+      { blockId: 'block-1785178488270', title: 'CSE 213 SEC-1', description: 'CSE 213 SEC-1', color: '#06B6D4', priority: 'medium', icon: 'code', dayOfWeek: 2, startMinutes: 570, duration: 90 },
+      { blockId: 'block-1785179503902', title: 'CSE305 SEC-1', description: 'CSE305 SEC-1(Data Structure and Algorithms)', color: '#8B5CF6', priority: 'medium', icon: 'code', dayOfWeek: 2, startMinutes: 660, duration: 90 },
+      { blockId: 'block-1785180327130', title: 'LUNCH BREAK', description: 'Lunch Break', color: '#EF4444', priority: 'medium', icon: 'coffee', dayOfWeek: 2, startMinutes: 750, duration: 30 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 2, startMinutes: 840, duration: 60 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 2, startMinutes: 900, duration: 60 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 2, startMinutes: 960, duration: 60 },
+      { blockId: 'block-1785181271512', title: 'Fitness', description: 'Gym,Cricket,Pickleball,TT.', color: '#64748B', priority: 'Fitness', icon: 'code', dayOfWeek: 2, startMinutes: 1110, duration: 90 },
+      { blockId: 'block-dsa', title: 'DSA Practice', description: 'LeetCode, Data Structures & Algorithms problem solving', color: '#EF4444', priority: 'high', icon: 'code', dayOfWeek: 2, startMinutes: 1230, duration: 90 },
+      { blockId: 'block-cat', title: 'CAT Preparation', description: 'Quantitative Aptitude, DILR & VARC mock tests', color: '#EC4899', priority: 'high', icon: 'target', dayOfWeek: 2, startMinutes: 1320, duration: 60 },
+
+      // Thursday (dayOfWeek: 3)
+      { blockId: 'block-1785180426499', title: 'WAKE UP', description: 'WAKE UP', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 3, startMinutes: 420, duration: 30 },
+      { blockId: 'block-1785179503902', title: 'CSE305 SEC-1', description: 'CSE305 SEC-1(Data Structure and Algorithms)', color: '#8B5CF6', priority: 'medium', icon: 'code', dayOfWeek: 3, startMinutes: 570, duration: 90 },
+      { blockId: 'block-1785179761029', title: 'MGT111 SEC-2', description: 'SEC-2 Identity and Behaviour', color: '#F97316', priority: 'medium', icon: 'brain', dayOfWeek: 3, startMinutes: 660, duration: 90 },
+      { blockId: 'block-1785180327130', title: 'LUNCH BREAK', description: 'Lunch Break', color: '#EF4444', priority: 'medium', icon: 'coffee', dayOfWeek: 3, startMinutes: 750, duration: 30 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 3, startMinutes: 840, duration: 60 },
+      { blockId: 'block-1785180693019', title: 'Self Study', description: 'Self Study', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 3, startMinutes: 900, duration: 60 },
+      { blockId: 'block-1785179966798', title: 'ENR207 SEC-2', description: 'ENR207 SEC-2', color: '#10B981', priority: 'medium', icon: 'brain', dayOfWeek: 3, startMinutes: 960, duration: 90 },
+      { blockId: 'block-1785181271512', title: 'Fitness', description: 'Gym,Cricket,Pickleball,TT.', color: '#64748B', priority: 'Fitness', icon: 'code', dayOfWeek: 3, startMinutes: 1140, duration: 90 },
+      { blockId: 'block-dsa', title: 'DSA Practice', description: 'LeetCode, Data Structures & Algorithms problem solving', color: '#EF4444', priority: 'high', icon: 'code', dayOfWeek: 3, startMinutes: 1230, duration: 90 },
+      { blockId: 'block-cat', title: 'CAT Preparation', description: 'Quantitative Aptitude, DILR & VARC mock tests', color: '#EC4899', priority: 'high', icon: 'target', dayOfWeek: 3, startMinutes: 1320, duration: 60 },
+
+      // Friday (dayOfWeek: 4)
+      { blockId: 'block-1785180426499', title: 'WAKE UP', description: 'WAKE UP', color: '#EC4899', priority: 'high', icon: 'code', dayOfWeek: 4, startMinutes: 420, duration: 30 },
+      { blockId: 'block-1785178924907', title: 'ENR211 SEC-2', description: 'ENR211 SEC-2', color: '#10B981', priority: 'medium', icon: 'brain', dayOfWeek: 4, startMinutes: 570, duration: 90 },
+      { blockId: 'block-1785178488270', title: 'CSE 213 SEC-1', description: 'CSE 213 SEC-1', color: '#06B6D4', priority: 'medium', icon: 'code', dayOfWeek: 4, startMinutes: 660, duration: 90 },
+      { blockId: 'block-1785180327130', title: 'LUNCH BREAK', description: 'Lunch Break', color: '#EF4444', priority: 'medium', icon: 'coffee', dayOfWeek: 4, startMinutes: 750, duration: 30 },
+      { blockId: 'block-1785179085804', title: 'ENR209 SEC-2', description: 'ENR209 SEC-2', color: '#F97316', priority: 'medium', icon: 'brain', dayOfWeek: 4, startMinutes: 780, duration: 90 },
+      { blockId: 'block-1785180171203', title: 'ENR215 SEC-2', description: 'ENR215 SEC-2', color: '#F97316', priority: 'medium', icon: 'code', dayOfWeek: 4, startMinutes: 900, duration: 240 },
+      { blockId: 'block-dsa', title: 'DSA Practice', description: 'LeetCode, Data Structures & Algorithms problem solving', color: '#EF4444', priority: 'high', icon: 'code', dayOfWeek: 4, startMinutes: 1290, duration: 90 },
+      { blockId: 'block-cat', title: 'CAT Preparation', description: 'Quantitative Aptitude, DILR & VARC mock tests', color: '#EC4899', priority: 'high', icon: 'target', dayOfWeek: 4, startMinutes: 1380, duration: 60 },
+    ],
+  },
+  {
     id: 'tmpl-college',
-    name: 'College Week Routine',
+    name: 'Standard College Week Routine',
     description: 'Lectures, DSA practice, lab sessions, and gym',
     createdAt: Date.now(),
     blocks: [
@@ -146,7 +214,12 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const data = localStorage.getItem(TEMPLATES_KEY);
       if (data) {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Merge: add any DEFAULT_TEMPLATES not already in stored list (by id)
+          const storedIds = new Set(parsed.map((t: TimetableTemplate) => t.id));
+          const missingDefaults = DEFAULT_TEMPLATES.filter(t => !storedIds.has(t.id));
+          return [...missingDefaults, ...parsed];
+        }
       }
     } catch (e) {
       console.error('Failed to load templates', e);
@@ -198,6 +271,39 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.error('Failed to save state to localStorage', e);
     }
   }, [appState]);
+
+  // Supabase Auth listener effect
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        console.log('Supabase session active:', session.user.email);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Startup: ensure all INITIAL_LIBRARY_BLOCKS exist in state (match by title, case-insensitive)
+  useEffect(() => {
+    const existingTitles = new Set(
+      appState.libraryBlocks.map((b) => b.title.toLowerCase().trim())
+    );
+    const missing = INITIAL_LIBRARY_BLOCKS.filter(
+      (b) => !existingTitles.has(b.title.toLowerCase().trim())
+    );
+    if (missing.length > 0) {
+      updateAppState({
+        ...appState,
+        libraryBlocks: [...missing, ...appState.libraryBlocks],
+      });
+    }
+  // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addToast = useCallback((text: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
     const id = Date.now().toString() + Math.random().toString().slice(2, 6);
@@ -659,20 +765,23 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     addToast('Exported Cloud JSON Backup file!', 'success');
   }, [appState, resolution, addToast]);
 
-  const importJSONBackup = useCallback((jsonStr: string): boolean => {
+  const importJSONBackup = useCallback((jsonStr: string) => {
     try {
-      const data = JSON.parse(jsonStr);
-      if (data && Array.isArray(data.libraryBlocks) && Array.isArray(data.scheduledBlocks)) {
-        updateAppState({
-          libraryBlocks: data.libraryBlocks,
-          scheduledBlocks: data.scheduledBlocks,
-          templates: Array.isArray(data.templates) ? data.templates : appState.templates,
-          customCategories: Array.isArray(data.customCategories) ? data.customCategories : appState.customCategories,
+      const result = migrateBlockFlowJSON(jsonStr);
+      if (result) {
+        const allBlocks: ScheduledBlock[] = [];
+        Object.values(result.scheduledBlocksByWeek).forEach((blocks: any) => {
+          allBlocks.push(...blocks);
         });
-        if (data.resolution && [15, 30, 45, 60, 120, 240].includes(data.resolution)) {
-          setResolutionState(data.resolution);
-        }
-        addToast('Successfully imported Timetable Backup!', 'success');
+
+        updateAppState({
+          libraryBlocks: result.libraryBlocks,
+          scheduledBlocks: allBlocks,
+          templates: result.templates.length > 0 ? result.templates : appState.templates,
+          customCategories: result.customCategories.length > 0 ? result.customCategories : appState.customCategories,
+        });
+
+        addToast(`Successfully imported ${result.report.libraryCount} library blocks & ${result.report.activitiesCount} activities across ${result.report.weeksCount} weeks! 🎉`, 'success');
         return true;
       }
     } catch (e) {

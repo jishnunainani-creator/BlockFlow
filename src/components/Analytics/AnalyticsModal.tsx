@@ -12,6 +12,11 @@ import {
   Calendar,
   CheckCircle2,
   Award,
+  BookOpen,
+  Briefcase,
+  AlertOctagon,
+  Target,
+  Activity,
 } from 'lucide-react';
 
 interface AnalyticsModalProps {
@@ -26,34 +31,31 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose 
 
   // Total scheduled duration in minutes
   const totalMinutes = currentWeekScheduledBlocks.reduce((acc, b) => acc + b.duration, 0);
-  const totalHours = (totalMinutes / 60).toFixed(1);
 
-  // Workload by Priority
-  const priorityTotals: Record<Priority, number> = {
-    high: 0,
-    medium: 0,
-    low: 0,
-    personal: 0,
-    meetings: 0,
-    custom: 0,
-  };
+  // Study & Work Hours
+  const studyMinutes = currentWeekScheduledBlocks
+    .filter((b) => b.priority === 'high' || b.priority === 'Study' || b.title.toLowerCase().includes('dsa') || b.title.toLowerCase().includes('study'))
+    .reduce((acc, b) => acc + b.duration, 0);
 
-  currentWeekScheduledBlocks.forEach((b) => {
-    priorityTotals[b.priority] = (priorityTotals[b.priority] || 0) + b.duration;
-  });
+  const workMinutes = currentWeekScheduledBlocks
+    .filter((b) => b.priority === 'medium' || b.priority === 'Work' || b.title.toLowerCase().includes('work') || b.title.toLowerCase().includes('internship'))
+    .reduce((acc, b) => acc + b.duration, 0);
 
-  // Workload by Activity Block
-  const blockTotals: Record<string, { title: string; duration: number; color: string; icon: string }> = {};
-  currentWeekScheduledBlocks.forEach((b) => {
-    if (!blockTotals[b.title]) {
-      blockTotals[b.title] = { title: b.title, duration: 0, color: b.color, icon: b.icon };
-    }
-    blockTotals[b.title].duration += b.duration;
-  });
+  // Completion Rate
+  const completedBlocks = currentWeekScheduledBlocks.filter(
+    (b) => b.status === 'completed' || b.status === 'faster'
+  );
+  const missedBlocks = currentWeekScheduledBlocks.filter((b) => b.status === 'missed');
+  
+  const completionRate = currentWeekScheduledBlocks.length > 0
+    ? Math.round((completedBlocks.length / currentWeekScheduledBlocks.length) * 100)
+    : 0;
 
-  const sortedActivities = Object.values(blockTotals).sort((a, b) => b.duration - a.duration);
+  // Productivity & Focus Scores
+  const productivityScore = Math.min(100, Math.round(completionRate * 0.8 + (studyMinutes > 300 ? 20 : 10)));
+  const focusScore = Math.min(100, Math.round(85 + (completedBlocks.length > 3 ? 10 : 0) - missedBlocks.length * 5));
 
-  // Daily distribution (Mon-Sun)
+  // Daily distribution
   const dailyTotals = DAYS_OF_WEEK.map((day) => {
     const minutes = currentWeekScheduledBlocks
       .filter((b) => b.dayOfWeek === day.index)
@@ -69,16 +71,16 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 shadow-2xl overflow-hidden relative text-slate-100 max-h-[90vh] flex flex-col">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-6 shadow-2xl overflow-hidden relative text-slate-100 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/20">
-              <PieChart className="w-6 h-6" />
+            <div className="p-3 rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+              <Activity className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">Productivity Analytics</h3>
-              <p className="text-xs text-slate-400">Weekly workload breakdown & stats ({currentWeekId})</p>
+              <h3 className="text-lg font-bold text-white">Productivity Dashboard</h3>
+              <p className="text-xs text-slate-400">Minimal metric cards & weekly statistics ({currentWeekId})</p>
             </div>
           </div>
           <button
@@ -91,141 +93,92 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose 
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto space-y-6 pr-1 scrollbar-thin">
-          {/* Top Summary Cards */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-indigo-400">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Hours</span>
-                <Clock className="w-4 h-4" />
+          {/* Key Metric Cards Grid (6 Clean Cards) */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {/* 1. Study Hours */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Study Hours</span>
+                <BookOpen className="w-4 h-4 text-indigo-400" />
               </div>
-              <div className="mt-2">
-                <span className="text-2xl font-black text-white">{totalHours}h</span>
-                <p className="text-[11px] text-slate-400 mt-0.5">{currentWeekScheduledBlocks.length} activities scheduled</p>
-              </div>
+              <div className="text-2xl font-black text-white">{(studyMinutes / 60).toFixed(1)}h</div>
+              <p className="text-[11px] text-slate-500">{studyMinutes} mins focused study</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-emerald-400">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">High Priority</span>
-                <Zap className="w-4 h-4" />
+            {/* 2. Work Hours */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Work Hours</span>
+                <Briefcase className="w-4 h-4 text-emerald-400" />
               </div>
-              <div className="mt-2">
-                <span className="text-2xl font-black text-white">
-                  {(priorityTotals.high / 60).toFixed(1)}h
-                </span>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {totalMinutes > 0 ? Math.round((priorityTotals.high / totalMinutes) * 100) : 0}% of weekly schedule
-                </p>
-              </div>
+              <div className="text-2xl font-black text-white">{(workMinutes / 60).toFixed(1)}h</div>
+              <p className="text-[11px] text-slate-500">{workMinutes} mins task execution</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-800/50 border border-slate-700/50 flex flex-col justify-between">
-              <div className="flex items-center justify-between text-purple-400">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Top Focus</span>
-                <Award className="w-4 h-4" />
+            {/* 3. Completion Rate */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Completion Rate</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               </div>
-              <div className="mt-2">
-                <span className="text-sm font-bold text-white truncate block">
-                  {sortedActivities[0]?.title || 'None'}
-                </span>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {sortedActivities[0] ? formatDuration(sortedActivities[0].duration) : '0m'}
-                </p>
+              <div className="text-2xl font-black text-white">{completionRate}%</div>
+              <p className="text-[11px] text-slate-500">{completedBlocks.length} / {currentWeekScheduledBlocks.length} blocks done</p>
+            </div>
+
+            {/* 4. Productivity Score */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Productivity Score</span>
+                <Target className="w-4 h-4 text-amber-400" />
               </div>
+              <div className="text-2xl font-black text-white">{productivityScore} / 100</div>
+              <p className="text-[11px] text-slate-500">Based on schedule execution</p>
+            </div>
+
+            {/* 5. Focus Score */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Focus Score</span>
+                <Award className="w-4 h-4 text-purple-400" />
+              </div>
+              <div className="text-2xl font-black text-white">{focusScore} / 100</div>
+              <p className="text-[11px] text-slate-500">Deep work consistency</p>
+            </div>
+
+            {/* 6. Missed Blocks */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-xs font-semibold uppercase tracking-wider">Missed Blocks</span>
+                <AlertOctagon className="w-4 h-4 text-rose-400" />
+              </div>
+              <div className="text-2xl font-black text-white">{missedBlocks.length}</div>
+              <p className="text-[11px] text-slate-500">Skipped or overdue tasks</p>
             </div>
           </div>
 
-          {/* Daily Workload Chart (Bar graph) */}
-          <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-indigo-400" />
-                <span>Daily Workload Distribution</span>
-              </h4>
-            </div>
+          {/* Secondary Visual Breakdown */}
+          <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-indigo-400" />
+              <span>Daily Workload Overview</span>
+            </h4>
 
-            <div className="grid grid-cols-7 gap-2 items-end h-32 pt-4">
+            <div className="grid grid-cols-7 gap-2 items-end h-28 pt-2">
               {dailyTotals.map((d) => {
                 const heightPct = maxDailyMinutes > 0 ? (d.minutes / maxDailyMinutes) * 100 : 0;
                 return (
-                  <div key={d.day} className="flex flex-col items-center gap-2 h-full justify-end">
-                    <span className="text-[10px] font-bold text-slate-300">{d.minutes > 0 ? `${d.hours}h` : ''}</span>
-                    <div className="w-full bg-slate-800 rounded-lg overflow-hidden h-full flex flex-col justify-end">
+                  <div key={d.day} className="flex flex-col items-center gap-1.5 h-full justify-end">
+                    <span className="text-[10px] font-mono text-slate-400">{d.minutes > 0 ? `${d.hours}h` : ''}</span>
+                    <div className="w-full bg-slate-900 rounded-md overflow-hidden h-full flex flex-col justify-end border border-slate-800">
                       <div
-                        style={{ height: `${Math.max(5, heightPct)}%` }}
-                        className="w-full bg-gradient-to-t from-indigo-600 to-purple-500 rounded-t-lg transition-all duration-500"
+                        style={{ height: `${Math.max(6, heightPct)}%` }}
+                        className="w-full bg-indigo-600 rounded-t transition-all duration-300"
                       />
                     </div>
-                    <span className="text-[11px] font-bold text-slate-400">{d.day}</span>
+                    <span className="text-[11px] font-semibold text-slate-400">{d.day}</span>
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Priority Breakdown */}
-          <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-indigo-400" />
-              <span>Priority & Workload Allocation</span>
-            </h4>
-
-            <div className="space-y-2.5">
-              {(Object.keys(PRIORITY_CONFIG) as Priority[]).map((key) => {
-                const dur = priorityTotals[key] || 0;
-                const pct = totalMinutes > 0 ? Math.round((dur / totalMinutes) * 100) : 0;
-                const cfg = PRIORITY_CONFIG[key];
-
-                if (dur === 0) return null;
-
-                return (
-                  <div key={key} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <div className="flex items-center gap-2">
-                        <span>{cfg.badge}</span>
-                        <span className="text-slate-200">{cfg.label}</span>
-                      </div>
-                      <span className="text-slate-400">
-                        {formatDuration(dur)} ({pct}%)
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        style={{
-                          width: `${pct}%`,
-                          backgroundColor: cfg.defaultColor,
-                        }}
-                        className="h-full rounded-full transition-all duration-500"
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Top Activity Breakdown */}
-          <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Activity Ranking
-            </h4>
-
-            <div className="space-y-2">
-              {sortedActivities.map((act, idx) => (
-                <div
-                  key={act.title}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 font-bold flex items-center justify-center text-[10px]">
-                      #{idx + 1}
-                    </span>
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: act.color }} />
-                    <span className="font-bold text-white">{act.title}</span>
-                  </div>
-                  <span className="font-semibold text-slate-300">{formatDuration(act.duration)}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -234,7 +187,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose 
         <div className="pt-4 border-t border-slate-800 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all"
+            className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs rounded-xl transition-colors"
           >
             Close Dashboard
           </button>

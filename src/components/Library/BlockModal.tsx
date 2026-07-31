@@ -84,23 +84,25 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   const [newCatName, setNewCatName] = useState('');
 
   useEffect(() => {
-    if (editingBlock) {
-      setTitle(editingBlock.title);
-      setDescription(editingBlock.description || '');
-      setPriority(editingBlock.priority);
-      setColor(editingBlock.color);
-      setDefaultDuration(editingBlock.defaultDuration);
-      setIcon(editingBlock.icon || 'code');
-    } else {
-      setTitle('');
-      setDescription('');
-      setPriority('high');
-      setColor('#EF4444');
-      setDefaultDuration(60);
-      setIcon('code');
+    if (isOpen) {
+      if (editingBlock) {
+        setTitle(editingBlock.title);
+        setDescription(editingBlock.description || '');
+        setPriority(editingBlock.priority);
+        setColor(editingBlock.color);
+        setDefaultDuration(editingBlock.defaultDuration);
+        setIcon(editingBlock.icon || 'code');
+      } else {
+        setTitle('');
+        setDescription('');
+        setPriority('high');
+        setColor('#EF4444');
+        setDefaultDuration(60);
+        setIcon('code');
+      }
+      setCurrentStep(1);
     }
-    setCurrentStep(1);
-  }, [editingBlock, isOpen]);
+  }, [isOpen, editingBlock?.id]);
 
   const handlePriorityChange = (newPriority: Priority) => {
     setPriority(newPriority);
@@ -118,8 +120,32 @@ export const BlockModal: React.FC<BlockModalProps> = ({
     setIsAddingCategory(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNext = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!title.trim()) return;
+    if (currentStep === 1) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    }
+  };
+
+  const handleBack = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (currentStep === 3) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(1);
+    }
+  };
+
+  const handleSave = () => {
     if (!title.trim()) return;
 
     if (editingBlock) {
@@ -143,6 +169,18 @@ export const BlockModal: React.FC<BlockModalProps> = ({
       });
     }
     onClose();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    if (currentStep === 1) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    } else {
+      handleSave();
+    }
   };
 
   if (!isOpen) return null;
@@ -172,6 +210,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
           >
@@ -269,21 +308,26 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                   placeholder="e.g. DSA Practice, Internship, Gym, Reading"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && title.trim() && setCurrentStep(2)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleNext();
+                    }
+                  }}
                   className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Description / Notes (Optional)
+                  Description / Notes (4–6 lines visible for detailed notes)
                 </label>
                 <textarea
-                  rows={3}
-                  placeholder="e.g. Solve 2 LeetCode Medium problems daily, Sprint standup, Upper body workout"
+                  rows={5}
+                  placeholder="e.g. Activity objectives, step-by-step goals, reference links, or meeting agenda notes..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none shadow-inner"
+                  className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none shadow-inner leading-relaxed"
                 />
               </div>
             </div>
@@ -472,11 +516,11 @@ export const BlockModal: React.FC<BlockModalProps> = ({
             {currentStep > 1 ? (
               <button
                 type="button"
-                onClick={() => setCurrentStep((prev) => (prev - 1) as 1 | 2 | 3)}
+                onClick={handleBack}
                 className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 rounded-xl transition-all border border-slate-700"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Previous</span>
+                <span>Back</span>
               </button>
             ) : (
               <button
@@ -492,7 +536,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               <button
                 type="button"
                 disabled={!title.trim()}
-                onClick={() => title.trim() && setCurrentStep((prev) => (prev + 1) as 1 | 2 | 3)}
+                onClick={handleNext}
                 className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-lg transition-all ${
                   title.trim()
                     ? 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'
@@ -509,7 +553,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                 className="flex items-center gap-1.5 px-6 py-2.5 text-xs font-bold text-white rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{editingBlock ? 'Save Changes' : 'Create Activity Block'}</span>
+                <span>{editingBlock ? 'Save Changes' : 'Save Activity'}</span>
               </button>
             )}
           </div>

@@ -80,11 +80,67 @@ export interface ConflictInfo {
   message: string;
 }
 
+export type CategoryName = 'Study' | 'Work' | 'Personal' | 'Meeting' | 'Health' | 'Entertainment' | string;
+
+export interface CATEGORY_CONFIG_ITEM {
+  name: string;
+  color: string;
+  badge: string;
+  icon: string;
+}
+
+export const CATEGORY_PALETTE: Record<string, CATEGORY_CONFIG_ITEM> = {
+  Study: { name: 'Study', color: '#6366F1', badge: '📚', icon: 'book-open' },
+  Work: { name: 'Work', color: '#10B981', badge: '💼', icon: 'briefcase' },
+  Personal: { name: 'Personal', color: '#F59E0B', badge: '🟡', icon: 'user' },
+  Meeting: { name: 'Meeting', color: '#0EA5E9', badge: '☁️', icon: 'users' },
+  Health: { name: 'Health', color: '#F43F5E', badge: '🌹', icon: 'heart' },
+  Entertainment: { name: 'Entertainment', color: '#8B5CF6', badge: '🟣', icon: 'film' },
+};
+
 export const PRIORITY_CONFIG: Record<string, { label: string; defaultColor: string; badge: string }> = {
   high: { label: 'High Priority', defaultColor: '#EF4444', badge: '🔴' },
   medium: { label: 'Medium Priority', defaultColor: '#F97316', badge: '🟠' },
   low: { label: 'Low Priority', defaultColor: '#10B981', badge: '🟢' },
-  personal: { label: 'Personal', defaultColor: '#3B82F6', badge: '🔵' },
-  meetings: { label: 'Meetings', defaultColor: '#8B5CF6', badge: '🟣' },
-  custom: { label: 'Custom', defaultColor: '#EC4899', badge: '✨' },
+  personal: { label: 'Personal', defaultColor: '#F59E0B', badge: '🟡' },
+  meetings: { label: 'Meeting', defaultColor: '#0EA5E9', badge: '☁️' },
+  custom: { label: 'Custom', defaultColor: '#8B5CF6', badge: '✨' },
 };
+
+// ── BLOCKFLOW EXECUTION OPERATING SYSTEM MODELS ──
+
+export interface Goal {
+  id: string;
+  title: string;
+  category: string; // e.g. "Career", "Learning", "Health"
+  deadline: string; // e.g. "November 2026"
+  targetHoursPerDay: number;
+  progressPct: number;
+  color: string;
+}
+
+export interface DailyMissionItem {
+  id: string;
+  title: string;
+  goalId?: string;
+  duration: number; // in minutes
+  completionProbability: number; // e.g. 89 (representing 89%)
+  completed: boolean;
+}
+
+export interface ExecutionScore {
+  score: number; // 0 - 100
+  consistencyRating: 'Excellent' | 'Good' | 'Fair' | 'Needs Focus';
+  focusRating: 'Excellent' | 'Good' | 'Fair';
+  timeAccuracyPct: number;
+  goalProgressPct: number;
+}
+
+export interface ProductivityDNA {
+  peakFocusWindow: string; // e.g. "9:00 AM – 11:30 AM"
+  preferredSessionMinutes: number; // e.g. 75
+  maxEffectiveDailyHours: number; // e.g. 5.5
+  mostProductiveDay: string; // e.g. "Tuesday"
+  leastProductiveTime: string; // e.g. "After 9 PM"
+}
+

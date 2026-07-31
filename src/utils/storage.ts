@@ -10,6 +10,105 @@ const STORAGE_KEYS = {
 
 export const INITIAL_LIBRARY_BLOCKS: LibraryBlock[] = [
   {
+    id: 'block-1785181271512',
+    title: 'Fitness',
+    description: 'Gym, Cricket, Pickleball, TT',
+    priority: 'Fitness',
+    color: '#64748B',
+    defaultDuration: 90,
+    icon: 'code',
+  },
+  {
+    id: 'block-1785180693019',
+    title: 'Self Study',
+    description: 'Self Study',
+    priority: 'high',
+    color: '#EC4899',
+    defaultDuration: 60,
+    icon: 'code',
+  },
+  {
+    id: 'block-1785180426499',
+    title: 'WAKE UP',
+    description: 'WAKE UP',
+    priority: 'high',
+    color: '#EC4899',
+    defaultDuration: 30,
+    icon: 'code',
+  },
+  {
+    id: 'block-1785180327130',
+    title: 'LUNCH BREAK',
+    description: 'Lunch',
+    priority: 'medium',
+    color: '#EF4444',
+    defaultDuration: 30,
+    icon: 'coffee',
+  },
+  {
+    id: 'block-1785180171203',
+    title: 'ENR215 SEC-2',
+    description: 'ENR215 SEC-2',
+    priority: 'medium',
+    color: '#F97316',
+    defaultDuration: 240,
+    icon: 'code',
+  },
+  {
+    id: 'block-1785179966798',
+    title: 'ENR207 SEC-2',
+    description: 'ENR207 SEC-2',
+    priority: 'medium',
+    color: '#10B981',
+    defaultDuration: 90,
+    icon: 'brain',
+  },
+  {
+    id: 'block-1785179761029',
+    title: 'MGT111 SEC-2',
+    description: 'SEC-2 Identity and Behaviour',
+    priority: 'medium',
+    color: '#F97316',
+    defaultDuration: 90,
+    icon: 'brain',
+  },
+  {
+    id: 'block-1785179503902',
+    title: 'CSE305 SEC-1',
+    description: 'CSE305 SEC-1(Data Structure and Algorithms)',
+    priority: 'medium',
+    color: '#8B5CF6',
+    defaultDuration: 90,
+    icon: 'code',
+  },
+  {
+    id: 'block-1785179085804',
+    title: 'ENR209 SEC-2',
+    description: 'ENR209 SEC-2',
+    priority: 'medium',
+    color: '#F97316',
+    defaultDuration: 90,
+    icon: 'brain',
+  },
+  {
+    id: 'block-1785178924907',
+    title: 'ENR211 SEC-2',
+    description: 'ENR211 SEC-2',
+    priority: 'medium',
+    color: '#10B981',
+    defaultDuration: 90,
+    icon: 'brain',
+  },
+  {
+    id: 'block-1785178488270',
+    title: 'CSE 213 SEC-1',
+    description: 'CSE 213 SEC-1',
+    priority: 'medium',
+    color: '#06B6D4',
+    defaultDuration: 90,
+    icon: 'code',
+  },
+  {
     id: 'block-dsa',
     title: 'DSA Practice',
     description: 'LeetCode, Data Structures & Algorithms problem solving',
@@ -37,21 +136,12 @@ export const INITIAL_LIBRARY_BLOCKS: LibraryBlock[] = [
     icon: 'dumbbell',
   },
   {
-    id: 'block-reading',
-    title: 'Reading & Learning',
-    description: 'Tech blogs, non-fiction books & tech docs',
-    color: '#10B981',
-    priority: 'low',
-    defaultDuration: 45,
-    icon: 'book',
-  },
-  {
     id: 'block-cat',
     title: 'CAT Preparation',
     description: 'Quantitative Aptitude, DILR & VARC mock tests',
     color: '#EC4899',
     priority: 'high',
-    defaultDuration: 90,
+    defaultDuration: 60,
     icon: 'target',
   },
   {
@@ -166,7 +256,12 @@ export function loadLibraryBlocks(): LibraryBlock[] {
     const data = localStorage.getItem(STORAGE_KEYS.LIBRARY_BLOCKS);
     if (data) {
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Merge: add any INITIAL_LIBRARY_BLOCKS not already in stored list (by id)
+        const storedIds = new Set(parsed.map((b: LibraryBlock) => b.id));
+        const missingDefaults = INITIAL_LIBRARY_BLOCKS.filter(b => !storedIds.has(b.id));
+        return [...missingDefaults, ...parsed];
+      }
     }
   } catch (e) {
     console.error('Failed to load library blocks from storage', e);

@@ -249,22 +249,18 @@ export const BlockLibrary: React.FC = () => {
                 key={block.id}
                 draggable
                 onDragStart={(e) => handleDragStart(e, block)}
-                className="group relative bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 rounded-xl p-3 shadow-md hover:shadow-lg transition-all duration-200 cursor-grab active:cursor-grabbing overflow-hidden"
+                style={{
+                  borderLeftColor: block.color,
+                  backgroundColor: `${block.color}0D`,
+                }}
+                className="group relative bg-slate-900/90 hover:bg-slate-900 border-l-[4px] border-y border-r border-slate-800 rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-150 cursor-grab active:cursor-grabbing overflow-hidden"
               >
-                {/* Priority Color Bar */}
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-1.5 transition-all group-hover:w-2"
-                  style={{ backgroundColor: block.color }}
-                />
-
-                <div className="pl-2 flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2">
                   <div className="flex items-start gap-2.5 min-w-0">
                     <div
-                      className="p-2 rounded-lg shrink-0 mt-0.5 text-white shadow-sm"
-                      style={{ backgroundColor: `${block.color}25`, color: block.color }}
-                    >
-                      <IconComp className="w-4 h-4" />
-                    </div>
+                      className="w-2.5 h-2.5 rounded-full shrink-0 mt-1 shadow-sm"
+                      style={{ backgroundColor: block.color }}
+                    />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <h4 className="text-xs font-bold text-slate-100 truncate">

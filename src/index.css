@@ -160,21 +160,41 @@ html.light-theme .group.absolute.rounded-xl p {
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Print Styles for PDF Export */
+/* Print Styles for Vector PDF Export & Native Print */
 @media print {
-  body {
+  html, body {
     overflow: visible !important;
     background: white !important;
     color: black !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  header, aside, .fixed, button {
+  /* Hide main React application container */
+  #root {
     display: none !important;
   }
 
-  #timetable-printable-area {
-    overflow: visible !important;
-    height: auto !important;
+  /* Expose ONLY portalled #calendar-print-root during print */
+  #calendar-print-root {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 15px !important;
+    background: white !important;
+    color: #0f172a !important;
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #calendar-print-root * {
+    visibility: visible !important;
   }
 }
