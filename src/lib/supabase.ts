@@ -1,15 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Safe global reference check for client-side Vite and SSR
+const globalProc = typeof globalThis !== 'undefined' ? (globalThis as any).process : undefined;
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+// Explicit literal dot-notation access for static replacement by Vite bundler
+const rawUrl =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_URL) ||
+  (globalProc && globalProc.env && globalProc.env.VITE_SUPABASE_URL) ||
+  '';
+
+const rawKey =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) ||
+  (globalProc && globalProc.env && globalProc.env.VITE_SUPABASE_ANON_KEY) ||
+  '';
+
+const cleanUrl = String(rawUrl || '').trim().replace(/^["']|["']$/g, '');
+const cleanKey = String(rawKey || '').trim().replace(/^["']|["']$/g, '');
+
+export const isSupabaseConfigured = Boolean(
+  cleanUrl &&
+  cleanKey &&
+  cleanUrl !== 'undefined' &&
+  cleanKey !== 'undefined' &&
+  cleanUrl !== 'null' &&
+  cleanKey !== 'null' &&
+  cleanUrl.startsWith('http')
+);
+
+export const supabaseUrl = cleanUrl;
+export const supabaseAnonKey = cleanKey;
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+  ? createClient(cleanUrl, cleanKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        detectSessionInUrl: true,
       },
     })
   : null;
@@ -30,7 +56,7 @@ export async function signInWithOAuth(provider: 'google' | 'github') {
   return await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
     },
   });
 }
