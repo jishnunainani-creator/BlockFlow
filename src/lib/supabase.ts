@@ -19,6 +19,13 @@ export const isSupabaseConfigured = Boolean(
   supabaseUrl.startsWith('http')
 );
 
+console.log("=== SUPABASE ENV DEBUG ===");
+console.log("MODE:", import.meta.env.MODE);
+console.log("URL exists:", Boolean(import.meta.env.VITE_SUPABASE_URL));
+console.log("KEY exists:", Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY));
+console.log("URL:", import.meta.env.VITE_SUPABASE_URL);
+console.log("Configured:", isSupabaseConfigured);
+
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
