@@ -25,7 +25,9 @@ import {
   ChevronDown,
   ChevronUp,
   Zap,
+  Bookmark,
 } from 'lucide-react';
+import { SaveBlockToLibraryModal } from '../Library/SaveBlockToLibraryModal';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -38,7 +40,7 @@ interface FocusCardProps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const CARD_WIDTH       = 348;
-const CARD_EST_HEIGHT  = 520;
+const CARD_EST_HEIGHT  = 560;
 const VIEWPORT_PAD     = 14;
 const HEADER_CLEARANCE = 100; // space reserved for nav/toolbar at top
 
@@ -49,6 +51,7 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
     deleteScheduledBlock,
     updateScheduledBlock,
     updateBlockStatus,
+    libraryBlocks,
     conflicts,
   } = useTimetable();
 
@@ -56,6 +59,7 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
   const [isEditingNotes,   setIsEditingNotes]   = useState(false);
   const [showReminderMenu, setShowReminderMenu] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showSaveLibModal, setShowSaveLibModal] = useState(false);
   const [tempNotes,        setTempNotes]        = useState(block.description || '');
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -265,14 +269,17 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 <span>{statusCfg.label}</span>
               </button>
 
-              {/* Reminder badge */}
-              {block.reminderMinutes ? (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-medium border"
-                  style={{ backgroundColor: 'rgba(245,158,11,0.10)', borderColor: 'rgba(245,158,11,0.20)', color: '#FBBF24' }}
+              {/* Save to Activity Library (rendered only when block is not linked) */}
+              {(!block.blockId || !libraryBlocks.some((l) => l.id === block.blockId)) && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setShowSaveLibModal(true); }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-[11px] font-bold bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all"
                 >
-                  <Bell className="w-3 h-3 shrink-0" />{block.reminderMinutes}m before
-                </span>
-              ) : null}
+                  <Bookmark className="w-3.5 h-3.5" />
+                  Save to Activity Library
+                </button>
+              )}
             </div>
 
             {/* Status picker popover */}
@@ -468,6 +475,12 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
           </div>
         </div>
       </div>
+
+      <SaveBlockToLibraryModal
+        isOpen={showSaveLibModal}
+        block={block}
+        onClose={() => setShowSaveLibModal(false)}
+      />
     </>,
     document.body
   );

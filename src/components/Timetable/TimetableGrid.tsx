@@ -7,7 +7,8 @@ import { ConflictBanner } from '../Conflict/ConflictBanner';
 import { MobileAddBlockSheet } from './MobileAddBlockSheet';
 import { ExportModal } from '../Export/ExportModal';
 import { PrintCalendar } from '../Export/PrintCalendar';
-import { Plus, Calendar, CalendarDays, LayoutGrid, Download } from 'lucide-react';
+import { Plus, Calendar, CalendarDays, LayoutGrid, Download, Bookmark } from 'lucide-react';
+import { BulkSaveToLibraryModal } from '../Library/BulkSaveToLibraryModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const [dragOverTime,   setDragOverTime]   = useState<number | null>(null);
   const [showMobileAdd,  setShowMobileAdd]  = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showBulkSaveModal, setShowBulkSaveModal] = useState(false);
   const todayDayIndex = (new Date().getDay() + 6) % 7;
   const [mobileActiveDay, setMobileActiveDay] = useState<number>(todayDayIndex);
 
@@ -339,10 +341,20 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         <div className="w-px h-4 bg-slate-700/60" />
 
+        {/* Bulk Save to Library Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowBulkSaveModal(true); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-xl text-xs font-bold text-purple-300 hover:text-white transition-all shadow-sm active:scale-95 ml-auto"
+          title="Save Timetable Activities to Library"
+        >
+          <Bookmark className="w-3.5 h-3.5" />
+          <span>Save to Library</span>
+        </button>
+
         {/* Export Button */}
         <button
           onClick={(e) => { e.stopPropagation(); setShowExportModal(true); }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 rounded-xl text-xs font-bold text-indigo-300 hover:text-white transition-all shadow-sm active:scale-95 ml-auto"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 rounded-xl text-xs font-bold text-indigo-300 hover:text-white transition-all shadow-sm active:scale-95"
           title="Export Timetable Planner"
         >
           <Download className="w-3.5 h-3.5" />
@@ -752,6 +764,11 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
           endHour={endHour}
         />
       )}
+
+      <BulkSaveToLibraryModal
+        isOpen={showBulkSaveModal}
+        onClose={() => setShowBulkSaveModal(false)}
+      />
     </div>
   );
 };
