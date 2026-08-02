@@ -19,30 +19,49 @@ import {
   Bot,
   RotateCcw,
   Sparkles,
+  X,
 } from 'lucide-react';
 
 import { ResolutionSelector } from '../Timetable/ResolutionSelector';
+import { FeasibilityBadge } from '../ExecutionOS/FeasibilityBadge';
 
 interface AppHeaderProps {
   onOpenAISchedule?: (tab: 'voice' | 'text' | 'import') => void;
   onOpenAICommandCenter?: () => void;
+  userEmail?: string | null;
+  onOpenAuth?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenAISchedule,
   onOpenAICommandCenter,
+  userEmail,
+  onOpenAuth,
 }) => {
   const {
     currentWeekId,
     setCurrentWeekId,
     enableNotifications,
     notificationsEnabled,
+    currentWeekScheduledBlocks,
+    searchQuery,
+    setSearchQuery,
   } = useTimetable();
 
   const { isDemoMode, activeProfile, clearDemoData } = useDemo();
   const currentProfileConfig = DEMO_PROFILES.find(p => p.id === activeProfile);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const activeSearchQuery = searchQuery.trim().toLowerCase();
+  const matchCount = activeSearchQuery !== ''
+    ? (currentWeekScheduledBlocks || []).filter((b) => {
+        return (
+          b.title.toLowerCase().includes(activeSearchQuery) ||
+          (b.description && b.description.toLowerCase().includes(activeSearchQuery)) ||
+          (b.goalTitle && b.goalTitle.toLowerCase().includes(activeSearchQuery)) ||
+          (b.priority && b.priority.toLowerCase().includes(activeSearchQuery))
+        );
+      }).length
+    : 0;
 
   const dateRangeLabel = getWeekDateRangeLabel(currentWeekId);
   const thisWeekId = getISOWeekString();
@@ -60,23 +79,27 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between gap-3 shrink-0 select-none z-30 overflow-x-auto scrollbar-none">
-      {/* ── LEFT: ← TODAY → & WEEK RANGE ── */}
-      <div className="flex items-center gap-2 shrink-0">
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+    <header className="h-16 px-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 z-30 select-none">
+      {/* ── LEFT: WEEK NAVIGATION & DATE RANGE ── */}
+      <div className="flex items-center gap-2 font-mono">
+        <button
+          onClick={handleTodayWeek}
+          className={`px-2.5 py-1 text-xs font-bold rounded-xl border transition-colors ${
+            currentWeekId === thisWeekId
+              ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+              : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'
+          }`}
+        >
+          Today
+        </button>
+
+        <div className="flex items-center gap-0.5 bg-slate-950 rounded-xl border border-slate-800 p-0.5">
           <button
             onClick={handlePrevWeek}
             className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
             title="Previous Week"
           >
             <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleTodayWeek}
-            className="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            Today
           </button>
 
           <button
@@ -91,6 +114,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <span className="text-xs font-bold text-slate-300 ml-1 whitespace-nowrap hidden md:inline">
           {dateRangeLabel}
         </span>
+
+        {/* Live Schedule Feasibility Badge */}
+        <div className="hidden lg:block ml-2">
+          <FeasibilityBadge blocks={currentWeekScheduledBlocks} compact />
+        </div>
 
         {/* Demo Workspace Badge */}
         {isDemoMode && (
@@ -107,7 +135,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         )}
       </div>
 
-      {/* ── CENTER: PRIMARY AI SCHEDULING ACTION BUTTONS (Section 53) ── */}
+      {/* ── CENTER: PRIMARY AI SCHEDULING ACTION BUTTONS ── */}
       <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={() => onOpenAISchedule && onOpenAISchedule('text')}
@@ -148,15 +176,37 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       <div className="flex items-center gap-2 shrink-0 ml-auto">
         <ResolutionSelector />
 
-        <div className="relative hidden lg:block w-36">
-          <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5" />
+        {/* Live Active Calendar Search Bar */}
+        <div className="relative w-36 sm:w-44 md:w-52">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search timetable..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-7 pr-2 py-1 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-8 pr-14 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
           />
+
+          {searchQuery && (
+            <div className="absolute right-2 top-1.5 flex items-center gap-1">
+              <span
+                className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                  matchCount > 0
+                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                }`}
+              >
+                {matchCount}
+              </span>
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-slate-400 hover:text-white p-0.5 rounded-full"
+                title="Clear Search"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
         </div>
 
         <button
@@ -170,6 +220,27 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         >
           <Bell className="w-4 h-4" />
         </button>
+
+        {/* User Account / Auth Button */}
+        {onOpenAuth && (
+          userEmail ? (
+            <button
+              onClick={onOpenAuth}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all shrink-0"
+              title={`Logged in as ${userEmail}`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="truncate max-w-[90px] sm:max-w-[140px]">{userEmail}</span>
+            </button>
+          ) : (
+            <button
+              onClick={onOpenAuth}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-110 text-white font-bold text-xs shadow-md transition-all whitespace-nowrap shrink-0"
+            >
+              Sign In
+            </button>
+          )
+        )}
       </div>
     </header>
   );

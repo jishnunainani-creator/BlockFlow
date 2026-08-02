@@ -58,6 +58,13 @@ export interface ScheduledBlock {
   status?: CompletionStatus;
   completedAt?: number;
   actualDuration?: number;
+
+  // Goal & Task Linking Fields
+  goalId?: string;
+  goalTitle?: string;
+  goalComponentId?: string;
+  isFixed?: boolean;
+  taskId?: string;
 }
 
 export interface WeekSchedule {
@@ -109,14 +116,45 @@ export const PRIORITY_CONFIG: Record<string, { label: string; defaultColor: stri
 
 // ── BLOCKFLOW EXECUTION OPERATING SYSTEM MODELS ──
 
+export interface GoalComponent {
+  id: string;
+  title: string;
+  targetHours: number;
+  completedHours: number;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+export interface GoalMilestone {
+  id: string;
+  title: string;
+  targetDate: string;
+  isUnlocked: boolean;
+  unlockedDate?: string;
+  weightPct: number; // e.g. 25
+}
+
 export interface Goal {
   id: string;
   title: string;
-  category: string; // e.g. "Career", "Learning", "Health"
-  deadline: string; // e.g. "November 2026"
-  targetHoursPerDay: number;
-  progressPct: number;
+  category: string; // e.g. "Career", "Academics", "Fitness", "Skill Development", "Financial", "Personal Growth"
+  description?: string;
+  purpose?: string; // Step 2: Why this matters
+  derailObstacle?: string; // Step 2: What could derail
+  targetDate?: string; // Step 3: ISO date or formatted date
+  targetWeeklyHours?: number; // Step 4: Weekly hours commitment
+  preferredSessionMinutes?: number; // Step 4: e.g. 60, 90, 120
+  preferredEnergyWindow?: 'morning' | 'afternoon' | 'evening';
+  totalRequiredHours?: number;
   color: string;
+  createdAt?: number;
+
+  components?: GoalComponent[];
+  milestones?: GoalMilestone[];
+
+  // Compatibility fields
+  deadline?: string;
+  targetHoursPerDay?: number;
+  progressPct?: number;
 }
 
 export interface DailyMissionItem {
@@ -124,7 +162,7 @@ export interface DailyMissionItem {
   title: string;
   goalId?: string;
   duration: number; // in minutes
-  completionProbability: number; // e.g. 89 (representing 89%)
+  completionProbability: number; // e.g. 89
   completed: boolean;
 }
 
@@ -137,10 +175,9 @@ export interface ExecutionScore {
 }
 
 export interface ProductivityDNA {
-  peakFocusWindow: string; // e.g. "9:00 AM – 11:30 AM"
-  preferredSessionMinutes: number; // e.g. 75
-  maxEffectiveDailyHours: number; // e.g. 5.5
-  mostProductiveDay: string; // e.g. "Tuesday"
-  leastProductiveTime: string; // e.g. "After 9 PM"
+  peakFocusWindow: string;
+  preferredSessionMinutes: number;
+  maxEffectiveDailyHours: number;
+  mostProductiveDay: string;
+  leastProductiveTime: string;
 }
-

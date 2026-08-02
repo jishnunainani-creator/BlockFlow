@@ -285,41 +285,132 @@ export function calculateCompletionProbability(block: ScheduledBlock): number {
 }
 
 export function calculateExecutionScore(blocks: ScheduledBlock[]) {
-  if (blocks.length === 0) {
+  if (!blocks || blocks.length === 0) {
     return {
-      score: 92,
-      consistencyRating: 'Excellent' as const,
-      focusRating: 'Good' as const,
-      timeAccuracyPct: 91,
-      goalProgressPct: 78,
+      score: 0,
+      consistencyRating: 'No Data' as const,
+      focusRating: 'No Data' as const,
+      timeAccuracyPct: 0,
+      goalProgressPct: 0,
+      hasData: false,
     };
   }
 
   const metrics = calculateAdherenceMetrics(blocks);
-  const score = Math.min(100, Math.max(40, metrics.adherenceScore));
+  const score = Math.min(100, Math.max(0, metrics.adherenceScore));
 
-  let consistencyRating: 'Excellent' | 'Good' | 'Fair' | 'Needs Focus' = 'Good';
-  if (score >= 90) consistencyRating = 'Excellent';
-  else if (score >= 75) consistencyRating = 'Good';
-  else if (score >= 60) consistencyRating = 'Fair';
-  else consistencyRating = 'Needs Focus';
+  let consistencyRating: 'Excellent' | 'Good' | 'Fair' | 'Needs Focus' | 'No Data' = 'No Data';
+  if (metrics.completedCount > 0) {
+    if (score >= 90) consistencyRating = 'Excellent';
+    else if (score >= 75) consistencyRating = 'Good';
+    else if (score >= 60) consistencyRating = 'Fair';
+    else consistencyRating = 'Needs Focus';
+  }
 
   return {
     score,
     consistencyRating,
-    focusRating: score >= 85 ? ('Excellent' as const) : ('Good' as const),
-    timeAccuracyPct: Math.min(98, score + 4),
-    goalProgressPct: Math.min(95, Math.round(score * 0.85)),
+    focusRating: metrics.completedCount > 0 ? (score >= 85 ? ('Excellent' as const) : ('Good' as const)) : ('No Data' as const),
+    timeAccuracyPct: metrics.completedCount > 0 ? Math.min(100, score) : 0,
+    goalProgressPct: metrics.completedCount > 0 ? Math.min(100, Math.round(score * 0.85)) : 0,
+    hasData: true,
   };
 }
 
-export function getProductivityDNA() {
+export function getProductivityDNA(params?: {
+  scheduledBlocks?: ScheduledBlock[];
+  scheduledBlocksByWeek?: Record<string, ScheduledBlock[]>;
+  dailyScores?: Record<string, any>;
+}) {
+  const allBlocks: ScheduledBlock[] = [];
+  if (params?.scheduledBlocks) allBlocks.push(...params.scheduledBlocks);
+  if (params?.scheduledBlocksByWeek) {
+    Object.values(params.scheduledBlocksByWeek).forEach((bList) => {
+      if (Array.isArray(bList)) allBlocks.push(...bList);
+    });
+  }
+
+  const completedBlocks = allBlocks.filter(
+    (b) => b && (b.status === 'completed' || b.status === 'faster' || (b as any).completed === true)
+  );
+
+  const completedCount = completedBlocks.length;
+  const daysTracked = Object.keys(params?.dailyScores || {}).length;
+
+  // 1. Peak Focus Window
+  let peakFocusWindow = 'Insufficient data (3+ completed blocks required)';
+  if (completedCount >= 3) {
+    let morning = 0;
+    let afternoon = 0;
+    let evening = 0;
+    completedBlocks.forEach((b) => {
+      if (b.startMinutes >= 360 && b.startMinutes < 720) morning++;
+      else if (b.startMinutes >= 720 && b.startMinutes < 1080) afternoon++;
+      else if (b.startMinutes >= 1080) evening++;
+    });
+
+    if (morning >= afternoon && morning >= evening) peakFocusWindow = '8:00 AM – 11:30 AM (Morning)';
+    else if (afternoon >= morning && afternoon >= evening) peakFocusWindow = '1:30 PM – 5:00 PM (Afternoon)';
+    else peakFocusWindow = '6:30 PM – 9:30 PM (Evening)';
+  }
+
+  // 2. Preferred Session Duration
+  let preferredSessionMinutes = 'Insufficient data';
+  if (completedCount >= 3) {
+    const avgDuration = Math.round(
+      completedBlocks.reduce((sum, b) => sum + (b.duration || 60), 0) / completedCount
+    );
+    preferredSessionMinutes = `${avgDuration} mins`;
+  }
+
+  // 3. Most Productive Day
+  let mostProductiveDay = 'Gathering history (7+ days required)';
+  if (daysTracked >= 7 || completedCount >= 10) {
+    const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+    completedBlocks.forEach((b) => {
+      if (typeof b.dayOfWeek === 'number' && b.dayOfWeek >= 0 && b.dayOfWeek <= 6) {
+        dayCounts[b.dayOfWeek]++;
+      }
+    });
+
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    let maxIdx = 0;
+    let maxVal = -1;
+    dayCounts.forEach((c, idx) => {
+      if (c > maxVal) {
+        maxVal = c;
+        maxIdx = idx;
+      }
+    });
+    if (maxVal > 0) mostProductiveDay = dayNames[maxIdx];
+  }
+
+  // 4. Least Productive Time / Fatigue Drop-off
+  let leastProductiveTime = 'Gathering history';
+  if (allBlocks.length >= 5) {
+    const eveningBlocks = allBlocks.filter((b) => b.startMinutes >= 1200);
+    const eveningSkipped = eveningBlocks.filter((b) => b.status === 'skipped' || b.status === 'missed').length;
+    if (eveningBlocks.length > 0 && eveningSkipped / eveningBlocks.length >= 0.4) {
+      leastProductiveTime = 'After 8:00 PM (Fatigue drop-off)';
+    } else {
+      leastProductiveTime = 'No distinct drop-off';
+    }
+  }
+
+  // 5. Max Effective Daily Hours
+  let maxEffectiveDailyHours = '0h';
+  if (completedCount > 0) {
+    const totalHours = Math.round((completedBlocks.reduce((sum, b) => sum + (b.duration || 60), 0) / 60) * 10) / 10;
+    maxEffectiveDailyHours = `${totalHours}h total`;
+  }
+
   return {
-    peakFocusWindow: '9:00 AM – 11:30 AM',
-    preferredSessionMinutes: 75,
-    maxEffectiveDailyHours: 5.5,
-    mostProductiveDay: 'Tuesday',
-    leastProductiveTime: 'After 9:00 PM',
+    peakFocusWindow,
+    preferredSessionMinutes,
+    maxEffectiveDailyHours,
+    mostProductiveDay,
+    leastProductiveTime,
   };
 }
+
 

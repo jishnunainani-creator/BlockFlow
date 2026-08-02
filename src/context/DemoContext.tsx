@@ -4,6 +4,7 @@ import { TOUR_STEPS, TourStep } from '../types/onboarding';
 import { getDemoProfileData } from '../utils/demoProfiles';
 import { saveScheduledBlocks, saveLibraryBlocks, loadScheduledBlocks, loadLibraryBlocks } from '../utils/storage';
 import { saveDailyScores, saveReflections, saveMoods, saveStreaks, saveAchievements, loadDailyScores, loadReflections, loadMoods, loadStreaks, loadAchievements } from '../utils/executionStorage';
+import { loadCustomMilestones, saveCustomMilestones } from '../utils/assignmentStorage';
 import { getISOWeekString } from '../utils/timeUtils';
 import { Goal, DailyMissionItem } from '../types/timetable';
 
@@ -96,6 +97,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         moods: loadMoods(),
         streaks: loadStreaks(),
         achievements: loadAchievements(),
+        customMilestones: loadCustomMilestones(),
       };
       localStorage.setItem(USER_BACKUP_KEY, JSON.stringify(backupData));
     }
@@ -112,6 +114,12 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     saveMoods(demoData.moods);
     saveStreaks(demoData.streaks);
     saveAchievements(demoData.achievements);
+    saveCustomMilestones(demoData.customMilestones || [
+      { id: 'demo-m-1', title: '100 Hours Deep Work', description: 'Logged 100 hours of focused study in BlockFlow', category: 'focus', measurementType: 'hours', targetValue: 100, currentValue: 100, earnedDate: 'Oct 15, 2026', isUnlocked: true, isCustom: true },
+      { id: 'demo-m-2', title: '30-Day Study Streak', description: 'Maintained 30 consecutive days of study', category: 'consistency', measurementType: 'days', targetValue: 30, currentValue: 30, earnedDate: 'Oct 12, 2026', isUnlocked: true, isCustom: true },
+      { id: 'demo-m-3', title: 'First Full Stack Project', description: 'Shipped complete full-stack web application', category: 'career', measurementType: 'count', targetValue: 1, currentValue: 1, earnedDate: 'Sep 28, 2026', isUnlocked: true, isCustom: true },
+      { id: 'demo-m-4', title: 'A+ in Data Structures', description: 'Achieved top grade in Data Structures coursework', category: 'learning', measurementType: 'score', targetValue: 95, currentValue: 95, earnedDate: 'May 15, 2026', isUnlocked: true, isCustom: true },
+    ]);
 
     setIsDemoMode(true);
     setActiveProfile(profileType);
@@ -137,6 +145,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         saveMoods(backup.moods || {});
         saveStreaks(backup.streaks || []);
         saveAchievements(backup.achievements || []);
+        saveCustomMilestones(backup.customMilestones || []);
       } catch (err) {
         console.error("Failed to restore backup data", err);
       }
@@ -152,6 +161,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       saveMoods({});
       saveStreaks([]);
       saveAchievements([]);
+      saveCustomMilestones([]);
     }
 
     setIsDemoMode(false);

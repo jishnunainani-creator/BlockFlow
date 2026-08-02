@@ -233,8 +233,16 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
           {/* ── BODY ── */}
           <div className="relative px-5 py-4 space-y-4">
 
-            {/* Tags row: category + status + reminder */}
+            {/* Tags row: category + status + reminder + goal */}
             <div className="flex flex-wrap gap-2 items-center">
+              {/* Linked Goal Badge */}
+              {block.goalTitle && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20 shadow-sm">
+                  <span className="text-purple-400">🎯 Goal:</span>
+                  <span className="truncate max-w-[160px]">{block.goalTitle}</span>
+                </div>
+              )}
+
               {/* Category */}
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border"

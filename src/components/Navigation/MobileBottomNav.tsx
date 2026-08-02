@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavView } from './Sidebar';
-import { Calendar, Plus, Bot, BarChart3, Settings, Sparkles, FileText, Upload, Brain, Moon } from 'lucide-react';
+import { Calendar, Plus, Bot, BarChart3, Settings, Sparkles, FileText, Upload, Brain, Moon, Target, CheckSquare, User } from 'lucide-react';
 
 interface MobileBottomNavProps {
   currentView: NavView;
@@ -8,6 +8,8 @@ interface MobileBottomNavProps {
   onOpenAddBlock: () => void;
   onOpenAISchedule: (tab: 'voice' | 'text' | 'import') => void;
   onOpenEndOfDay?: () => void;
+  userEmail?: string | null;
+  onOpenAuth?: () => void;
 }
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -16,6 +18,8 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenAddBlock,
   onOpenAISchedule,
   onOpenEndOfDay,
+  userEmail,
+  onOpenAuth,
 }) => {
   const [showQuickActions, setShowQuickActions] = useState(false);
 
@@ -99,12 +103,28 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 </div>
               </button>
             )}
+
+            {onOpenAuth && (
+              <button
+                type="button"
+                onClick={() => { setShowQuickActions(false); onOpenAuth(); }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-white transition-all text-left mt-2"
+              >
+                <div className="p-2 rounded-xl bg-indigo-600 text-white">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold">{userEmail ? `Account (${userEmail})` : 'Sign In / Account'}</p>
+                  <p className="text-[10px] text-indigo-300">{userEmail ? 'Manage session & Cloud Sync' : 'Access account & save timetable'}</p>
+                </div>
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {/* ── FIXED BOTTOM NAVIGATION BAR (< 768px) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 flex items-center justify-around h-16 px-2 select-none">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/80 flex items-center justify-around h-16 px-1 select-none">
         
         {/* 1. Calendar */}
         <button
@@ -118,7 +138,43 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <span className="text-[10px] mt-0.5">Calendar</span>
         </button>
 
-        {/* 2. Growth (Execution Intelligence) */}
+        {/* 2. Tasks / Backlog */}
+        <button
+          type="button"
+          onClick={() => onSelectView('task-inbox')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+            currentView === 'task-inbox' ? 'text-indigo-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <CheckSquare className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Tasks</span>
+        </button>
+
+        {/* 3. Center ADD Floating Action Button */}
+        <div className="relative -top-5 flex-1 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setShowQuickActions(true)}
+            className="w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-600/40 flex items-center justify-center border-2 border-slate-950 active:scale-90 hover:scale-105 transition-all"
+            title="Quick Action Menu"
+          >
+            <Plus className="w-6 h-6 stroke-[2.5]" />
+          </button>
+        </div>
+
+        {/* 4. Goals */}
+        <button
+          type="button"
+          onClick={() => onSelectView('goals')}
+          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
+            currentView === 'goals' ? 'text-indigo-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Target className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Goals</span>
+        </button>
+
+        {/* 5. Growth (Execution Intelligence) */}
         <button
           type="button"
           onClick={() => onSelectView('execution')}
@@ -128,42 +184,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         >
           <Brain className="w-5 h-5" />
           <span className="text-[10px] mt-0.5">Growth</span>
-        </button>
-
-        {/* 3. Center ADD Floating Action Button */}
-        <div className="relative -top-5 flex-1 flex justify-center">
-          <button
-            type="button"
-            onClick={() => setShowQuickActions(true)}
-            className="w-13 h-13 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 text-white shadow-xl shadow-indigo-600/40 flex items-center justify-center border-2 border-slate-950 active:scale-90 hover:scale-105 transition-all"
-            title="Quick Action"
-          >
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </button>
-        </div>
-
-        {/* 4. AI Coach */}
-        <button
-          type="button"
-          onClick={() => onSelectView('ai-insights')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            currentView === 'ai-insights' ? 'text-indigo-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Bot className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">AI</span>
-        </button>
-
-        {/* 5. Settings */}
-        <button
-          type="button"
-          onClick={() => onSelectView('settings')}
-          className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            currentView === 'settings' ? 'text-indigo-400 font-bold scale-105' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Settings className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Settings</span>
         </button>
       </nav>
     </>

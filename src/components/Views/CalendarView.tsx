@@ -7,11 +7,15 @@ import { LayoutGrid } from 'lucide-react';
 interface CalendarViewProps {
   onOpenAISchedule?: (tab: 'voice' | 'text' | 'import') => void;
   onOpenAICommandCenter?: () => void;
+  userEmail?: string | null;
+  onOpenAuth?: () => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   onOpenAISchedule,
   onOpenAICommandCenter,
+  userEmail,
+  onOpenAuth,
 }) => {
   const [showSideLibrary, setShowSideLibrary] = useState(true);
 
@@ -21,6 +25,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       <AppHeader
         onOpenAISchedule={onOpenAISchedule}
         onOpenAICommandCenter={onOpenAICommandCenter}
+        userEmail={userEmail}
+        onOpenAuth={onOpenAuth}
       />
 
       {/* Main Grid Workspace + Collapsible Side Library */}

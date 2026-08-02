@@ -33,6 +33,7 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
     moveScheduledBlock,
     setSelectedBlockId,
     conflicts,
+    searchQuery,
   } = useTimetable();
 
   const [liveDuration, setLiveDuration] = useState(block.duration);
@@ -57,6 +58,16 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
 
   const startTime = minutesToTimeStr(block.startMinutes);
   const endTime   = minutesToTimeStr(block.startMinutes + liveDuration);
+
+  // Search Filter & Highlighting Logic
+  const activeSearchQuery = (searchQuery || '').trim().toLowerCase();
+  const isSearchActive    = activeSearchQuery.length > 0;
+  const isSearchMatch     = isSearchActive && (
+    block.title.toLowerCase().includes(activeSearchQuery) ||
+    (block.description && block.description.toLowerCase().includes(activeSearchQuery)) ||
+    (block.goalTitle && block.goalTitle.toLowerCase().includes(activeSearchQuery)) ||
+    (block.priority && block.priority.toLowerCase().includes(activeSearchQuery))
+  );
 
   // ── Resize ────────────────────────────────────────────────────────────────
   const handleResizeStart = (e: React.MouseEvent) => {
@@ -128,15 +139,17 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
       style={{
         top:             `${topPx}px`,
         height:          `${Math.max(heightPx - 2, 18)}px`,
-        borderLeftColor: block.color,
-        backgroundColor: `${block.color}16`,
-        opacity:         hidden ? 0 : dimmed ? 0.28 : isCompleted ? 0.65 : isSkipped ? 0.40 : 1,
+        borderLeftColor: isSearchMatch ? '#818CF8' : block.color,
+        backgroundColor: isSearchMatch ? `${block.color}35` : `${block.color}16`,
+        opacity:         hidden ? 0 : dimmed ? 0.28 : isSearchActive && !isSearchMatch ? 0.15 : isCompleted ? 0.65 : isSkipped ? 0.40 : 1,
+        filter:          isSearchActive && !isSearchMatch ? 'grayscale(80%)' : 'none',
         pointerEvents:   hidden ? 'none' : 'auto',
-        transition:      'opacity 250ms ease, box-shadow 150ms ease, transform 150ms ease',
+        transition:      'opacity 250ms ease, box-shadow 150ms ease, transform 150ms ease, filter 250ms ease',
       }}
       className={`group absolute left-1.5 right-1.5 rounded-xl border-l-[4px] border border-white/[0.06]
         cursor-pointer select-none overflow-hidden
         hover:brightness-110 hover:shadow-md hover:-translate-y-px
+        ${isSearchMatch ? '!z-30 ring-2 ring-indigo-400 shadow-2xl scale-[1.02] brightness-125' : ''}
         ${isConflicting ? '!border-l-rose-500 border-dashed ring-1 ring-rose-500/40' : ''}
         ${isResizing ? 'z-30 shadow-xl cursor-ns-resize' : 'hover:z-10'}
       `}
@@ -146,6 +159,16 @@ export const ScheduledBlockItem: React.FC<ScheduledBlockItemProps> = ({
 
         {/* Title row */}
         <div className="flex items-center gap-1.5 min-w-0">
+          {/* Search Match Indicator */}
+          {isSearchMatch && (
+            <span className="text-[10px] shrink-0 font-bold text-indigo-300" title="Matches Search Query">🔍</span>
+          )}
+
+          {/* Goal Indicator */}
+          {block.goalTitle && (
+            <span className="text-[10px] shrink-0" title={`Linked to Goal: ${block.goalTitle}`}>🎯</span>
+          )}
+
           {/* Conflict indicator */}
           {isConflicting && (
             <AlertTriangle className="w-2.5 h-2.5 text-rose-400 shrink-0 animate-pulse" />

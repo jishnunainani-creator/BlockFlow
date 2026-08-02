@@ -77,7 +77,8 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const [dragOverTime,   setDragOverTime]   = useState<number | null>(null);
   const [showMobileAdd,  setShowMobileAdd]  = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [mobileActiveDay, setMobileActiveDay] = useState<number | 'weekdays'>(0); // Default to today/day 0 on mobile
+  const todayDayIndex = (new Date().getDay() + 6) % 7;
+  const [mobileActiveDay, setMobileActiveDay] = useState<number>(todayDayIndex);
 
   // Mobile Touch Swipe Gesture Handler (Swipe Left = Next Day, Swipe Right = Prev Day)
   const touchStartX = useRef<number | null>(null);
@@ -141,10 +142,9 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const workDays      = daysWithDates.filter((d) => d.index < 5);
   const displayDays   = viewMode === 'workweek' ? workDays : daysWithDates;
 
-  // Mobile display
-  const mobileDisplayDays = mobileActiveDay === 'weekdays'
-    ? workDays
-    : daysWithDates.filter((d) => d.index === mobileActiveDay);
+  // Mobile single day display
+  const activeDayIndex = typeof mobileActiveDay === 'number' ? mobileActiveDay : todayDayIndex;
+  const mobileDisplayDays = daysWithDates.filter((d) => d.index === activeDayIndex);
 
   // ── Shift+Scroll → horizontal ───────────────────────────────────────────────
   useEffect(() => {
@@ -350,35 +350,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         </button>
       </div>
 
-      {/* ── MOBILE DAY SELECTOR ──────────────────────────────────────────────── */}
-      <div className="sm:hidden bg-slate-900 border-b border-slate-800 p-1.5 flex items-center gap-1 overflow-x-auto scrollbar-none shrink-0 z-20">
-        <button
-          onClick={() => setMobileActiveDay('weekdays')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-all ${
-            mobileActiveDay === 'weekdays'
-              ? 'bg-indigo-600 text-white shadow'
-              : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          5 Days
-        </button>
-        {workDays.map((day) => (
-          <button
-            key={day.index}
-            onClick={() => setMobileActiveDay(day.index)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 transition-all flex items-center gap-1 ${
-              mobileActiveDay === day.index
-                ? 'bg-indigo-600 text-white shadow'
-                : day.isToday
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <span>{day.short}</span>
-            <span className="text-[10px] opacity-75">{day.dateNum}</span>
-          </button>
-        ))}
-      </div>
+
 
       {/* ── MAIN CALENDAR AREA ───────────────────────────────────────────────── */}
       {/* Desktop: sticky header + horizontally scrollable columns */}
@@ -582,31 +554,81 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Mobile sticky header */}
-        <div className="sticky top-0 flex border-b border-slate-800 bg-slate-900/95 backdrop-blur-md shrink-0 z-30">
-          <div className="w-14 border-r border-slate-800 p-2 text-center shrink-0 flex items-end justify-center pb-2">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Time</span>
+        {/* Mobile sticky header & 7-day pill strip */}
+        <div className="sticky top-0 flex flex-col border-b border-slate-800 bg-slate-900/95 backdrop-blur-md shrink-0 z-30">
+          {/* 7-Day Pill Strip */}
+          <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-800/60 bg-slate-950/60">
+            <button
+              type="button"
+              onClick={() => setMobileActiveDay((prev) => Math.max(0, prev - 1))}
+              disabled={activeDayIndex === 0}
+              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 text-xs font-bold"
+              title="Previous Day"
+            >
+              ◀
+            </button>
+
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+              {daysWithDates.map((d) => {
+                const isSelected = d.index === activeDayIndex;
+                return (
+                  <button
+                    key={d.index}
+                    type="button"
+                    onClick={() => setMobileActiveDay(d.index)}
+                    className={`flex flex-col items-center px-2 py-1 rounded-xl text-[10px] transition-all min-w-[36px] ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/40 scale-105'
+                        : d.isToday
+                        ? 'bg-emerald-950/60 text-emerald-400 font-semibold border border-emerald-500/30'
+                        : 'text-slate-400 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <span className="uppercase text-[9px]">{d.short.substring(0, 3)}</span>
+                    <span className="font-mono text-[11px] leading-none mt-0.5">{d.dateNum}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setMobileActiveDay((prev) => Math.min(6, prev + 1))}
+              disabled={activeDayIndex === 6}
+              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 text-xs font-bold"
+              title="Next Day"
+            >
+              ▶
+            </button>
           </div>
-          <div className="flex-1 grid divide-x divide-slate-800/60" style={{ gridTemplateColumns: `repeat(${mobileDisplayDays.length}, 1fr)` }}>
-            {mobileDisplayDays.map((day) => (
-              <div
-                key={day.index}
-                className={`p-1.5 text-center transition-colors relative ${
-                  day.isToday
-                    ? 'bg-gradient-to-b from-emerald-950/60 to-transparent border-t-2 border-emerald-400'
-                    : 'hover:bg-slate-800/40'
-                }`}
-              >
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className={`text-[10px] font-extrabold uppercase tracking-wider ${day.isToday ? 'text-emerald-400' : 'text-slate-200'}`}>
-                    {day.short}
+
+          {/* Active 1-Day Header */}
+          <div className="flex items-center">
+            <div className="w-14 border-r border-slate-800 p-2 text-center shrink-0 flex items-center justify-center">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Time</span>
+            </div>
+            <div className="flex-1 px-3 py-1.5 flex items-center justify-between bg-slate-900/40">
+              {mobileDisplayDays.map((day) => (
+                <div key={day.index} className="flex items-center gap-2">
+                  <span className={`text-xs font-black uppercase tracking-wide ${day.isToday ? 'text-emerald-400' : 'text-slate-100'}`}>
+                    {day.full}
                   </span>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${day.isToday ? 'bg-emerald-500 text-slate-950 font-black' : 'text-slate-400'}`}>
-                    {day.dateNum}
-                  </span>
+                  <span className="text-xs text-slate-400 font-mono">({day.dateFormatted})</span>
+                  {day.isToday && (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
+                      TODAY
+                    </span>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+              <button
+                type="button"
+                onClick={() => setMobileActiveDay(todayDayIndex)}
+                className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-500/30"
+              >
+                Today
+              </button>
+            </div>
           </div>
         </div>
 

@@ -134,6 +134,8 @@ interface TimetableContextType {
   setCurrentWeekId: (weekId: string) => void;
   resolution: Resolution;
   setResolution: (res: Resolution) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
   
   // Custom Categories
   customCategories: string[];
@@ -204,6 +206,7 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [resolution, setResolutionState] = useState<Resolution>(() => loadResolution());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ dayOfWeek: number; startMinutes: number } | null>(null);
@@ -815,6 +818,8 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCurrentWeekId,
         resolution,
         setResolution,
+        searchQuery,
+        setSearchQuery,
         customCategories: appState.customCategories,
         addCustomCategory,
         selectedBlockId,

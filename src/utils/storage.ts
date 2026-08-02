@@ -1,5 +1,6 @@
-import { LibraryBlock, ScheduledBlock, Resolution } from '../types/timetable';
+import { LibraryBlock, ScheduledBlock, Resolution, Goal } from '../types/timetable';
 import { getISOWeekString } from './timeUtils';
+import { getUserScopedKey } from './userScope';
 
 const STORAGE_KEYS = {
   LIBRARY_BLOCKS: 'timetable_library_blocks_v1',
@@ -10,148 +11,40 @@ const STORAGE_KEYS = {
 
 export const INITIAL_LIBRARY_BLOCKS: LibraryBlock[] = [
   {
-    id: 'block-1785181271512',
-    title: 'Fitness',
-    description: 'Gym, Cricket, Pickleball, TT',
-    priority: 'Fitness',
-    color: '#64748B',
-    defaultDuration: 90,
-    icon: 'code',
-  },
-  {
-    id: 'block-1785180693019',
+    id: 'lib-block-study',
     title: 'Self Study',
-    description: 'Self Study',
+    description: 'Focused learning, reading & research',
     priority: 'high',
-    color: '#EC4899',
-    defaultDuration: 60,
-    icon: 'code',
-  },
-  {
-    id: 'block-1785180426499',
-    title: 'WAKE UP',
-    description: 'WAKE UP',
-    priority: 'high',
-    color: '#EC4899',
-    defaultDuration: 30,
-    icon: 'code',
-  },
-  {
-    id: 'block-1785180327130',
-    title: 'LUNCH BREAK',
-    description: 'Lunch',
-    priority: 'medium',
-    color: '#EF4444',
-    defaultDuration: 30,
-    icon: 'coffee',
-  },
-  {
-    id: 'block-1785180171203',
-    title: 'ENR215 SEC-2',
-    description: 'ENR215 SEC-2',
-    priority: 'medium',
-    color: '#F97316',
-    defaultDuration: 240,
-    icon: 'code',
-  },
-  {
-    id: 'block-1785179966798',
-    title: 'ENR207 SEC-2',
-    description: 'ENR207 SEC-2',
-    priority: 'medium',
-    color: '#10B981',
-    defaultDuration: 90,
-    icon: 'brain',
-  },
-  {
-    id: 'block-1785179761029',
-    title: 'MGT111 SEC-2',
-    description: 'SEC-2 Identity and Behaviour',
-    priority: 'medium',
-    color: '#F97316',
-    defaultDuration: 90,
-    icon: 'brain',
-  },
-  {
-    id: 'block-1785179503902',
-    title: 'CSE305 SEC-1',
-    description: 'CSE305 SEC-1(Data Structure and Algorithms)',
-    priority: 'medium',
     color: '#8B5CF6',
-    defaultDuration: 90,
-    icon: 'code',
+    defaultDuration: 60,
+    icon: 'book',
   },
   {
-    id: 'block-1785179085804',
-    title: 'ENR209 SEC-2',
-    description: 'ENR209 SEC-2',
-    priority: 'medium',
-    color: '#F97316',
-    defaultDuration: 90,
-    icon: 'brain',
-  },
-  {
-    id: 'block-1785178924907',
-    title: 'ENR211 SEC-2',
-    description: 'ENR211 SEC-2',
+    id: 'lib-block-fitness',
+    title: 'Fitness & Health',
+    description: 'Gym, sports, workout & exercise',
     priority: 'medium',
     color: '#10B981',
-    defaultDuration: 90,
-    icon: 'brain',
+    defaultDuration: 60,
+    icon: 'activity',
   },
   {
-    id: 'block-1785178488270',
-    title: 'CSE 213 SEC-1',
-    description: 'CSE 213 SEC-1',
-    priority: 'medium',
-    color: '#06B6D4',
-    defaultDuration: 90,
-    icon: 'code',
-  },
-  {
-    id: 'block-dsa',
-    title: 'DSA Practice',
-    description: 'LeetCode, Data Structures & Algorithms problem solving',
-    color: '#EF4444',
+    id: 'lib-block-work',
+    title: 'Work & Projects',
+    description: 'Deep work, coding & assignment execution',
     priority: 'high',
-    defaultDuration: 90,
-    icon: 'code',
-  },
-  {
-    id: 'block-internship',
-    title: 'Internship Work',
-    description: 'Feature development, standups, and codebase tasks',
-    color: '#F97316',
-    priority: 'high',
-    defaultDuration: 120,
-    icon: 'briefcase',
-  },
-  {
-    id: 'block-gym',
-    title: 'Gym & Workout',
-    description: 'Weightlifting and fitness training session',
     color: '#3B82F6',
-    priority: 'personal',
-    defaultDuration: 60,
-    icon: 'dumbbell',
+    defaultDuration: 90,
+    icon: 'code',
   },
   {
-    id: 'block-cat',
-    title: 'CAT Preparation',
-    description: 'Quantitative Aptitude, DILR & VARC mock tests',
-    color: '#EC4899',
-    priority: 'high',
-    defaultDuration: 60,
-    icon: 'target',
-  },
-  {
-    id: 'block-revision',
-    title: 'Daily Revision',
-    description: 'Reviewing key concepts, notes, and active recall',
-    color: '#8B5CF6',
-    priority: 'medium',
-    defaultDuration: 60,
-    icon: 'brain',
+    id: 'lib-block-break',
+    title: 'Meal / Break',
+    description: 'Lunch, dinner, rest & recovery interval',
+    priority: 'low',
+    color: '#F59E0B',
+    defaultDuration: 45,
+    icon: 'coffee',
   },
 ];
 
@@ -253,25 +146,22 @@ export function getDefaultScheduledBlocks(currentWeekId: string): ScheduledBlock
 
 export function loadLibraryBlocks(): LibraryBlock[] {
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.LIBRARY_BLOCKS);
+    const key = getUserScopedKey(STORAGE_KEYS.LIBRARY_BLOCKS);
+    const data = localStorage.getItem(key);
     if (data) {
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Merge: add any INITIAL_LIBRARY_BLOCKS not already in stored list (by id)
-        const storedIds = new Set(parsed.map((b: LibraryBlock) => b.id));
-        const missingDefaults = INITIAL_LIBRARY_BLOCKS.filter(b => !storedIds.has(b.id));
-        return [...missingDefaults, ...parsed];
-      }
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {
     console.error('Failed to load library blocks from storage', e);
   }
-  return INITIAL_LIBRARY_BLOCKS;
+  return [];
 }
 
 export function saveLibraryBlocks(blocks: LibraryBlock[]): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.LIBRARY_BLOCKS, JSON.stringify(blocks));
+    const key = getUserScopedKey(STORAGE_KEYS.LIBRARY_BLOCKS);
+    localStorage.setItem(key, JSON.stringify(blocks));
   } catch (e) {
     console.error('Failed to save library blocks to storage', e);
   }
@@ -279,7 +169,8 @@ export function saveLibraryBlocks(blocks: LibraryBlock[]): void {
 
 export function loadScheduledBlocks(currentWeekId: string): ScheduledBlock[] {
   try {
-    const data = localStorage.getItem(STORAGE_KEYS.SCHEDULED_BLOCKS);
+    const key = getUserScopedKey(STORAGE_KEYS.SCHEDULED_BLOCKS);
+    const data = localStorage.getItem(key);
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
@@ -289,12 +180,13 @@ export function loadScheduledBlocks(currentWeekId: string): ScheduledBlock[] {
   } catch (e) {
     console.error('Failed to load scheduled blocks from storage', e);
   }
-  return getDefaultScheduledBlocks(currentWeekId);
+  return [];
 }
 
 export function saveScheduledBlocks(blocks: ScheduledBlock[]): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.SCHEDULED_BLOCKS, JSON.stringify(blocks));
+    const key = getUserScopedKey(STORAGE_KEYS.SCHEDULED_BLOCKS);
+    localStorage.setItem(key, JSON.stringify(blocks));
   } catch (e) {
     console.error('Failed to save scheduled blocks to storage', e);
   }
@@ -302,7 +194,8 @@ export function saveScheduledBlocks(blocks: ScheduledBlock[]): void {
 
 export function loadResolution(): Resolution {
   try {
-    const res = localStorage.getItem(STORAGE_KEYS.RESOLUTION);
+    const key = getUserScopedKey(STORAGE_KEYS.RESOLUTION);
+    const res = localStorage.getItem(key);
     if (res && [15, 30, 45, 60].includes(Number(res))) {
       return Number(res) as Resolution;
     }
@@ -314,8 +207,35 @@ export function loadResolution(): Resolution {
 
 export function saveResolution(resolution: Resolution): void {
   try {
-    localStorage.setItem(STORAGE_KEYS.RESOLUTION, resolution.toString());
+    const key = getUserScopedKey(STORAGE_KEYS.RESOLUTION);
+    localStorage.setItem(key, resolution.toString());
   } catch (e) {
     console.error('Failed to save resolution', e);
   }
 }
+
+const GOALS_STORAGE_KEY = 'blockflow_goals_v1';
+
+export function loadGoals(): Goal[] {
+  try {
+    const key = getUserScopedKey(GOALS_STORAGE_KEY);
+    const data = localStorage.getItem(key);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.error('Failed to load goals from storage', e);
+  }
+  return [];
+}
+
+export function saveGoals(goals: Goal[]): void {
+  try {
+    const key = getUserScopedKey(GOALS_STORAGE_KEY);
+    localStorage.setItem(key, JSON.stringify(goals));
+  } catch (e) {
+    console.error('Failed to save goals to storage', e);
+  }
+}
+

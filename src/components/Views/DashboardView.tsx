@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTimetable } from '../../context/TimetableContext';
 import { NavView } from '../Navigation/Sidebar';
+import { loadGoals } from '../../utils/storage';
+import { Goal, GoalMilestone } from '../../types/timetable';
 import {
   calculateExecutionScore,
   calculateCompletionProbability,
@@ -33,15 +35,18 @@ interface DashboardViewProps {
   onStartFocusMode?: () => void;
 }
 
+import { useExecution } from '../../context/ExecutionContext';
+
 export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigate,
   userEmail,
   onStartFocusMode,
 }) => {
   const { currentWeekScheduledBlocks, addToast } = useTimetable();
+  const { dailyScores } = useExecution();
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
 
-  const userName = userEmail ? userEmail.split('@')[0] : 'Jishnu';
+  const userName = userEmail ? userEmail.split('@')[0] : 'Guest';
 
   // Today's index
   const todayIndex = (new Date().getDay() + 6) % 7;
@@ -49,38 +54,45 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     .filter((b) => b.dayOfWeek === todayIndex)
     .sort((a, b) => a.startMinutes - b.startMinutes);
 
-  // Execution Score
+  // Execution Score & DNA
   const execScore = calculateExecutionScore(currentWeekScheduledBlocks);
-  const dna = getProductivityDNA();
+  const dna = getProductivityDNA({
+    scheduledBlocks: currentWeekScheduledBlocks,
+    dailyScores,
+  });
 
-  // Signature Feature: Daily Mission State
-  const [missionItems, setMissionItems] = useState([
-    { id: 'm1', title: 'Complete Dynamic Programming Graph Sheet', duration: 120, probability: 91, completed: true },
-    { id: 'm2', title: 'Finish Internship API Integration Sprint', duration: 90, probability: 88, completed: false },
-    { id: 'm3', title: 'Operating Systems Chapter 4 Revision', duration: 60, probability: 84, completed: false },
-    { id: 'm4', title: 'Exercise & Core Workout Session', duration: 45, probability: 96, completed: true },
-  ]);
+  // Dynamic Daily Mission derived from real todayBlocks
+  const [completedMissionIds, setCompletedMissionIds] = useState<Set<string>>(new Set());
+
+  const missionItems = todayBlocks.map((b) => ({
+    id: b.id,
+    title: b.title,
+    duration: b.duration,
+    probability: calculateCompletionProbability(b),
+    completed: b.status === 'completed' || b.status === 'faster' || completedMissionIds.has(b.id),
+  }));
 
   const [adaptiveBannerOpen, setAdaptiveBannerOpen] = useState(true);
 
   const toggleMission = (id: string) => {
-    setMissionItems((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const next = !item.completed;
-          if (next) addToast(`Completed mission item: "${item.title}"! 🎯`, 'success');
-          return { ...item, completed: next };
-        }
-        return item;
-      })
-    );
+    setCompletedMissionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        const item = missionItems.find((i) => i.id === id);
+        if (item) addToast(`Completed mission item: "${item.title}"! 🎯`, 'success');
+      }
+      return next;
+    });
   };
 
   const completedMissionCount = missionItems.filter((i) => i.completed).length;
   const totalMissionMinutes = missionItems.reduce((acc, i) => acc + i.duration, 0);
 
   const handleAcceptAdaptiveAdjustment = () => {
-    addToast('Schedule automatically adjusted! Execution Score improved by 11% ✨', 'success');
+    addToast('Schedule automatically adjusted! Execution Score improved ✨', 'success');
     setAdaptiveBannerOpen(false);
   };
 
@@ -242,40 +254,51 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Mission Items List */}
-        <div className="space-y-2.5">
-          {missionItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => toggleMission(item.id)}
-              className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                item.completed
-                  ? 'bg-slate-950/60 border-slate-800/80 text-slate-400'
-                  : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-200'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <button className="text-indigo-400 shrink-0">
-                  {item.completed ? <CheckSquare className="w-5 h-5 text-emerald-400" /> : <Square className="w-5 h-5 text-slate-500" />}
-                </button>
-                <span className={`text-xs font-semibold truncate ${item.completed ? 'line-through opacity-60' : 'text-white'}`}>
-                  {item.title}
-                </span>
-              </div>
+        {missionItems.length > 0 ? (
+          <div className="space-y-2.5">
+            {missionItems.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => toggleMission(item.id)}
+                className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                  item.completed
+                    ? 'bg-slate-950/60 border-slate-800/80 text-slate-400'
+                    : 'bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-200'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <button className="text-indigo-400 shrink-0">
+                    {item.completed ? <CheckSquare className="w-5 h-5 text-emerald-400" /> : <Square className="w-5 h-5 text-slate-500" />}
+                  </button>
+                  <span className={`text-xs font-semibold truncate ${item.completed ? 'line-through opacity-60' : 'text-white'}`}>
+                    {item.title}
+                  </span>
+                </div>
 
-              {/* Completion Probability Badge */}
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[11px] font-mono font-bold text-slate-400">
-                  {item.duration}m
-                </span>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] font-semibold text-emerald-400">
-                  <span>Probability: {item.probability}%</span>
+                {/* Completion Probability Badge */}
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[11px] font-mono font-bold text-slate-400">
+                    {item.duration}m
+                  </span>
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] font-semibold text-emerald-400">
+                    <Zap size={10} /> {item.probability}% AI Match
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-8 text-center space-y-2">
+            <Target className="w-8 h-8 text-slate-600 mx-auto" />
+            <h4 className="text-sm font-bold text-slate-300">No Activities Scheduled For Today</h4>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+              Add activities to your timetable for today to automatically synthesize your AI Daily Mission.
+            </p>
+          </div>
+        )}
       </div>
 
+      {/* ── GOAL-BASED OUTCOMES & AI COACH SNAPSHOT ── */}
       {/* ── GOAL-BASED OUTCOMES & AI COACH SNAPSHOT ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Active Goals Card */}
@@ -294,27 +317,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="space-y-3">
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">Crack CAT Examination</span>
-                <span className="text-purple-400 font-bold">42% Progress</span>
+            {loadGoals().length > 0 ? (
+              loadGoals().slice(0, 3).map((goal: Goal) => {
+                const isGoalDone = goal.milestones && goal.milestones.length > 0
+                  ? Math.round((goal.milestones.filter((m: GoalMilestone) => m.isUnlocked).length / goal.milestones.length) * 100)
+                  : 0;
+                return (
+                  <div key={goal.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-white truncate max-w-[200px]">{goal.title}</span>
+                      <span className="text-purple-400 font-bold font-mono">{isGoalDone}% Progress</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                      <div
+                        className="h-full bg-purple-500 rounded-full transition-all"
+                        style={{ width: `${isGoalDone}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      Target: {goal.targetWeeklyHours || 5}h/week · Category: {goal.category || 'General'}
+                    </p>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-5 rounded-xl bg-slate-950 border border-slate-800/80 text-center space-y-1.5">
+                <Target className="w-6 h-6 text-slate-600 mx-auto" />
+                <p className="text-xs font-bold text-slate-300">No Active Goals</p>
+                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                  Create long-term objectives in the Goal Planner to convert targets into scheduled BlockFlow activities.
+                </p>
               </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                <div className="h-full bg-purple-500 rounded-full w-[42%]" />
-              </div>
-              <p className="text-[10px] text-slate-400">Deadline: November 2026 · Required Study: 2.0h/day</p>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">Launch BlockFlow SaaS Platform</span>
-                <span className="text-emerald-400 font-bold">65% Progress</span>
-              </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                <div className="h-full bg-emerald-500 rounded-full w-[65%]" />
-              </div>
-              <p className="text-[10px] text-slate-400">Deadline: August 2026 · Target Hours: 3.5h/day</p>
-            </div>
+            )}
           </div>
         </div>
 
@@ -328,13 +362,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
 
-            <h4 className="text-sm font-bold text-white">
-              Habit Insight: Post-Dinner Fatigue Drop
-            </h4>
-
-            <p className="text-xs text-slate-300 leading-relaxed font-medium">
-              "You consistently skip coding and reading sessions scheduled after 9 PM. Consider scheduling these High-Priority tasks immediately after lunch (2 PM – 4 PM) for 96% completion consistency."
-            </p>
+            {currentWeekScheduledBlocks.length > 0 ? (
+              <>
+                <h4 className="text-sm font-bold text-white">
+                  Peak Focus: {dna.peakFocusWindow}
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                  "Your current timetable has {currentWeekScheduledBlocks.length} planned activities. Keep completing blocks to refine peak performance insights."
+                </p>
+              </>
+            ) : (
+              <>
+                <h4 className="text-sm font-bold text-white">
+                  Awaiting Timetable History
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                  "Add activities to your calendar to unlock AI recommendations on peak focus hours, fatigue drop-off times, and scheduling efficiency."
+                </p>
+              </>
+            )}
           </div>
 
           <button

@@ -1,3 +1,5 @@
+import { getUserScopedKey } from './userScope';
+
 export const getTodayDateString = (): string => {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -5,7 +7,8 @@ export const getTodayDateString = (): string => {
 
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
   try {
-    const item = localStorage.getItem(key);
+    const scopedKey = getUserScopedKey(key);
+    const item = localStorage.getItem(scopedKey);
     return item ? JSON.parse(item) : defaultValue;
   } catch (error) {
     console.error(`Error loading from localStorage key "${key}":`, error);
@@ -15,7 +18,8 @@ const getStorageItem = <T>(key: string, defaultValue: T): T => {
 
 const setStorageItem = <T>(key: string, value: T): void => {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    const scopedKey = getUserScopedKey(key);
+    localStorage.setItem(scopedKey, JSON.stringify(value));
   } catch (error) {
     console.error(`Error saving to localStorage key "${key}":`, error);
   }

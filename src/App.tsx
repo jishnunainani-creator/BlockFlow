@@ -23,6 +23,7 @@ import { AICoachView } from './components/Views/AICoachView';
 import { RemindersView } from './components/Views/RemindersView';
 import { SettingsView } from './components/Views/SettingsView';
 import { ExecutionDashboardView } from './components/Views/ExecutionDashboardView';
+import { TaskInboxView } from './components/ExecutionOS/TaskInboxView';
 import { ToastContainer } from './components/UI/ToastContainer';
 import { getCurrentUser } from './lib/supabase';
 import { syncLocalStateToSupabase } from './lib/supabaseMigration';
@@ -165,9 +166,12 @@ export function AppContent() {
           <CalendarView
             onOpenAISchedule={openAISchedule}
             onOpenAICommandCenter={() => setIsAICommandCenterOpen(true)}
+            userEmail={userEmail}
+            onOpenAuth={() => setShowAuthPage(true)}
           />
         )}
         {currentView === 'goals' && <GoalsView />}
+        {currentView === 'task-inbox' && <TaskInboxView />}
         {currentView === 'assignments' && <AssignmentsView />}
         {currentView === 'library' && <LibraryView />}
         {currentView === 'templates' && <TemplatesView onNavigate={setCurrentView} />}
@@ -186,6 +190,9 @@ export function AppContent() {
         onSelectView={setCurrentView}
         onOpenAddBlock={() => setIsBlockModalOpen(true)}
         onOpenAISchedule={openAISchedule}
+        onOpenEndOfDay={() => setIsAICommandCenterOpen(true)}
+        userEmail={userEmail}
+        onOpenAuth={() => setShowAuthPage(true)}
       />
 
       {/* Quick Add Activity Block Modal */}

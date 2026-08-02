@@ -27,6 +27,7 @@ export interface DemoProfileData {
   dailyScores: Record<string, DailyExecutionScore>;
   streaks: ProductivityStreak[];
   achievements: Achievement[];
+  customMilestones?: import('./executionOS').CustomMilestone[];
   aiRecommendations: string[];
 }
 

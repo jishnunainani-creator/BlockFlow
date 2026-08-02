@@ -18,11 +18,13 @@ import {
   Crown,
   Brain,
   CheckSquare,
+  Inbox,
 } from 'lucide-react';
 
 export type NavView =
   | 'dashboard'
   | 'calendar'
+  | 'task-inbox'
   | 'goals'
   | 'assignments'
   | 'focus'
@@ -56,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems: { id: NavView; label: string; icon: React.FC<{ className?: string }>; badge?: string; action?: () => void }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
+    { id: 'task-inbox', label: 'Task Inbox', icon: Inbox, badge: 'NEW' },
     { id: 'goals', label: 'Goals & Outcomes', icon: Target },
     { id: 'assignments', label: 'Assignment Tracker', icon: CheckSquare, badge: 'NEW' },
     { id: 'focus', label: 'Smart Focus Mode', icon: Zap, badge: 'PRO', action: onOpenFocusMode },
@@ -68,8 +71,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
-  const displayName = userEmail ? userEmail.split('@')[0] : 'Jishnu';
-  const displayEmail = userEmail || 'jishnu@blockflow.ai';
+  const displayName = userEmail ? userEmail.split('@')[0] : 'Guest';
+  const displayEmail = userEmail || 'Guest Mode (Local)';
 
   return (
     <aside

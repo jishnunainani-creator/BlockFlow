@@ -64,10 +64,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold shadow-md">
-              {userEmail ? userEmail[0].toUpperCase() : 'J'}
+              {userEmail ? userEmail[0].toUpperCase() : 'G'}
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">{userEmail ? userEmail.split('@')[0] : 'Jishnu (Local User)'}</h4>
+              <h4 className="text-sm font-bold text-white">{userEmail ? userEmail.split('@')[0] : 'Guest User'}</h4>
               <p className="text-xs text-slate-400">{userEmail || 'Offline Local Storage Mode'}</p>
               <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                 <CheckCircle2 className="w-3 h-3" />

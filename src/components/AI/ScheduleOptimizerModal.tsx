@@ -1,5 +1,8 @@
 import React from 'react';
-import { Sparkles, Brain, Coffee, ArrowRightLeft, X, Check } from 'lucide-react';
+import { useTimetable } from '../../context/TimetableContext';
+import { loadEnergyProfile } from '../../utils/assignmentStorage';
+import { optimizeTodaySchedule } from '../../utils/scheduleOptimizerEngine';
+import { Sparkles, Brain, Coffee, ArrowRightLeft, X, CheckCircle2 } from 'lucide-react';
 
 interface ScheduleOptimizerModalProps {
   isOpen: boolean;
@@ -7,71 +10,80 @@ interface ScheduleOptimizerModalProps {
   onApplyOptimizations?: () => void;
 }
 
-export default function ScheduleOptimizerModal({ isOpen, onClose, onApplyOptimizations = () => {} }: ScheduleOptimizerModalProps) {
+export default function ScheduleOptimizerModal({
+  isOpen,
+  onClose,
+  onApplyOptimizations = () => {},
+}: ScheduleOptimizerModalProps) {
+  const { currentWeekScheduledBlocks, scheduledBlocks } = useTimetable();
+  const blocks = currentWeekScheduledBlocks?.length > 0 ? currentWeekScheduledBlocks : scheduledBlocks || [];
+  const energyProfile = loadEnergyProfile();
+
   if (!isOpen) return null;
 
+  const optimizations = optimizeTodaySchedule(blocks, energyProfile);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-        <div className="p-6 relative">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600/10 blur-3xl rounded-full"></div>
-          
-          <div className="flex justify-between items-start mb-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in select-none">
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative">
+        <div className="p-6 relative space-y-6">
+          <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2 mb-1">
-                <Sparkles className="text-indigo-400" size={24} />
+              <h2 className="text-xl font-bold text-white flex items-center gap-2 mb-1">
+                <Sparkles className="text-indigo-400" size={22} />
                 Optimize My Day
               </h2>
-              <p className="text-slate-400 text-sm">AI recommendations to improve your schedule</p>
+              <p className="text-slate-400 text-xs">AI recommendations derived from your current timetable and energy profile</p>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors relative z-10">
+            <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
               <X size={20} />
             </button>
           </div>
 
-          <div className="space-y-4 mb-8">
-            <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-4 flex gap-4">
-              <div className="mt-1 text-orange-400">
-                <Brain size={24} />
-              </div>
-              <div>
-                <h3 className="text-white font-medium mb-1">Workload Balance</h3>
-                <p className="text-sm text-slate-400">Shifted "Deep Work" to morning peak energy hours.</p>
-              </div>
+          {optimizations.length > 0 ? (
+            <div className="space-y-3">
+              {optimizations.map((opt) => (
+                <div key={opt.id} className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 flex gap-3 text-xs">
+                  <div className="mt-0.5 text-indigo-400 shrink-0">
+                    {opt.type === 'break' ? <Coffee size={20} /> : <Brain size={20} />}
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold mb-0.5">{opt.title}</h3>
+                    <p className="text-slate-300 leading-relaxed">{opt.description}</p>
+                    <span className="text-[10px] font-mono text-indigo-400 mt-1 block">Impact: {opt.impact}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-
-            <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-4 flex gap-4">
-              <div className="mt-1 text-emerald-400">
-                <Coffee size={24} />
-              </div>
-              <div>
-                <h3 className="text-white font-medium mb-1">Break Insertion</h3>
-                <p className="text-sm text-slate-400">Added a 15m walk at 3:00 PM to prevent afternoon slump.</p>
-              </div>
+          ) : (
+            <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 text-center space-y-2">
+              <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+              <h3 className="text-sm font-bold text-white">Schedule Well Balanced</h3>
+              <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+                Your current daily timetable has no high-intensity overload or missing rest intervals. Keep executing!
+              </p>
             </div>
+          )}
 
-            <div className="bg-slate-950/50 border border-slate-800 rounded-xl p-4 flex gap-4">
-              <div className="mt-1 text-blue-400">
-                <ArrowRightLeft size={24} />
-              </div>
-              <div>
-                <h3 className="text-white font-medium mb-1">Context Switching</h3>
-                <p className="text-sm text-slate-400">Grouped 3 small admin tasks together at 4:30 PM.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <button onClick={onClose} className="px-5 py-2.5 rounded-xl font-medium text-slate-300 hover:bg-slate-800 transition-colors">
-              Cancel
-            </button>
-            <button 
-              onClick={() => { onApplyOptimizations(); onClose(); }}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium transition-colors"
+          <div className="flex justify-end gap-3 pt-2 border-t border-slate-800">
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 hover:bg-slate-800 transition-colors"
             >
-              <Check size={18} />
-              Apply Optimization
+              Close
             </button>
+            {optimizations.length > 0 && (
+              <button
+                onClick={() => {
+                  onApplyOptimizations();
+                  onClose();
+                }}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all"
+              >
+                <CheckCircle2 size={16} />
+                Apply Optimizations
+              </button>
+            )}
           </div>
         </div>
       </div>
