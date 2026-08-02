@@ -42,15 +42,20 @@ export function useUndoRedo<T>(initialPresent: T) {
     });
   }, []);
 
-  const set = useCallback((newPresent: T) => {
+  const set = useCallback((newPresent: T | ((prev: T) => T)) => {
     setHistory((curr) => {
+      const resolvedPresent =
+        typeof newPresent === 'function'
+          ? (newPresent as (prev: T) => T)(curr.present)
+          : newPresent;
+
       // Don't push if equal
-      if (JSON.stringify(curr.present) === JSON.stringify(newPresent)) {
+      if (JSON.stringify(curr.present) === JSON.stringify(resolvedPresent)) {
         return curr;
       }
       return {
         past: [...curr.past, curr.present],
-        present: newPresent,
+        present: resolvedPresent,
         future: [],
       };
     });

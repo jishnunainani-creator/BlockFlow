@@ -38,7 +38,7 @@ export const BulkSaveToLibraryModal: React.FC<BulkSaveToLibraryModalProps> = ({
   onClose,
   onNavigateToLibrary,
 }) => {
-  const { libraryBlocks, currentWeekScheduledBlocks, addLibraryBlock, updateScheduledBlock, addToast } = useTimetable();
+  const { libraryBlocks, currentWeekScheduledBlocks, bulkAddLibraryBlocksAndLink } = useTimetable();
 
   const [selectedTitles, setSelectedTitles] = useState<Set<string>>(new Set());
   const [isCompleted, setIsCompleted] = useState(false);
@@ -119,38 +119,29 @@ export const BulkSaveToLibraryModal: React.FC<BulkSaveToLibraryModalProps> = ({
 
     if (selectedCandidates.length === 0) return;
 
-    let newActivitiesCount = 0;
-    let totalOccurrencesLinked = 0;
-
-    selectedCandidates.forEach((candidate) => {
-      // Check if matching library block already exists
-      let targetLibBlock = libraryBlocks.find(
+    const payload = selectedCandidates.map((candidate) => {
+      const existing = libraryBlocks.find(
         (lib) => normalizeActivityTitle(lib.title) === candidate.normalizedTitle
       );
 
-      if (!targetLibBlock) {
-        targetLibBlock = addLibraryBlock({
+      return {
+        blockData: {
           title: candidate.displayTitle,
           description: candidate.description,
           defaultDuration: candidate.defaultDuration,
           priority: candidate.priority,
           color: candidate.color,
           icon: candidate.icon,
-        });
-        newActivitiesCount++;
-      }
-
-      // Link all matching scheduled occurrences to this targetLibBlock.id
-      candidate.occurrences.forEach((occ) => {
-        updateScheduledBlock(occ.id, { blockId: targetLibBlock!.id });
-        totalOccurrencesLinked++;
-      });
+        },
+        scheduledBlockIds: candidate.occurrences.map((o) => o.id),
+        existingLibraryId: existing?.id,
+      };
     });
 
-    setCreatedCount(newActivitiesCount);
-    setLinkedCount(totalOccurrencesLinked);
+    const result = bulkAddLibraryBlocksAndLink(payload);
+    setCreatedCount(result.newCreatedCount);
+    setLinkedCount(result.totalLinkedCount);
     setIsCompleted(true);
-    addToast(`Bulk saved ${newActivitiesCount} activities & linked ${totalOccurrencesLinked} blocks! 🎉`, 'success');
   };
 
   return (

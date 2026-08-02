@@ -35,7 +35,7 @@ export const SaveBlockToLibraryModal: React.FC<SaveBlockToLibraryModalProps> = (
   onClose,
   onSuccess,
 }) => {
-  const { libraryBlocks, addLibraryBlock, updateScheduledBlock, addToast } = useTimetable();
+  const { libraryBlocks, addLibraryBlockAndLinkScheduled, updateScheduledBlock, addToast } = useTimetable();
 
   const [mode, setMode] = useState<'form' | 'similar_found'>('form');
   const [matchedLibBlock, setMatchedLibBlock] = useState<LibraryBlock | null>(null);
@@ -87,18 +87,17 @@ export const SaveBlockToLibraryModal: React.FC<SaveBlockToLibraryModalProps> = (
   const handleSaveNew = () => {
     if (!title.trim()) return;
 
-    const newLibBlock = addLibraryBlock({
-      title: title.trim(),
-      description: description.trim(),
-      defaultDuration,
-      priority,
-      color,
-      icon,
-    });
-
-    // Link the current scheduled block to this newly created activity
-    updateScheduledBlock(block.id, { blockId: newLibBlock.id });
-    addToast(`Saved "${newLibBlock.title}" to Activity Library & linked! 📚`, 'success');
+    const newLibBlock = addLibraryBlockAndLinkScheduled(
+      {
+        title: title.trim(),
+        description: description.trim(),
+        defaultDuration,
+        priority,
+        color,
+        icon,
+      },
+      [block.id]
+    );
 
     if (onSuccess) onSuccess(newLibBlock);
     onClose();

@@ -159,6 +159,17 @@ interface TimetableContextType {
 
   // Library block actions
   addLibraryBlock: (block: Omit<LibraryBlock, 'id'>) => LibraryBlock;
+  addLibraryBlockAndLinkScheduled: (
+    blockData: Omit<LibraryBlock, 'id'>,
+    scheduledBlockIds: string[]
+  ) => LibraryBlock;
+  bulkAddLibraryBlocksAndLink: (
+    candidates: {
+      blockData: Omit<LibraryBlock, 'id'>;
+      scheduledBlockIds: string[];
+      existingLibraryId?: string;
+    }[]
+  ) => { newCreatedCount: number; totalLinkedCount: number };
   updateLibraryBlock: (id: string, block: Partial<LibraryBlock>) => void;
   deleteLibraryBlock: (id: string) => void;
 
@@ -365,19 +376,103 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const addLibraryBlock = useCallback((blockData: Omit<LibraryBlock, 'id'>): LibraryBlock => {
     const newBlock: LibraryBlock = {
       ...blockData,
-      id: `block-${Date.now()}`,
+      id: `block-${Date.now()}-${Math.random().toString().slice(2, 6)}`,
       lastUsedAt: Date.now(),
       usageCount: 0,
     };
 
-    updateAppState({
-      ...appState,
-      libraryBlocks: [newBlock, ...appState.libraryBlocks],
-    });
+    updateAppState((prev) => ({
+      ...prev,
+      libraryBlocks: [newBlock, ...prev.libraryBlocks],
+    }));
 
     addToast(`Created block "${newBlock.title}"`, 'success');
     return newBlock;
-  }, [appState, updateAppState, addToast]);
+  }, [updateAppState, addToast]);
+
+  const addLibraryBlockAndLinkScheduled = useCallback(
+    (blockData: Omit<LibraryBlock, 'id'>, scheduledBlockIds: string[]): LibraryBlock => {
+      const newBlock: LibraryBlock = {
+        ...blockData,
+        id: `block-${Date.now()}-${Math.random().toString().slice(2, 6)}`,
+        lastUsedAt: Date.now(),
+        usageCount: scheduledBlockIds.length,
+      };
+
+      const idSet = new Set(scheduledBlockIds);
+
+      updateAppState((prev) => ({
+        ...prev,
+        libraryBlocks: [newBlock, ...prev.libraryBlocks],
+        scheduledBlocks: prev.scheduledBlocks.map((sb) =>
+          idSet.has(sb.id) ? { ...sb, blockId: newBlock.id } : sb
+        ),
+      }));
+
+      addToast(`Saved "${newBlock.title}" to Activity Library & linked! 📚`, 'success');
+      return newBlock;
+    },
+    [updateAppState, addToast]
+  );
+
+  const bulkAddLibraryBlocksAndLink = useCallback(
+    (
+      candidates: {
+        blockData: Omit<LibraryBlock, 'id'>;
+        scheduledBlockIds: string[];
+        existingLibraryId?: string;
+      }[]
+    ) => {
+      let newCreatedCount = 0;
+      let totalLinkedCount = 0;
+
+      updateAppState((prev) => {
+        let updatedLibrary = [...prev.libraryBlocks];
+        let updatedScheduled = [...prev.scheduledBlocks];
+
+        candidates.forEach(({ blockData, scheduledBlockIds, existingLibraryId }) => {
+          let targetLibId = existingLibraryId;
+
+          if (!targetLibId) {
+            const newLib: LibraryBlock = {
+              ...blockData,
+              id: `block-${Date.now()}-${Math.random().toString().slice(2, 6)}`,
+              lastUsedAt: Date.now(),
+              usageCount: scheduledBlockIds.length,
+            };
+            updatedLibrary = [newLib, ...updatedLibrary];
+            targetLibId = newLib.id;
+            newCreatedCount++;
+          }
+
+          const idSet = new Set(scheduledBlockIds);
+          updatedScheduled = updatedScheduled.map((sb) => {
+            if (idSet.has(sb.id)) {
+              totalLinkedCount++;
+              return {
+                ...sb,
+                blockId: targetLibId,
+              };
+            }
+            return sb;
+          });
+        });
+
+        return {
+          ...prev,
+          libraryBlocks: updatedLibrary,
+          scheduledBlocks: updatedScheduled,
+        };
+      });
+
+      addToast(
+        `Saved ${newCreatedCount} activities to Library & linked ${totalLinkedCount} blocks! 🎉`,
+        'success'
+      );
+      return { newCreatedCount, totalLinkedCount };
+    },
+    [updateAppState, addToast]
+  );
 
   const updateLibraryBlock = useCallback((id: string, partial: Partial<LibraryBlock>) => {
     const updatedBlocks = appState.libraryBlocks.map((b) => (b.id === id ? { ...b, ...partial } : b));
@@ -517,39 +612,34 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [appState, updateAppState, resolution]);
 
   const updateScheduledBlock = useCallback((id: string, partial: Partial<ScheduledBlock>) => {
-    const updatedScheduled = appState.scheduledBlocks.map((sb) => {
-      if (sb.id === id) {
-        return {
-          ...sb,
-          ...partial,
-        };
-      }
-      return sb;
-    });
-
-    updateAppState({
-      ...appState,
-      scheduledBlocks: updatedScheduled,
-    });
+    updateAppState((prev) => ({
+      ...prev,
+      scheduledBlocks: prev.scheduledBlocks.map((sb) =>
+        sb.id === id ? { ...sb, ...partial } : sb
+      ),
+    }));
 
     addToast(`Updated block`, 'info');
-  }, [appState, updateAppState, addToast]);
+  }, [updateAppState, addToast]);
 
   const deleteScheduledBlock = useCallback((id: string) => {
-    const sb = appState.scheduledBlocks.find((b) => b.id === id);
-    const updatedScheduled = appState.scheduledBlocks.filter((b) => b.id !== id);
-
     if (selectedBlockId === id) {
       setSelectedBlockId(null);
     }
 
-    updateAppState({
-      ...appState,
-      scheduledBlocks: updatedScheduled,
+    let deletedTitle = '';
+
+    updateAppState((prev) => {
+      const sb = prev.scheduledBlocks.find((b) => b.id === id);
+      deletedTitle = sb?.title || 'block';
+      return {
+        ...prev,
+        scheduledBlocks: prev.scheduledBlocks.filter((b) => b.id !== id),
+      };
     });
 
-    addToast(`Removed "${sb?.title || 'block'}"`, 'info');
-  }, [appState, updateAppState, selectedBlockId, addToast]);
+    addToast(`Removed "${deletedTitle}"`, 'info');
+  }, [updateAppState, selectedBlockId, addToast]);
 
   // Selection & Clipboard Actions
   const copySelectedBlock = useCallback(() => {
@@ -835,6 +925,8 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         conflicts,
         updateBlockStatus,
         addLibraryBlock,
+        addLibraryBlockAndLinkScheduled,
+        bulkAddLibraryBlocksAndLink,
         updateLibraryBlock,
         deleteLibraryBlock,
         addScheduledBlock,
