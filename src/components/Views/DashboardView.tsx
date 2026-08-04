@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { ContextHelp } from '../UI/ContextHelp';
 import { EmptyStateGuidance } from '../UI/EmptyStateGuidance';
-import TimeBudgetWidget from '../Analytics/TimeBudgetWidget';
+import PersonalTimeBudgetWidget from '../Analytics/PersonalTimeBudgetWidget';
 import ScheduleOptimizerModal from '../AI/ScheduleOptimizerModal';
 
 interface DashboardViewProps {
@@ -227,7 +227,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* ── 24-HOUR TIME BUDGET DASHBOARD (Feature 82) ── */}
-      <TimeBudgetWidget />
+      <PersonalTimeBudgetWidget />
 
       {/* ── SIGNATURE FEATURE: 🎯 TODAY'S MISSION CARD ── */}
       <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-md">

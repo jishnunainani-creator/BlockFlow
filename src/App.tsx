@@ -3,6 +3,7 @@ import { TimetableProvider, useTimetable } from './context/TimetableContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ExecutionProvider } from './context/ExecutionContext';
 import { SessionProvider } from './context/SessionContext';
+import { TimeBudgetProvider } from './context/TimeBudgetContext';
 import { SessionModalsContainer } from './components/Execution/SessionModalsContainer';
 import { DemoProvider } from './context/DemoContext';
 import { OnboardingModal } from './components/Onboarding/OnboardingModal';
@@ -258,9 +259,11 @@ export default function App() {
       <TimetableProvider>
         <ExecutionProvider>
           <SessionProvider>
-            <DemoProvider>
-              <AppContent />
-            </DemoProvider>
+            <TimeBudgetProvider>
+              <DemoProvider>
+                <AppContent />
+              </DemoProvider>
+            </TimeBudgetProvider>
           </SessionProvider>
         </ExecutionProvider>
       </TimetableProvider>
