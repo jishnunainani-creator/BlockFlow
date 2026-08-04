@@ -8,6 +8,7 @@ import {
 } from '../../types/timetable';
 import { useTimetable } from '../../context/TimetableContext';
 import { useSession } from '../../context/SessionContext';
+import { useTimeBudget } from '../../context/TimeBudgetContext';
 import { formatDuration, minutesToTimeStr } from '../../utils/timeUtils';
 import { AVAILABLE_ICONS } from '../Library/BlockModal';
 import { StatusPickerPopover } from '../Completion/StatusPickerPopover';
@@ -69,11 +70,20 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
 
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const { userBudget } = useTimeBudget();
+
   const completionProb = calculateCompletionProbability(block);
   const currentStatus: CompletionStatus = block.status || 'not_started';
   const statusCfg    = COMPLETION_STATUS_CONFIG[currentStatus];
   const isConflicting = conflicts.has(block.id);
-  const categoryLabel = PRIORITY_CONFIG[block.priority]?.label || block.priority;
+
+  // Time Category lookup
+  const matchedCategory = userBudget.categories.find(
+    (c) => c.id === (block as any).categoryId || c.name.toLowerCase() === block.title.toLowerCase()
+  );
+  const timeCategoryName = matchedCategory ? matchedCategory.name : 'Uncategorized';
+  const priorityLabel = PRIORITY_CONFIG[block.priority]?.label || block.priority;
+
   const startTime     = minutesToTimeStr(block.startMinutes);
   const endTime       = minutesToTimeStr(block.startMinutes + block.duration);
   const isCompleted   = currentStatus === 'completed' || currentStatus === 'faster';
@@ -252,17 +262,22 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 </div>
               )}
 
-              {/* Category */}
+              {/* Time Category */}
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border"
                 style={{
-                  color:           block.color,
-                  borderColor:     `${block.color}30`,
-                  backgroundColor: `${block.color}10`,
+                  color: matchedCategory ? matchedCategory.color : block.color,
+                  borderColor: matchedCategory ? `${matchedCategory.color}30` : `${block.color}30`,
+                  backgroundColor: matchedCategory ? `${matchedCategory.color}10` : `${block.color}10`,
                 }}
               >
                 <Tag className="w-3 h-3 shrink-0" />
-                {categoryLabel}
+                <span>Category: {timeCategoryName}</span>
+              </span>
+
+              {/* Priority */}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700">
+                <span>Priority: {priorityLabel}</span>
               </span>
 
               {/* Status — interactive */}

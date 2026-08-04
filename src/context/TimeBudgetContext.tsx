@@ -9,11 +9,13 @@ import {
   TargetPeriodType,
 } from '../types/timeBudget';
 import { loadUserTimeBudget, saveUserTimeBudget, createDefaultBudget } from '../utils/timeBudgetStorage';
-import { calculateTimeBudgetSummary } from '../utils/timeBudgetEngine';
+import { DateScopeFilter, calculateTimeBudgetSummary } from '../utils/timeBudgetEngine';
 
 interface TimeBudgetContextType {
   userBudget: UserTimeBudget;
   summary: TimeBudgetSummary;
+  dateScope: DateScopeFilter;
+  setDateScope: (scope: DateScopeFilter) => void;
 
   isConfigureModalOpen: boolean;
   openConfigureModal: () => void;
@@ -52,6 +54,7 @@ export const TimeBudgetProvider: React.FC<{ children: ReactNode }> = ({ children
   const { sessions } = useSession();
 
   const [userBudget, setUserBudget] = useState<UserTimeBudget>(createDefaultBudget());
+  const [dateScope, setDateScope] = useState<DateScopeFilter>('week');
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
   const [isBulkCategorizeOpen, setIsBulkCategorizeOpen] = useState(false);
 
@@ -150,10 +153,22 @@ export const TimeBudgetProvider: React.FC<{ children: ReactNode }> = ({ children
     [userBudget, addToast]
   );
 
-  // Delete category
+  // Delete category (Category Deletion Safety - Requirement 14)
   const deleteCategory = useCallback(
     (categoryId: string) => {
       const cat = userBudget.categories.find((c) => c.id === categoryId);
+
+      // Check if assigned to any current blocks
+      const assignedCount = currentWeekScheduledBlocks.filter((b) => (b as any).categoryId === categoryId).length;
+      if (assignedCount > 0) {
+        // Remap assigned blocks to undefined (uncategorized)
+        currentWeekScheduledBlocks.forEach((b) => {
+          if ((b as any).categoryId === categoryId) {
+            updateScheduledBlock(b.id, { categoryId: undefined } as any);
+          }
+        });
+      }
+
       const updatedCategories = userBudget.categories.filter((c) => c.id !== categoryId);
       const updatedBudgets = { ...userBudget.budgets };
       delete updatedBudgets[categoryId];
@@ -167,9 +182,9 @@ export const TimeBudgetProvider: React.FC<{ children: ReactNode }> = ({ children
 
       setUserBudget(updated);
       saveUserTimeBudget(updated);
-      addToast(`Removed category "${cat?.name || ''}"`, 'warning');
+      addToast(`Removed category "${cat?.name || ''}". ${assignedCount > 0 ? `${assignedCount} blocks set as Uncategorized.` : ''}`, 'warning');
     },
-    [userBudget, addToast]
+    [userBudget, currentWeekScheduledBlocks, updateScheduledBlock, addToast]
   );
 
   // Bulk categorize activity blocks (Part 10)
@@ -191,13 +206,15 @@ export const TimeBudgetProvider: React.FC<{ children: ReactNode }> = ({ children
     [currentWeekScheduledBlocks, updateScheduledBlock, addToast]
   );
 
-  const summary = calculateTimeBudgetSummary(userBudget, currentWeekScheduledBlocks, sessions);
+  const summary = calculateTimeBudgetSummary(userBudget, currentWeekScheduledBlocks, sessions, dateScope);
 
   return (
     <TimeBudgetContext.Provider
       value={{
         userBudget,
         summary,
+        dateScope,
+        setDateScope,
         isConfigureModalOpen,
         openConfigureModal,
         closeConfigureModal,

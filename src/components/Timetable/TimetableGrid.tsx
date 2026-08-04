@@ -242,6 +242,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
           blockId: data.blockId, title: data.title, description: data.description,
           color: data.color, priority: data.priority, icon: data.icon,
           dayOfWeek: dayIndex, startMinutes: snappedStart, duration: data.duration || 60,
+          categoryId: data.categoryId,
         });
       } else if (data.type === 'SCHEDULED_BLOCK') {
         moveScheduledBlock(data.id, dayIndex, snappedStart);

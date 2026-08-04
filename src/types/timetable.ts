@@ -46,6 +46,7 @@ export interface LibraryBlock {
   description?: string;
   color: string;
   priority: Priority;
+  categoryId?: string;
   defaultDuration: number; // in minutes
   icon: string;
   lastUsedAt?: number;
@@ -59,6 +60,7 @@ export interface ScheduledBlock {
   description?: string;
   color: string;
   priority: Priority;
+  categoryId?: string;
   icon: string;
   dayOfWeek: number; // 0 = Monday, ..., 6 = Sunday
   startMinutes: number; // minutes from 00:00

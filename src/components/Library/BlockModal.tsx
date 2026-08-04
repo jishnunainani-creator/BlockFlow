@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LibraryBlock, Priority, PRIORITY_CONFIG } from '../../types/timetable';
 import { useTimetable } from '../../context/TimetableContext';
+import { useTimeBudget } from '../../context/TimeBudgetContext';
 import {
   X,
   Code,
@@ -71,11 +72,13 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   editingBlock,
 }) => {
   const { customCategories, addCustomCategory } = useTimetable();
+  const { userBudget } = useTimeBudget();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('high');
+  const [categoryId, setCategoryId] = useState<string>('');
   const [color, setColor] = useState('#EF4444');
   const [defaultDuration, setDefaultDuration] = useState(60);
   const [icon, setIcon] = useState('code');
@@ -89,6 +92,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
         setTitle(editingBlock.title);
         setDescription(editingBlock.description || '');
         setPriority(editingBlock.priority);
+        setCategoryId(editingBlock.categoryId || '');
         setColor(editingBlock.color);
         setDefaultDuration(editingBlock.defaultDuration);
         setIcon(editingBlock.icon || 'code');
@@ -96,6 +100,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
         setTitle('');
         setDescription('');
         setPriority('high');
+        setCategoryId('');
         setColor('#EF4444');
         setDefaultDuration(60);
         setIcon('code');
@@ -154,6 +159,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
         title: title.trim(),
         description: description.trim(),
         priority,
+        categoryId: categoryId || undefined,
         color,
         defaultDuration,
         icon,
@@ -163,6 +169,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
         title: title.trim(),
         description: description.trim(),
         priority,
+        categoryId: categoryId || undefined,
         color,
         defaultDuration,
         icon,
@@ -336,11 +343,33 @@ export const BlockModal: React.FC<BlockModalProps> = ({
           {/* STEP 2: Category & Color Accent */}
           {currentStep === 2 && (
             <div className="space-y-5 animate-fade-in flex-1">
+              {/* Personal Time Budget Category Dropdown */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
+                  <span>Time Category (Life Domain)</span>
+                  <span className="text-[10px] text-indigo-400 font-normal lowercase">Personal Time Budget Allocation</span>
+                </label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                >
+                  <option value="">-- Select Time Category (e.g. Academics, Fitness) --</option>
+                  {userBudget.categories
+                    .filter((c) => c.isActive)
+                    .map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
               {/* Category / Priority */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Category / Priority Level
+                    Priority Level
                   </label>
                   {!isAddingCategory && (
                     <button

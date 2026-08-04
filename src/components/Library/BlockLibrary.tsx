@@ -96,6 +96,7 @@ export const BlockLibrary: React.FC = () => {
         description: block.description,
         color: block.color,
         priority: block.priority,
+        categoryId: block.categoryId,
         icon: block.icon,
         duration: block.defaultDuration,
       })

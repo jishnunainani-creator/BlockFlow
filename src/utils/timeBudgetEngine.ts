@@ -7,10 +7,13 @@ import {
   TimeCategory,
 } from '../types/timeBudget';
 
+export type DateScopeFilter = 'today' | 'week' | 'month';
+
 export function calculateTimeBudgetSummary(
   userBudget: UserTimeBudget,
   scheduledBlocks: ScheduledBlock[],
-  executionSessions: ExecutionSession[] = []
+  executionSessions: ExecutionSession[] = [],
+  scope: DateScopeFilter = 'week'
 ): TimeBudgetSummary {
   if (!userBudget.isConfigured) {
     return {
@@ -32,18 +35,25 @@ export function calculateTimeBudgetSummary(
     .filter((c) => c.isActive)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
+  // Filter scheduled blocks by date scope
+  const todayDayIndex = (new Date().getDay() + 6) % 7; // 0 = Mon, ..., 6 = Sun
+
+  let filteredBlocks = scheduledBlocks;
+  if (scope === 'today') {
+    filteredBlocks = scheduledBlocks.filter((b) => b.dayOfWeek === todayDayIndex);
+  }
+
   // Group scheduled blocks by category
   const scheduledMinsByCat: Record<string, number> = {};
-  let totalScheduledWeeklyMinutes = 0;
+  let totalScheduledScopeMinutes = 0;
   let uncategorizedCount = 0;
 
-  scheduledBlocks.forEach((block) => {
-    totalScheduledWeeklyMinutes += block.duration;
+  filteredBlocks.forEach((block) => {
+    totalScheduledScopeMinutes += block.duration;
 
-    // Match by block.categoryId or match by title/priority fallback
     let catId = (block as any).categoryId;
     if (!catId) {
-      const normTitle = block.title.toLowerCase();
+      const normTitle = block.title.toLowerCase().trim();
       const matchedCat = activeCategories.find(
         (c) => normTitle.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(normTitle)
       );
@@ -61,14 +71,14 @@ export function calculateTimeBudgetSummary(
 
   // Group actual execution sessions by category
   const actualMinsByCat: Record<string, number> = {};
-  let totalActualWeeklyMinutes = 0;
+  let totalActualScopeMinutes = 0;
 
   executionSessions.forEach((session) => {
-    totalActualWeeklyMinutes += session.actualDuration;
+    totalActualScopeMinutes += session.actualDuration;
 
     let catId = (session as any).categoryId;
     if (!catId) {
-      const normTitle = session.actualTitle.toLowerCase();
+      const normTitle = session.actualTitle.toLowerCase().trim();
       const matchedCat = activeCategories.find(
         (c) => normTitle.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(normTitle)
       );
@@ -107,14 +117,16 @@ export function calculateTimeBudgetSummary(
     totalTargetDailyMinutes += targetDailyMinutes;
     totalTargetWeeklyMinutes += targetWeeklyMinutes;
 
-    const scheduledWeeklyMinutes = scheduledMinsByCat[cat.id] || 0;
-    const scheduledDailyMinutes = Math.round(scheduledWeeklyMinutes / 7);
+    // Scope target minutes
+    let targetScopeMinutes = targetWeeklyMinutes;
+    if (scope === 'today') targetScopeMinutes = targetDailyMinutes;
+    else if (scope === 'month') targetScopeMinutes = Math.round(targetWeeklyMinutes * 4.33);
 
-    const actualWeeklyMinutes = actualMinsByCat[cat.id] || 0;
-    const actualDailyMinutes = Math.round(actualWeeklyMinutes / 7);
+    const scheduledScopeMinutes = scheduledMinsByCat[cat.id] || 0;
+    const actualScopeMinutes = actualMinsByCat[cat.id] || 0;
 
-    const scheduledDiffMinutes = scheduledDailyMinutes - targetDailyMinutes;
-    const actualDiffMinutes = actualDailyMinutes - targetDailyMinutes;
+    const scheduledDiffMinutes = scheduledScopeMinutes - targetScopeMinutes;
+    const actualDiffMinutes = actualScopeMinutes - targetScopeMinutes;
 
     let scheduledStatus: 'on_track' | 'over_budget' | 'under_target' = 'on_track';
     if (scheduledDiffMinutes > 30) scheduledStatus = 'over_budget';
@@ -129,10 +141,10 @@ export function calculateTimeBudgetSummary(
       budget,
       targetDailyMinutes,
       targetWeeklyMinutes,
-      scheduledDailyMinutes,
-      scheduledWeeklyMinutes,
-      actualDailyMinutes,
-      actualWeeklyMinutes,
+      scheduledDailyMinutes: scope === 'today' ? scheduledScopeMinutes : Math.round(scheduledScopeMinutes / 7),
+      scheduledWeeklyMinutes: scope === 'week' ? scheduledScopeMinutes : scheduledScopeMinutes * 7,
+      actualDailyMinutes: scope === 'today' ? actualScopeMinutes : Math.round(actualScopeMinutes / 7),
+      actualWeeklyMinutes: scope === 'week' ? actualScopeMinutes : actualScopeMinutes * 7,
       scheduledDiffMinutes,
       actualDiffMinutes,
       scheduledStatus,
@@ -142,8 +154,8 @@ export function calculateTimeBudgetSummary(
 
   const unallocatedDailyMinutes = Math.max(0, 1440 - totalTargetDailyMinutes);
   const unallocatedWeeklyMinutes = Math.max(0, 10080 - totalTargetWeeklyMinutes);
-  const totalScheduledDailyMinutes = Math.round(totalScheduledWeeklyMinutes / 7);
-  const totalActualDailyMinutes = Math.round(totalActualWeeklyMinutes / 7);
+  const totalScheduledDailyMinutes = Math.round(totalScheduledScopeMinutes / 7);
+  const totalActualDailyMinutes = Math.round(totalActualScopeMinutes / 7);
 
   return {
     isConfigured: true,
@@ -151,10 +163,10 @@ export function calculateTimeBudgetSummary(
     totalTargetWeeklyMinutes,
     unallocatedDailyMinutes,
     unallocatedWeeklyMinutes,
-    totalScheduledDailyMinutes,
-    totalScheduledWeeklyMinutes,
-    totalActualDailyMinutes,
-    totalActualWeeklyMinutes,
+    totalScheduledDailyMinutes: scope === 'today' ? totalScheduledScopeMinutes : totalScheduledDailyMinutes,
+    totalScheduledWeeklyMinutes: scope === 'week' ? totalScheduledScopeMinutes : totalScheduledScopeMinutes * 7,
+    totalActualDailyMinutes: scope === 'today' ? totalActualScopeMinutes : totalActualDailyMinutes,
+    totalActualWeeklyMinutes: scope === 'week' ? totalActualScopeMinutes : totalActualScopeMinutes * 7,
     comparisons,
     uncategorizedBlockCount: uncategorizedCount,
   };

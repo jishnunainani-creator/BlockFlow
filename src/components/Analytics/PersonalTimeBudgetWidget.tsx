@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { useTimeBudget } from '../../context/TimeBudgetContext';
 import { TimeBudgetConfigureModal } from './TimeBudgetConfigureModal';
 import { BulkCategorizeModal } from './BulkCategorizeModal';
-import { Clock, Sliders, AlertTriangle, CheckCircle2, Tag, TrendingUp, Sparkles, BarChart2 } from 'lucide-react';
+import { DateScopeFilter } from '../../utils/timeBudgetEngine';
+import { Clock, Sliders, AlertTriangle, CheckCircle2, Tag, TrendingUp, Sparkles, BarChart2, Calendar } from 'lucide-react';
 import { formatDuration } from '../../utils/timeUtils';
 
 export default function PersonalTimeBudgetWidget() {
   const {
     summary,
     userBudget,
+    dateScope,
+    setDateScope,
     isConfigureModalOpen,
     openConfigureModal,
     closeConfigureModal,
@@ -57,6 +60,17 @@ export default function PersonalTimeBudgetWidget() {
   const totalTargetDailyHours = Number((summary.totalTargetDailyMinutes / 60).toFixed(1));
   const unallocatedDailyHours = Number((summary.unallocatedDailyMinutes / 60).toFixed(1));
 
+  // Deterministic insights (Requirement 28)
+  const insights: string[] = [];
+  summary.comparisons.forEach((item) => {
+    const diffH = Math.abs(Number((item.scheduledDiffMinutes / 60).toFixed(1)));
+    if (item.scheduledDiffMinutes < -30) {
+      insights.push(`${item.category.name} is ${diffH}h below your target.`);
+    } else if (item.scheduledDiffMinutes > 30) {
+      insights.push(`You scheduled ${diffH}h more ${item.category.name} than your target.`);
+    }
+  });
+
   return (
     <>
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-5 select-none shadow-xl">
@@ -70,7 +84,7 @@ export default function PersonalTimeBudgetWidget() {
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 Personal Time Budget
                 <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
-                  24H ALLOCATION
+                  AUTOMATIC ALLOCATION
                 </span>
               </h2>
               <p className="text-xs text-indigo-400 font-semibold tracking-wide mt-0.5">
@@ -79,8 +93,43 @@ export default function PersonalTimeBudgetWidget() {
             </div>
           </div>
 
-          {/* Action Buttons & View Toggles */}
+          {/* Controls & Scope Filter (Requirement 12) */}
           <div className="flex items-center gap-2 self-start lg:self-auto flex-wrap">
+            {/* Scope Filter (Today | This Week | This Month) */}
+            <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1 text-[11px] font-semibold">
+              <button
+                onClick={() => setDateScope('today')}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  dateScope === 'today'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setDateScope('week')}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  dateScope === 'week'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                This Week
+              </button>
+              <button
+                onClick={() => setDateScope('month')}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  dateScope === 'month'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                This Month
+              </button>
+            </div>
+
+            {/* View Mode Toggle */}
             <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1 text-[11px] font-semibold">
               <button
                 onClick={() => setViewMode('scheduled')}
@@ -90,7 +139,7 @@ export default function PersonalTimeBudgetWidget() {
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Budget vs Scheduled
+                Planned
               </button>
               <button
                 onClick={() => setViewMode('reality')}
@@ -100,7 +149,7 @@ export default function PersonalTimeBudgetWidget() {
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                Budget vs Reality
+                Actual
               </button>
             </div>
 
@@ -122,7 +171,7 @@ export default function PersonalTimeBudgetWidget() {
               className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all"
             >
               <Sliders className="w-3.5 h-3.5" />
-              Configure Budget
+              Configure Targets
             </button>
           </div>
         </div>
@@ -161,12 +210,30 @@ export default function PersonalTimeBudgetWidget() {
           </div>
         </div>
 
-        {/* Category Comparison Grid Cards */}
+        {/* Mathematical Insights Banner */}
+        {insights.length > 0 && (
+          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-3 flex flex-wrap gap-2 text-xs font-medium text-indigo-300">
+            <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5 flex-1">
+              {insights.slice(0, 3).map((ins, idx) => (
+                <p key={idx}>• {ins}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Category Allocation Cards with Progress Bars */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
           {summary.comparisons.map((item) => {
-            const targetHours = (item.targetDailyMinutes / 60).toFixed(1);
-            const scheduledHours = (item.scheduledDailyMinutes / 60).toFixed(1);
-            const actualHours = item.actualDailyMinutes ? (item.actualDailyMinutes / 60).toFixed(1) : undefined;
+            const targetMins = dateScope === 'today' ? item.targetDailyMinutes : item.targetWeeklyMinutes;
+            const scheduledMins = dateScope === 'today' ? item.scheduledDailyMinutes : item.scheduledWeeklyMinutes;
+            const actualMins = dateScope === 'today' ? item.actualDailyMinutes : item.actualWeeklyMinutes;
+
+            const targetHours = (targetMins / 60).toFixed(1);
+            const scheduledHours = (scheduledMins / 60).toFixed(1);
+            const actualHours = actualMins !== undefined ? (actualMins / 60).toFixed(1) : undefined;
+
+            const pctScheduled = targetMins > 0 ? Math.min(100, Math.round((scheduledMins / targetMins) * 100)) : 0;
 
             const isScheduledOver = item.scheduledDiffMinutes > 30;
             const isScheduledUnder = item.scheduledDiffMinutes < -30;
@@ -203,6 +270,23 @@ export default function PersonalTimeBudgetWidget() {
                   )}
                 </div>
 
+                {/* Progress Bar */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                    <span>{scheduledHours}h scheduled</span>
+                    <span>{pctScheduled}% of target ({targetHours}h)</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800/80">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${pctScheduled}%`,
+                        backgroundColor: item.category.color,
+                      }}
+                    />
+                  </div>
+                </div>
+
                 {/* Metrics Breakdown (Target vs Scheduled vs Actual) */}
                 <div className="grid grid-cols-3 gap-2 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/60 text-center">
                   <div>
@@ -210,7 +294,7 @@ export default function PersonalTimeBudgetWidget() {
                     <strong className="text-xs font-bold text-white font-mono">{targetHours}h</strong>
                   </div>
                   <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Planned</span>
+                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Scheduled</span>
                     <strong className="text-xs font-bold text-indigo-300 font-mono">{scheduledHours}h</strong>
                   </div>
                   <div>
