@@ -7,6 +7,7 @@ import {
   PRIORITY_CONFIG,
 } from '../../types/timetable';
 import { useTimetable } from '../../context/TimetableContext';
+import { useSession } from '../../context/SessionContext';
 import { formatDuration, minutesToTimeStr } from '../../utils/timeUtils';
 import { AVAILABLE_ICONS } from '../Library/BlockModal';
 import { StatusPickerPopover } from '../Completion/StatusPickerPopover';
@@ -20,6 +21,8 @@ import {
   Edit3,
   Trash2,
   Check,
+  CheckCircle2,
+  ArrowRightLeft,
   Sparkles,
   AlertTriangle,
   ChevronDown,
@@ -54,6 +57,8 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
     libraryBlocks,
     conflicts,
   } = useTimetable();
+
+  const { openSessionLogModal, openReplaceModal } = useSession();
 
   const [mounted,          setMounted]          = useState(false);
   const [isEditingNotes,   setIsEditingNotes]   = useState(false);
@@ -268,6 +273,35 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 <span>{statusCfg.badge}</span>
                 <span>{statusCfg.label}</span>
               </button>
+
+              {/* Log Session Reality & Replace Activity Actions */}
+              <div className="w-full grid grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openSessionLogModal(block);
+                    onClose();
+                  }}
+                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-[11px] font-bold bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30 transition-all shadow-sm"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Log Reality
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openReplaceModal(block);
+                    onClose();
+                  }}
+                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-[11px] font-bold bg-pink-500/10 text-pink-300 hover:bg-pink-500/20 border border-pink-500/20 transition-all shadow-sm"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  Replace
+                </button>
+              </div>
 
               {/* Save to Activity Library (rendered only when block is not linked) */}
               {(!block.blockId || !libraryBlocks.some((l) => l.id === block.blockId)) && (

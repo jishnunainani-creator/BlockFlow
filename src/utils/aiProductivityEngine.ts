@@ -413,4 +413,125 @@ export function getProductivityDNA(params?: {
   };
 }
 
+import { ExecutionSession, DeviationRecord } from '../types/sessionLog';
+
+export function processAIExecutionAssistantQuery(
+  query: string,
+  sessions: ExecutionSession[],
+  deviations: DeviationRecord[],
+  scheduledBlocks: ScheduledBlock[]
+): { response: string; quickLogCandidate?: Partial<ExecutionSession>; replacementCandidate?: any } {
+  const norm = query.toLowerCase().trim();
+
+  // 1. AI Quick Logging Intent
+  // e.g. "I finished self study. I studied graphs, BFS and DFS and solved 3 LeetCode problems."
+  if (norm.includes('finished') || norm.includes('completed') || norm.includes('i studied') || norm.includes('i worked on')) {
+    const studyBlock = scheduledBlocks.find(
+      (b) => b.title.toLowerCase().includes('study') || b.title.toLowerCase().includes('dsa') || b.title.toLowerCase().includes('code')
+    ) || scheduledBlocks[0];
+
+    let topic = 'General Study';
+    let subtopics: string[] = [];
+    if (norm.includes('graphs')) {
+      topic = 'Graphs';
+      subtopics = ['BFS', 'DFS'];
+    } else if (norm.includes('dynamic programming') || norm.includes('dp')) {
+      topic = 'Dynamic Programming';
+      subtopics = ['Knapsack', 'Memoization'];
+    }
+
+    return {
+      response: `Got it! I found your recent scheduled block "${studyBlock?.title || 'Self Study'}". I have prepared a Session Log:\n• Topic: ${topic}\n• Subtopics: ${subtopics.join(', ') || 'None'}\n• Result: Completed\nWould you like me to save this Session Log?`,
+      quickLogCandidate: {
+        scheduledBlockId: studyBlock?.id || 'block-1',
+        plannedTitle: studyBlock?.title || 'Self Study',
+        actualTitle: studyBlock?.title || 'Self Study',
+        topic,
+        subtopics,
+        notes: query,
+        status: 'completed',
+        actualStartMinutes: studyBlock?.startMinutes || 960,
+        actualDuration: studyBlock?.duration || 60,
+      },
+    };
+  }
+
+  // 2. Replacement Intent
+  // e.g. "I didn't do DSA today, I went to the gym instead."
+  if (norm.includes("didn't do") || norm.includes('went to') || norm.includes('instead') || norm.includes('replaced')) {
+    const dsaBlock = scheduledBlocks.find((b) => b.title.toLowerCase().includes('dsa')) || scheduledBlocks[0];
+
+    return {
+      response: `I'll record your change of plan for "${dsaBlock?.title || 'DSA Practice'}":\n• Planned: ${dsaBlock?.title || 'DSA Practice'}\n• Actual: Fitness / Gym\n• Deviation Reason: Health / fitness\nWhat should happen to ${dsaBlock?.title || 'DSA Practice'}?`,
+      replacementCandidate: {
+        block: dsaBlock,
+        actualTitle: 'Fitness / Gym',
+        reason: 'Health / fitness',
+      },
+    };
+  }
+
+  // 3. Query Execution History (Part 17)
+  if (norm.includes('what did i study') || norm.includes('topics')) {
+    if (sessions.length === 0) {
+      return { response: 'You haven\'t logged any study sessions yet. Complete a study activity and log what you worked on to build your learning history.' };
+    }
+
+    const topicsLogged = sessions
+      .filter((s) => s.topic)
+      .map((s) => `• ${s.actualTitle}: ${s.topic} (${s.subtopics?.join(', ') || ''})`)
+      .slice(0, 5);
+
+    if (topicsLogged.length === 0) {
+      return { response: 'No topic-level details logged in your study sessions yet.' };
+    }
+
+    return { response: `Here is what you logged recently:\n${topicsLogged.join('\n')}` };
+  }
+
+  if (norm.includes('hours') && norm.includes('study')) {
+    const totalMinutes = sessions
+      .filter((s) => s.topic || s.actualTitle.toLowerCase().includes('study') || s.actualTitle.toLowerCase().includes('dsa'))
+      .reduce((sum, s) => sum + s.actualDuration, 0);
+
+    const hours = (totalMinutes / 60).toFixed(1);
+    return { response: `Based on your actual logged sessions, you have completed **${hours} hours** of study time.` };
+  }
+
+  if (norm.includes('cancel') || norm.includes('miss') || norm.includes('why')) {
+    if (deviations.length === 0) {
+      return { response: 'You haven\'t recorded any schedule deviations or missed activities yet.' };
+    }
+
+    const reasonsMap: Record<string, number> = {};
+    deviations.forEach((d) => {
+      reasonsMap[d.reason] = (reasonsMap[d.reason] || 0) + 1;
+    });
+
+    const topReason = Object.entries(reasonsMap).sort((a, b) => b[1] - a[1])[0];
+    return {
+      response: `Based on your real deviation records, your most common reason for missing or changing activities is **"${topReason[0]}"** (${topReason[1]} times).`,
+    };
+  }
+
+  if (norm.includes('follow') || norm.includes('adherence') || norm.includes('schedule')) {
+    const total = sessions.length;
+    if (total === 0) {
+      return { response: 'Not enough execution history yet to calculate schedule adherence.' };
+    }
+
+    const completedAsPlanned = sessions.filter((s) => s.status === 'completed' && s.actualTitle === s.plannedTitle).length;
+    const adherence = Math.round((completedAsPlanned / total) * 100);
+
+    return {
+      response: `Your overall Plan Adherence score is **${adherence}%** (${completedAsPlanned} of ${total} sessions executed exactly as planned).`,
+    };
+  }
+
+  return {
+    response: `I am monitoring your execution history. You can ask me what you studied, your plan adherence, or log your completed sessions!`,
+  };
+}
+
+
 

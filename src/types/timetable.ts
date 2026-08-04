@@ -6,9 +6,14 @@ export type ThemeMode = 'dark' | 'light' | 'system';
 
 export type CompletionStatus =
   | 'not_started'
+  | 'scheduled'
   | 'in_progress'
   | 'completed'
+  | 'partially_completed'
   | 'skipped'
+  | 'cancelled'
+  | 'replaced'
+  | 'rescheduled'
   | 'missed'
   | 'took_longer'
   | 'faster';
@@ -22,9 +27,14 @@ export interface STATUS_CONFIG_ITEM {
 
 export const COMPLETION_STATUS_CONFIG: Record<CompletionStatus, STATUS_CONFIG_ITEM> = {
   not_started: { label: 'Not Started', badge: '⏳', color: '#94A3B8', bgClass: 'bg-slate-500/20 text-slate-300' },
+  scheduled: { label: 'Scheduled', badge: '📅', color: '#3B82F6', bgClass: 'bg-blue-500/20 text-blue-300' },
   in_progress: { label: 'In Progress', badge: '▶️', color: '#3B82F6', bgClass: 'bg-blue-500/20 text-blue-300' },
   completed: { label: 'Completed', badge: '✅', color: '#10B981', bgClass: 'bg-emerald-500/20 text-emerald-300' },
-  skipped: { label: 'Skipped', badge: '⏭️', color: '#64748B', bgClass: 'bg-slate-700/30 text-slate-400' },
+  partially_completed: { label: 'Partially Completed', badge: '◐', color: '#F59E0B', bgClass: 'bg-amber-500/20 text-amber-300' },
+  skipped: { label: 'Skipped', badge: '×', color: '#64748B', bgClass: 'bg-slate-700/30 text-slate-400' },
+  cancelled: { label: 'Cancelled', badge: '🚫', color: '#EF4444', bgClass: 'bg-rose-500/20 text-rose-300' },
+  replaced: { label: 'Replaced', badge: '⇄', color: '#EC4899', bgClass: 'bg-pink-500/20 text-pink-300' },
+  rescheduled: { label: 'Rescheduled', badge: '↻', color: '#8B5CF6', bgClass: 'bg-purple-500/20 text-purple-300' },
   missed: { label: 'Missed', badge: '❌', color: '#EF4444', bgClass: 'bg-rose-500/20 text-rose-300' },
   took_longer: { label: 'Took Longer', badge: '⏱️', color: '#F59E0B', bgClass: 'bg-amber-500/20 text-amber-300' },
   faster: { label: 'Finished Faster', badge: '⚡', color: '#8B5CF6', bgClass: 'bg-purple-500/20 text-purple-300' },

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { TimetableProvider, useTimetable } from './context/TimetableContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ExecutionProvider } from './context/ExecutionContext';
+import { SessionProvider } from './context/SessionContext';
+import { SessionModalsContainer } from './components/Execution/SessionModalsContainer';
 import { DemoProvider } from './context/DemoContext';
 import { OnboardingModal } from './components/Onboarding/OnboardingModal';
 import { GuidedTour } from './components/Onboarding/GuidedTour';
@@ -238,6 +240,9 @@ export function AppContent() {
       {/* Global Toast Notifications */}
       <ToastContainer />
 
+      {/* Session Modals & End-of-Block Nudge Container */}
+      <SessionModalsContainer />
+
       {/* Interactive Onboarding Welcome Modal */}
       <OnboardingModal />
 
@@ -252,9 +257,11 @@ export default function App() {
     <ThemeProvider>
       <TimetableProvider>
         <ExecutionProvider>
-          <DemoProvider>
-            <AppContent />
-          </DemoProvider>
+          <SessionProvider>
+            <DemoProvider>
+              <AppContent />
+            </DemoProvider>
+          </SessionProvider>
         </ExecutionProvider>
       </TimetableProvider>
     </ThemeProvider>

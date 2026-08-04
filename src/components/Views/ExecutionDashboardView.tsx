@@ -9,7 +9,9 @@ import { EndOfDayFlowModal } from '../Execution/EndOfDayFlowModal';
 import MilestoneManager from '../Execution/MilestoneManager';
 import ReportsTabView from '../Execution/ReportsTabView';
 import ReflectionsTabView from '../Execution/ReflectionsTabView';
-import { PlanVsRealityTab } from '../ExecutionOS/PlanVsRealityTab';
+import { PlanVsRealityTab } from '../Execution/PlanVsRealityTab';
+import { SessionJournalTab } from '../Execution/SessionJournalTab';
+import { StudyHistoryTab } from '../Execution/StudyHistoryTab';
 import {
   Brain,
   Moon,
@@ -23,9 +25,12 @@ import {
   Lightbulb,
   FileText,
   LayoutDashboard,
+  Target,
+  BookOpen,
+  GraduationCap,
 } from 'lucide-react';
 
-type EIActiveTab = 'overview' | 'reports' | 'milestones' | 'reflections' | 'plan_vs_reality';
+type EIActiveTab = 'overview' | 'reports' | 'milestones' | 'reflections' | 'plan_vs_reality' | 'session_journal' | 'study_history';
 
 export const ExecutionDashboardView: React.FC = () => {
   const {
@@ -137,7 +142,29 @@ export const ExecutionDashboardView: React.FC = () => {
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
               }`}
             >
-              <BarChart3 size={14} /> Plan vs Reality
+              <Target size={14} /> Plan vs Reality
+            </button>
+
+            <button
+              onClick={() => setActiveTab('session_journal')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'session_journal'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <BookOpen size={14} /> Session Journal
+            </button>
+
+            <button
+              onClick={() => setActiveTab('study_history')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'study_history'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              }`}
+            >
+              <GraduationCap size={14} /> Study History
             </button>
           </div>
 
@@ -319,6 +346,12 @@ export const ExecutionDashboardView: React.FC = () => {
 
         {/* ── TAB 5: PLAN VS REALITY ── */}
         {activeTab === 'plan_vs_reality' && <PlanVsRealityTab />}
+
+        {/* ── TAB 6: SESSION JOURNAL ── */}
+        {activeTab === 'session_journal' && <SessionJournalTab />}
+
+        {/* ── TAB 7: STUDY HISTORY ── */}
+        {activeTab === 'study_history' && <StudyHistoryTab />}
       </div>
 
       {/* End of Day Modal */}
