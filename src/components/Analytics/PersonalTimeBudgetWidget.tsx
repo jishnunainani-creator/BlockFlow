@@ -1,75 +1,51 @@
 import React, { useState } from 'react';
 import { useTimeBudget } from '../../context/TimeBudgetContext';
-import { TimeBudgetConfigureModal } from './TimeBudgetConfigureModal';
+import { AddCategoryModal } from './AddCategoryModal';
 import { BulkCategorizeModal } from './BulkCategorizeModal';
-import { DateScopeFilter } from '../../utils/timeBudgetEngine';
-import { Clock, Sliders, AlertTriangle, CheckCircle2, Tag, TrendingUp, Sparkles, BarChart2, Calendar } from 'lucide-react';
+import { Clock, Plus, Tag, Sparkles, ChevronDown, ChevronUp, Layers, PieChart, BarChart2 } from 'lucide-react';
 import { formatDuration } from '../../utils/timeUtils';
 
 export default function PersonalTimeBudgetWidget() {
   const {
     summary,
-    userBudget,
     dateScope,
     setDateScope,
-    isConfigureModalOpen,
-    openConfigureModal,
-    closeConfigureModal,
+    viewMode,
+    setViewMode,
+    isAddCategoryOpen,
+    openAddCategoryModal,
+    closeAddCategoryModal,
     isBulkCategorizeOpen,
     openBulkCategorizeModal,
     closeBulkCategorizeModal,
   } = useTimeBudget();
 
-  const [viewMode, setViewMode] = useState<'scheduled' | 'reality'>('scheduled');
+  // Track expanded category IDs for Activity Breakdown
+  const [expandedCatIds, setExpandedCatIds] = useState<Record<string, boolean>>({});
 
-  if (!summary.isConfigured) {
-    return (
-      <>
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 select-none text-center space-y-4 shadow-xl">
-          <div className="w-14 h-14 rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
-            <Clock className="w-7 h-7" />
-          </div>
+  const toggleCategoryExpand = (catId: string) => {
+    setExpandedCatIds((prev) => ({ ...prev, [catId]: !prev[catId] }));
+  };
 
-          <div className="max-w-md mx-auto space-y-1.5">
-            <h2 className="text-xl font-black text-white tracking-tight">Personal Time Budget</h2>
-            <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
-              Decide where your time should go.
-            </p>
-            <p className="text-xs text-slate-400 leading-relaxed pt-1">
-              You haven't created a time budget yet. Decide how you'd ideally like to distribute your time across study, work, health, personal life, or your own custom categories.
-            </p>
-          </div>
+  const totalScheduledHoursStr = formatDuration(summary.totalScheduledMinutes);
+  const totalActualHoursStr = formatDuration(summary.totalActualMinutes);
 
-          <div className="pt-2 flex justify-center">
-            <button
-              onClick={openConfigureModal}
-              className="px-6 py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:brightness-110 text-white font-bold text-xs shadow-lg shadow-indigo-500/20 flex items-center gap-2 transition-all"
-            >
-              <Sliders className="w-4 h-4" />
-              Configure Time Budget
-            </button>
-          </div>
-        </div>
-
-        <TimeBudgetConfigureModal isOpen={isConfigureModalOpen} onClose={closeConfigureModal} />
-      </>
-    );
+  // Dynamic deterministic insights (Requirement 27)
+  const insights: string[] = [];
+  if (summary.largestCategoryName && summary.largestCategoryMinutes) {
+    const pct = summary.totalScheduledMinutes > 0
+      ? Math.round((summary.largestCategoryMinutes / summary.totalScheduledMinutes) * 100)
+      : 0;
+    insights.push(`${summary.largestCategoryName} accounts for ${pct}% of your scheduled time ${dateScope === 'today' ? 'today' : dateScope === 'month' ? 'this month' : 'this week'}.`);
   }
 
-  // Configured State calculations
-  const totalTargetDailyHours = Number((summary.totalTargetDailyMinutes / 60).toFixed(1));
-  const unallocatedDailyHours = Number((summary.unallocatedDailyMinutes / 60).toFixed(1));
+  if (summary.mostScheduledActivityTitle && summary.mostScheduledActivityMinutes) {
+    insights.push(`Your most scheduled activity is "${summary.mostScheduledActivityTitle}" at ${formatDuration(summary.mostScheduledActivityMinutes)}.`);
+  }
 
-  // Deterministic insights (Requirement 28)
-  const insights: string[] = [];
-  summary.comparisons.forEach((item) => {
-    const diffH = Math.abs(Number((item.scheduledDiffMinutes / 60).toFixed(1)));
-    if (item.scheduledDiffMinutes < -30) {
-      insights.push(`${item.category.name} is ${diffH}h below your target.`);
-    } else if (item.scheduledDiffMinutes > 30) {
-      insights.push(`You scheduled ${diffH}h more ${item.category.name} than your target.`);
-    }
-  });
+  if (summary.uncategorizedActivityCount > 0) {
+    insights.push(`${summary.uncategorizedActivityCount} activities still need categories.`);
+  }
 
   return (
     <>
@@ -78,17 +54,14 @@ export default function PersonalTimeBudgetWidget() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-              <Clock className="w-5 h-5" />
+              <PieChart className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                Personal Time Budget
-                <span className="px-2 py-0.5 rounded-md text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase">
-                  AUTOMATIC ALLOCATION
-                </span>
+                TIME ALLOCATION
               </h2>
               <p className="text-xs text-indigo-400 font-semibold tracking-wide mt-0.5">
-                Decide where your time should go.
+                See where your scheduled time is going.
               </p>
             </div>
           </div>
@@ -129,12 +102,12 @@ export default function PersonalTimeBudgetWidget() {
               </button>
             </div>
 
-            {/* View Mode Toggle */}
+            {/* Mode Toggle (Planned vs Actual) */}
             <div className="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1 text-[11px] font-semibold">
               <button
-                onClick={() => setViewMode('scheduled')}
+                onClick={() => setViewMode('planned')}
                 className={`px-3 py-1 rounded-lg transition-all ${
-                  viewMode === 'scheduled'
+                  viewMode === 'planned'
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -142,9 +115,9 @@ export default function PersonalTimeBudgetWidget() {
                 Planned
               </button>
               <button
-                onClick={() => setViewMode('reality')}
+                onClick={() => setViewMode('actual')}
                 className={`px-3 py-1 rounded-lg transition-all ${
-                  viewMode === 'reality'
+                  viewMode === 'actual'
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
@@ -155,162 +128,243 @@ export default function PersonalTimeBudgetWidget() {
 
             <button
               onClick={openBulkCategorizeModal}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-800 bg-slate-950 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-950 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
             >
               <Tag className="w-3.5 h-3.5 text-indigo-400" />
               Categorize Activities
-              {summary.uncategorizedBlockCount > 0 && (
+              {summary.uncategorizedActivityCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/20 text-amber-300">
-                  {summary.uncategorizedBlockCount}
+                  {summary.uncategorizedActivityCount}
                 </span>
               )}
             </button>
 
             <button
-              onClick={openConfigureModal}
-              className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all"
+              onClick={openAddCategoryModal}
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md flex items-center gap-1.5 transition-all"
             >
-              <Sliders className="w-3.5 h-3.5" />
-              Configure Targets
+              <Plus className="w-3.5 h-3.5" />
+              Add Category
             </button>
           </div>
         </div>
 
-        {/* 24H Proportional Allocation Bar */}
+        {/* Top Summary Stat Cards (Requirement 16) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-indigo-400" /> Total Scheduled
+            </span>
+            <div className="text-xl font-black text-white font-mono">{totalScheduledHoursStr}</div>
+          </div>
+
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
+              <PieChart className="w-3 h-3 text-blue-400" /> Largest Category
+            </span>
+            <div className="text-sm font-bold text-white truncate">
+              {summary.largestCategoryName || 'None'}
+            </div>
+            {summary.largestCategoryMinutes ? (
+              <span className="text-[10px] text-slate-400 font-mono">
+                {formatDuration(summary.largestCategoryMinutes)}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
+              <BarChart2 className="w-3 h-3 text-emerald-400" /> Top Activity
+            </span>
+            <div className="text-sm font-bold text-white truncate">
+              {summary.mostScheduledActivityTitle || 'None'}
+            </div>
+            {summary.mostScheduledActivityMinutes ? (
+              <span className="text-[10px] text-slate-400 font-mono">
+                {formatDuration(summary.mostScheduledActivityMinutes)}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
+              <Tag className="w-3 h-3 text-amber-400" /> Uncategorized
+            </span>
+            <div className="text-xl font-black text-white font-mono">
+              {formatDuration(summary.uncategorizedMinutes)}
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Distribution Bar (Requirement 15) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold">
-            <span className="text-slate-400">Target Allocation ({totalTargetDailyHours}h / 24h)</span>
-            {unallocatedDailyHours > 0 ? (
-              <span className="text-slate-500 font-mono">{unallocatedDailyHours}h UNALLOCATED</span>
-            ) : (
-              <span className="text-emerald-400 font-mono">100% Allocated</span>
-            )}
+            <span className="text-slate-400">Scheduled Time Distribution</span>
+            <span className="text-slate-500 font-mono">
+              {dateScope === 'today' ? 'Today' : dateScope === 'month' ? 'This Month' : 'This Week'}
+            </span>
           </div>
 
           <div className="flex h-4 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 p-0.5 gap-0.5">
-            {summary.comparisons.map((item) => {
-              const pct = (item.targetDailyMinutes / 1440) * 100;
-              if (pct <= 0) return null;
+            {summary.allocations.map((item) => {
+              if (item.scheduledMinutes <= 0) return null;
+              const pct = item.percentageOfTotalScheduled;
               return (
                 <div
                   key={item.category.id}
-                  style={{ width: `${pct}%`, backgroundColor: item.category.color }}
+                  style={{ width: `${Math.max(2, pct)}%`, backgroundColor: item.category.color }}
                   className="h-full rounded-md transition-all hover:opacity-80 relative group"
-                  title={`${item.category.name}: ${(item.targetDailyMinutes / 60).toFixed(1)}h / day target`}
+                  title={`${item.category.name}: ${formatDuration(item.scheduledMinutes)} (${pct}%)`}
                 />
               );
             })}
-            {unallocatedDailyHours > 0 && (
+
+            {summary.uncategorizedMinutes > 0 && summary.totalScheduledMinutes > 0 && (
               <div
-                style={{ width: `${(summary.unallocatedDailyMinutes / 1440) * 100}%` }}
-                className="h-full bg-slate-800/80 rounded-md transition-all relative"
-                title={`UNALLOCATED: ${unallocatedDailyHours}h / day (Time not assigned to a category)`}
+                style={{
+                  width: `${Math.max(
+                    2,
+                    (summary.uncategorizedMinutes / summary.totalScheduledMinutes) * 100
+                  )}%`,
+                }}
+                className="h-full bg-slate-700/80 rounded-md transition-all relative"
+                title={`Uncategorized: ${formatDuration(summary.uncategorizedMinutes)}`}
               />
             )}
           </div>
         </div>
 
-        {/* Mathematical Insights Banner */}
+        {/* Mathematical Insights Banner (Requirement 27) */}
         {insights.length > 0 && (
-          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-3 flex flex-wrap gap-2 text-xs font-medium text-indigo-300">
+          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-3 flex items-start gap-2.5 text-xs text-indigo-300">
             <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
             <div className="space-y-0.5 flex-1">
-              {insights.slice(0, 3).map((ins, idx) => (
+              {insights.map((ins, idx) => (
                 <p key={idx}>• {ins}</p>
               ))}
             </div>
           </div>
         )}
 
-        {/* Category Allocation Cards with Progress Bars */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
-          {summary.comparisons.map((item) => {
-            const targetMins = dateScope === 'today' ? item.targetDailyMinutes : item.targetWeeklyMinutes;
-            const scheduledMins = dateScope === 'today' ? item.scheduledDailyMinutes : item.scheduledWeeklyMinutes;
-            const actualMins = dateScope === 'today' ? item.actualDailyMinutes : item.actualWeeklyMinutes;
+        {/* Category Allocation Cards with Expandable Activity Breakdown (Requirements 13 & 14) */}
+        <div className="space-y-3 pt-1">
+          {summary.allocations
+            .filter((item) => item.scheduledMinutes > 0)
+            .map((item) => {
+              const isExpanded = expandedCatIds[item.category.id];
+              const schedHoursStr = formatDuration(item.scheduledMinutes);
+              const actualHoursStr = item.actualMinutes ? formatDuration(item.actualMinutes) : undefined;
 
-            const targetHours = (targetMins / 60).toFixed(1);
-            const scheduledHours = (scheduledMins / 60).toFixed(1);
-            const actualHours = actualMins !== undefined ? (actualMins / 60).toFixed(1) : undefined;
+              return (
+                <div
+                  key={item.category.id}
+                  className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 space-y-3 hover:border-slate-700/80 transition-all shadow-sm"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-4 h-4 rounded-full shrink-0 shadow-sm"
+                        style={{ backgroundColor: item.category.color }}
+                      />
+                      <div>
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          {item.category.name}
+                        </h3>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {schedHoursStr} scheduled · {item.percentageOfTotalScheduled}% of total
+                        </span>
+                      </div>
+                    </div>
 
-            const pctScheduled = targetMins > 0 ? Math.min(100, Math.round((scheduledMins / targetMins) * 100)) : 0;
+                    <div className="flex items-center gap-3">
+                      {viewMode === 'actual' && (
+                        <div className="text-xs font-semibold text-emerald-400 font-mono">
+                          Actual: {actualHoursStr || '0m'}
+                        </div>
+                      )}
 
-            const isScheduledOver = item.scheduledDiffMinutes > 30;
-            const isScheduledUnder = item.scheduledDiffMinutes < -30;
-
-            return (
-              <div
-                key={item.category.id}
-                className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 space-y-3 hover:border-slate-700/80 transition-all shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-3.5 h-3.5 rounded-full shrink-0"
-                      style={{ backgroundColor: item.category.color }}
-                    />
-                    <h3 className="text-xs font-bold text-white truncate">{item.category.name}</h3>
+                      <button
+                        onClick={() => toggleCategoryExpand(item.category.id)}
+                        className="px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
+                      >
+                        <span>{item.activities.length} activities</span>
+                        {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Status Badge */}
-                  {isScheduledOver && (
-                    <span className="text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded-full font-semibold">
-                      +{formatDuration(Math.abs(item.scheduledDiffMinutes))} Over
-                    </span>
-                  )}
-                  {isScheduledUnder && (
-                    <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-semibold">
-                      -{formatDuration(Math.abs(item.scheduledDiffMinutes))} Under
-                    </span>
-                  )}
-                  {!isScheduledOver && !isScheduledUnder && (
-                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
-                      On Track
-                    </span>
-                  )}
-                </div>
-
-                {/* Progress Bar */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                    <span>{scheduledHours}h scheduled</span>
-                    <span>{pctScheduled}% of target ({targetHours}h)</span>
-                  </div>
+                  {/* Progress Bar */}
                   <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800/80">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
-                        width: `${pctScheduled}%`,
+                        width: `${item.percentageOfTotalScheduled}%`,
                         backgroundColor: item.category.color,
                       }}
                     />
                   </div>
-                </div>
 
-                {/* Metrics Breakdown (Target vs Scheduled vs Actual) */}
-                <div className="grid grid-cols-3 gap-2 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/60 text-center">
-                  <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Target</span>
-                    <strong className="text-xs font-bold text-white font-mono">{targetHours}h</strong>
-                  </div>
-                  <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Scheduled</span>
-                    <strong className="text-xs font-bold text-indigo-300 font-mono">{scheduledHours}h</strong>
-                  </div>
-                  <div>
-                    <span className="text-[9px] uppercase font-bold text-slate-500 block">Actual</span>
-                    <strong className="text-xs font-bold text-emerald-400 font-mono">
-                      {actualHours !== undefined ? `${actualHours}h` : '--'}
-                    </strong>
-                  </div>
+                  {/* Expandable Activity Breakdown List (Requirement 14 & 29) */}
+                  {isExpanded && (
+                    <div className="pt-2 border-t border-slate-800/80 space-y-2 animate-fade-in">
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                        Activity Breakdown for {item.category.name}
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {item.activities.map((act) => (
+                          <div
+                            key={act.title}
+                            className="bg-slate-900/80 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span className="text-xs font-bold text-white block truncate">{act.title}</span>
+                              <span className="text-[10px] text-slate-500">
+                                {act.occurrenceCount} {act.occurrenceCount === 1 ? 'session' : 'sessions'}
+                              </span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-xs font-bold text-indigo-300 font-mono block">
+                                {formatDuration(act.scheduledMinutes)}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                {act.percentageOfCategory}% of {item.category.name}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+          {/* Uncategorized Section (Requirement 17) */}
+          {summary.uncategorizedMinutes > 0 && (
+            <div className="bg-slate-950/70 border border-amber-500/20 rounded-2xl p-4 space-y-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shrink-0" />
+                  <h3 className="text-xs font-bold text-amber-300">Uncategorized Activities</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-white font-mono">
+                    {formatDuration(summary.uncategorizedMinutes)}
+                  </span>
+                  <button
+                    onClick={openBulkCategorizeModal}
+                    className="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold hover:bg-amber-500/30 transition-colors"
+                  >
+                    Categorize Activities
+                  </button>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
       </div>
 
-      <TimeBudgetConfigureModal isOpen={isConfigureModalOpen} onClose={closeConfigureModal} />
+      <AddCategoryModal isOpen={isAddCategoryOpen} onClose={closeAddCategoryModal} />
       <BulkCategorizeModal isOpen={isBulkCategorizeOpen} onClose={closeBulkCategorizeModal} />
     </>
   );

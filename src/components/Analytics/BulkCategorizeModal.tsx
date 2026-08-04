@@ -9,13 +9,13 @@ interface BulkCategorizeModalProps {
 }
 
 export const BulkCategorizeModal: React.FC<BulkCategorizeModalProps> = ({ isOpen, onClose }) => {
-  const { userBudget, bulkCategorizeBlocks } = useTimeBudget();
+  const { categories, bulkCategorizeBlocks } = useTimeBudget();
   const { currentWeekScheduledBlocks, libraryBlocks } = useTimetable();
 
   const [mappings, setMappings] = useState<Record<string, string>>({});
 
   // Collect unique activity titles from scheduled blocks & library blocks
-  const activeCategories = userBudget.categories.filter((c) => c.isActive);
+  const activeCategories = categories.filter((c) => c.isActive);
 
   useEffect(() => {
     if (isOpen) {

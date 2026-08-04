@@ -1,6 +1,3 @@
-export type TargetPeriodType = 'daily' | 'weekly';
-export type TargetType = 'preferred' | 'strict';
-
 export interface TimeCategory {
   id: string;
   name: string;
@@ -11,53 +8,38 @@ export interface TimeCategory {
   isSystemSuggested?: boolean;
 }
 
-export interface CategoryBudget {
-  categoryId: string;
-  targetMinutes: number; // e.g. 300 for 5h
-  periodType: TargetPeriodType; // 'daily' or 'weekly'
-  targetType: TargetType; // 'preferred' or 'strict'
-  weekdayTargetMinutes?: number;
-  weekendTargetMinutes?: number;
+export interface ActivityBreakdownItem {
+  title: string;
+  blockId?: string;
+  scheduledMinutes: number;
+  actualMinutes?: number;
+  occurrenceCount: number;
+  percentageOfCategory: number;
 }
 
-export interface UserTimeBudget {
-  isConfigured: boolean;
-  categories: TimeCategory[];
-  budgets: Record<string, CategoryBudget>; // categoryId -> CategoryBudget
-  useDaySpecific: boolean;
-  updatedAt: number;
-}
-
-export interface CategoryComparisonItem {
+export interface CategoryAllocationItem {
   category: TimeCategory;
-  budget: CategoryBudget;
-  targetDailyMinutes: number;
-  targetWeeklyMinutes: number;
-  scheduledDailyMinutes: number;
-  scheduledWeeklyMinutes: number;
-  actualDailyMinutes?: number;
-  actualWeeklyMinutes?: number;
-  scheduledDiffMinutes: number; // scheduled - target
-  actualDiffMinutes?: number; // actual - target
-  scheduledStatus: 'on_track' | 'over_budget' | 'under_target';
-  actualStatus?: 'on_track' | 'over_budget' | 'under_target';
+  scheduledMinutes: number;
+  actualMinutes?: number;
+  occurrenceCount: number;
+  percentageOfTotalScheduled: number;
+  activities: ActivityBreakdownItem[];
 }
 
-export interface TimeBudgetSummary {
-  isConfigured: boolean;
-  totalTargetDailyMinutes: number;
-  totalTargetWeeklyMinutes: number;
-  unallocatedDailyMinutes: number;
-  unallocatedWeeklyMinutes: number;
-  totalScheduledDailyMinutes: number;
-  totalScheduledWeeklyMinutes: number;
-  totalActualDailyMinutes: number;
-  totalActualWeeklyMinutes: number;
-  comparisons: CategoryComparisonItem[];
-  uncategorizedBlockCount: number;
+export interface TimeAllocationSummary {
+  totalScheduledMinutes: number;
+  totalActualMinutes: number;
+  largestCategoryName?: string;
+  largestCategoryMinutes?: number;
+  mostScheduledActivityTitle?: string;
+  mostScheduledActivityMinutes?: number;
+  uncategorizedMinutes: number;
+  uncategorizedActivityCount: number;
+  allocations: CategoryAllocationItem[];
+  uncategorizedActivities: ActivityBreakdownItem[];
 }
 
-export const DEFAULT_SUGGESTED_CATEGORIES: Omit<TimeCategory, 'id' | 'displayOrder' | 'isActive'>[] = [
+export const DEFAULT_TIME_CATEGORIES: Omit<TimeCategory, 'id' | 'displayOrder' | 'isActive'>[] = [
   { name: 'Sleep', color: '#6366F1', icon: 'moon' },
   { name: 'Academics', color: '#3B82F6', icon: 'book' },
   { name: 'Career / Work', color: '#10B981', icon: 'briefcase' },

@@ -1,37 +1,22 @@
-import { ScheduledBlock } from '../types/timetable';
+import { ScheduledBlock, LibraryBlock } from '../types/timetable';
 import { ExecutionSession } from '../types/sessionLog';
 import {
-  UserTimeBudget,
-  TimeBudgetSummary,
-  CategoryComparisonItem,
   TimeCategory,
+  TimeAllocationSummary,
+  CategoryAllocationItem,
+  ActivityBreakdownItem,
 } from '../types/timeBudget';
 
 export type DateScopeFilter = 'today' | 'week' | 'month';
 
-export function calculateTimeBudgetSummary(
-  userBudget: UserTimeBudget,
+export function calculateTimeAllocationSummary(
+  categories: TimeCategory[],
   scheduledBlocks: ScheduledBlock[],
+  libraryBlocks: LibraryBlock[] = [],
   executionSessions: ExecutionSession[] = [],
   scope: DateScopeFilter = 'week'
-): TimeBudgetSummary {
-  if (!userBudget.isConfigured) {
-    return {
-      isConfigured: false,
-      totalTargetDailyMinutes: 0,
-      totalTargetWeeklyMinutes: 0,
-      unallocatedDailyMinutes: 1440,
-      unallocatedWeeklyMinutes: 10080,
-      totalScheduledDailyMinutes: 0,
-      totalScheduledWeeklyMinutes: 0,
-      totalActualDailyMinutes: 0,
-      totalActualWeeklyMinutes: 0,
-      comparisons: [],
-      uncategorizedBlockCount: scheduledBlocks.length,
-    };
-  }
-
-  const activeCategories = userBudget.categories
+): TimeAllocationSummary {
+  const activeCategories = categories
     .filter((c) => c.isActive)
     .sort((a, b) => a.displayOrder - b.displayOrder);
 
@@ -43,131 +28,164 @@ export function calculateTimeBudgetSummary(
     filteredBlocks = scheduledBlocks.filter((b) => b.dayOfWeek === todayDayIndex);
   }
 
-  // Group scheduled blocks by category
-  const scheduledMinsByCat: Record<string, number> = {};
-  let totalScheduledScopeMinutes = 0;
-  let uncategorizedCount = 0;
+  // Create fast lookup map from libraryBlocks
+  const libMap = new Map<string, LibraryBlock>();
+  libraryBlocks.forEach((lib) => {
+    libMap.set(lib.id, lib);
+    libMap.set(lib.title.toLowerCase().trim(), lib);
+  });
+
+  // Group scheduled blocks by Category ID and Activity Title
+  const catScheduledMap: Record<string, { totalMins: number; count: number; activities: Record<string, { mins: number; count: number }> }> = {};
+  const uncategorizedActivities: Record<string, { mins: number; count: number }> = {};
+  let totalScheduledMins = 0;
+  let uncategorizedMins = 0;
+
+  activeCategories.forEach((cat) => {
+    catScheduledMap[cat.id] = { totalMins: 0, count: 0, activities: {} };
+  });
 
   filteredBlocks.forEach((block) => {
-    totalScheduledScopeMinutes += block.duration;
+    const duration = block.duration || 60;
+    totalScheduledMins += duration;
 
-    let catId = (block as any).categoryId;
-    if (!catId) {
-      const normTitle = block.title.toLowerCase().trim();
-      const matchedCat = activeCategories.find(
-        (c) => normTitle.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(normTitle)
-      );
-      if (matchedCat) {
-        catId = matchedCat.id;
-      }
+    // Match category ID
+    let matchedCatId: string | undefined = block.categoryId;
+
+    if (!matchedCatId && block.blockId) {
+      const lib = libMap.get(block.blockId);
+      if (lib?.categoryId) matchedCatId = lib.categoryId;
     }
 
-    if (catId && userBudget.budgets[catId]) {
-      scheduledMinsByCat[catId] = (scheduledMinsByCat[catId] || 0) + block.duration;
+    if (!matchedCatId && block.title) {
+      const normTitle = block.title.toLowerCase().trim();
+      const lib = libMap.get(normTitle);
+      if (lib?.categoryId) matchedCatId = lib.categoryId;
+    }
+
+    if (!matchedCatId && block.title) {
+      const normTitle = block.title.toLowerCase().trim();
+      const catMatch = activeCategories.find(
+        (c) => normTitle.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(normTitle)
+      );
+      if (catMatch) matchedCatId = catMatch.id;
+    }
+
+    const titleKey = block.title.trim();
+
+    if (matchedCatId && catScheduledMap[matchedCatId]) {
+      const catEntry = catScheduledMap[matchedCatId];
+      catEntry.totalMins += duration;
+      catEntry.count += 1;
+
+      if (!catEntry.activities[titleKey]) {
+        catEntry.activities[titleKey] = { mins: 0, count: 0 };
+      }
+      catEntry.activities[titleKey].mins += duration;
+      catEntry.activities[titleKey].count += 1;
     } else {
-      uncategorizedCount++;
+      uncategorizedMins += duration;
+      if (!uncategorizedActivities[titleKey]) {
+        uncategorizedActivities[titleKey] = { mins: 0, count: 0 };
+      }
+      uncategorizedActivities[titleKey].mins += duration;
+      uncategorizedActivities[titleKey].count += 1;
     }
   });
 
-  // Group actual execution sessions by category
-  const actualMinsByCat: Record<string, number> = {};
-  let totalActualScopeMinutes = 0;
+  // Group actual execution sessions by Category ID
+  const catActualMap: Record<string, number> = {};
+  let totalActualMins = 0;
 
   executionSessions.forEach((session) => {
-    totalActualScopeMinutes += session.actualDuration;
+    const duration = session.actualDuration || 0;
+    totalActualMins += duration;
 
-    let catId = (session as any).categoryId;
-    if (!catId) {
+    let matchedCatId: string | undefined = (session as any).categoryId;
+    if (!matchedCatId) {
       const normTitle = session.actualTitle.toLowerCase().trim();
-      const matchedCat = activeCategories.find(
-        (c) => normTitle.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(normTitle)
-      );
-      if (matchedCat) {
-        catId = matchedCat.id;
+      const lib = libMap.get(normTitle);
+      if (lib?.categoryId) matchedCatId = lib.categoryId;
+    }
+
+    if (matchedCatId && catScheduledMap[matchedCatId]) {
+      catActualMap[matchedCatId] = (catActualMap[matchedCatId] || 0) + duration;
+    }
+  });
+
+  // Build allocations list
+  const allocations: CategoryAllocationItem[] = [];
+  let largestCatName: string | undefined;
+  let largestCatMins = 0;
+  let mostScheduledActTitle: string | undefined;
+  let mostScheduledActMins = 0;
+
+  activeCategories.forEach((cat) => {
+    const entry = catScheduledMap[cat.id] || { totalMins: 0, count: 0, activities: {} };
+    const scheduledMinutes = entry.totalMins;
+
+    if (scheduledMinutes > largestCatMins) {
+      largestCatMins = scheduledMinutes;
+      largestCatName = cat.name;
+    }
+
+    const percentageOfTotalScheduled =
+      totalScheduledMins > 0 ? Math.round((scheduledMinutes / totalScheduledMins) * 1000) / 10 : 0;
+
+    // Build Activity Breakdown list inside this category
+    const activitiesList: ActivityBreakdownItem[] = Object.entries(entry.activities).map(([title, data]) => {
+      if (data.mins > mostScheduledActMins) {
+        mostScheduledActMins = data.mins;
+        mostScheduledActTitle = title;
       }
-    }
 
-    if (catId && userBudget.budgets[catId]) {
-      actualMinsByCat[catId] = (actualMinsByCat[catId] || 0) + session.actualDuration;
-    }
-  });
+      const pctOfCat =
+        scheduledMinutes > 0 ? Math.round((data.mins / scheduledMinutes) * 1000) / 10 : 0;
 
-  let totalTargetDailyMinutes = 0;
-  let totalTargetWeeklyMinutes = 0;
+      return {
+        title,
+        scheduledMinutes: data.mins,
+        occurrenceCount: data.count,
+        percentageOfCategory: pctOfCat,
+      };
+    });
 
-  const comparisons: CategoryComparisonItem[] = activeCategories.map((cat) => {
-    const budget = userBudget.budgets[cat.id] || {
-      categoryId: cat.id,
-      targetMinutes: 0,
-      periodType: 'daily',
-      targetType: 'preferred',
-    };
+    // Sort activities by scheduled duration descending
+    activitiesList.sort((a, b) => b.scheduledMinutes - a.scheduledMinutes);
 
-    let targetDailyMinutes = 0;
-    let targetWeeklyMinutes = 0;
-
-    if (budget.periodType === 'weekly') {
-      targetWeeklyMinutes = budget.targetMinutes;
-      targetDailyMinutes = Math.round(budget.targetMinutes / 7);
-    } else {
-      targetDailyMinutes = budget.targetMinutes;
-      targetWeeklyMinutes = budget.targetMinutes * 7;
-    }
-
-    totalTargetDailyMinutes += targetDailyMinutes;
-    totalTargetWeeklyMinutes += targetWeeklyMinutes;
-
-    // Scope target minutes
-    let targetScopeMinutes = targetWeeklyMinutes;
-    if (scope === 'today') targetScopeMinutes = targetDailyMinutes;
-    else if (scope === 'month') targetScopeMinutes = Math.round(targetWeeklyMinutes * 4.33);
-
-    const scheduledScopeMinutes = scheduledMinsByCat[cat.id] || 0;
-    const actualScopeMinutes = actualMinsByCat[cat.id] || 0;
-
-    const scheduledDiffMinutes = scheduledScopeMinutes - targetScopeMinutes;
-    const actualDiffMinutes = actualScopeMinutes - targetScopeMinutes;
-
-    let scheduledStatus: 'on_track' | 'over_budget' | 'under_target' = 'on_track';
-    if (scheduledDiffMinutes > 30) scheduledStatus = 'over_budget';
-    else if (scheduledDiffMinutes < -30) scheduledStatus = 'under_target';
-
-    let actualStatus: 'on_track' | 'over_budget' | 'under_target' = 'on_track';
-    if (actualDiffMinutes > 30) actualStatus = 'over_budget';
-    else if (actualDiffMinutes < -30) actualStatus = 'under_target';
-
-    return {
+    allocations.push({
       category: cat,
-      budget,
-      targetDailyMinutes,
-      targetWeeklyMinutes,
-      scheduledDailyMinutes: scope === 'today' ? scheduledScopeMinutes : Math.round(scheduledScopeMinutes / 7),
-      scheduledWeeklyMinutes: scope === 'week' ? scheduledScopeMinutes : scheduledScopeMinutes * 7,
-      actualDailyMinutes: scope === 'today' ? actualScopeMinutes : Math.round(actualScopeMinutes / 7),
-      actualWeeklyMinutes: scope === 'week' ? actualScopeMinutes : actualScopeMinutes * 7,
-      scheduledDiffMinutes,
-      actualDiffMinutes,
-      scheduledStatus,
-      actualStatus,
-    };
+      scheduledMinutes,
+      actualMinutes: catActualMap[cat.id],
+      occurrenceCount: entry.count,
+      percentageOfTotalScheduled,
+      activities: activitiesList,
+    });
   });
 
-  const unallocatedDailyMinutes = Math.max(0, 1440 - totalTargetDailyMinutes);
-  const unallocatedWeeklyMinutes = Math.max(0, 10080 - totalTargetWeeklyMinutes);
-  const totalScheduledDailyMinutes = Math.round(totalScheduledScopeMinutes / 7);
-  const totalActualDailyMinutes = Math.round(totalActualScopeMinutes / 7);
+  // Sort categories by scheduled minutes descending
+  allocations.sort((a, b) => b.scheduledMinutes - a.scheduledMinutes);
+
+  // Build uncategorized activities list
+  const uncategorizedList: ActivityBreakdownItem[] = Object.entries(uncategorizedActivities).map(
+    ([title, data]) => ({
+      title,
+      scheduledMinutes: data.mins,
+      occurrenceCount: data.count,
+      percentageOfCategory: 100,
+    })
+  );
 
   return {
-    isConfigured: true,
-    totalTargetDailyMinutes,
-    totalTargetWeeklyMinutes,
-    unallocatedDailyMinutes,
-    unallocatedWeeklyMinutes,
-    totalScheduledDailyMinutes: scope === 'today' ? totalScheduledScopeMinutes : totalScheduledDailyMinutes,
-    totalScheduledWeeklyMinutes: scope === 'week' ? totalScheduledScopeMinutes : totalScheduledScopeMinutes * 7,
-    totalActualDailyMinutes: scope === 'today' ? totalActualScopeMinutes : totalActualDailyMinutes,
-    totalActualWeeklyMinutes: scope === 'week' ? totalActualScopeMinutes : totalActualScopeMinutes * 7,
-    comparisons,
-    uncategorizedBlockCount: uncategorizedCount,
+    totalScheduledMinutes: totalScheduledMins,
+    totalActualMinutes: totalActualMins,
+    largestCategoryName: largestCatName,
+    largestCategoryMinutes: largestCatMins,
+    mostScheduledActivityTitle: mostScheduledActTitle,
+    mostScheduledActivityMinutes: mostScheduledActMins,
+    uncategorizedMinutes: uncategorizedMins,
+    uncategorizedActivityCount: Object.keys(uncategorizedActivities).length,
+    allocations,
+    uncategorizedActivities: uncategorizedList,
   };
 }

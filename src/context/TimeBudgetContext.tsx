@@ -1,48 +1,28 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useTimetable } from './TimetableContext';
 import { useSession } from './SessionContext';
-import {
-  UserTimeBudget,
-  TimeBudgetSummary,
-  TimeCategory,
-  CategoryBudget,
-  TargetPeriodType,
-} from '../types/timeBudget';
-import { loadUserTimeBudget, saveUserTimeBudget, createDefaultBudget } from '../utils/timeBudgetStorage';
-import { DateScopeFilter, calculateTimeBudgetSummary } from '../utils/timeBudgetEngine';
+import { TimeCategory, TimeAllocationSummary } from '../types/timeBudget';
+import { loadUserTimeCategories, saveUserTimeCategories, createDefaultCategories } from '../utils/timeBudgetStorage';
+import { DateScopeFilter, calculateTimeAllocationSummary } from '../utils/timeBudgetEngine';
 
 interface TimeBudgetContextType {
-  userBudget: UserTimeBudget;
-  summary: TimeBudgetSummary;
+  categories: TimeCategory[];
+  summary: TimeAllocationSummary;
   dateScope: DateScopeFilter;
   setDateScope: (scope: DateScopeFilter) => void;
+  viewMode: 'planned' | 'actual';
+  setViewMode: (mode: 'planned' | 'actual') => void;
 
-  isConfigureModalOpen: boolean;
-  openConfigureModal: () => void;
-  closeConfigureModal: () => void;
+  isAddCategoryOpen: boolean;
+  openAddCategoryModal: () => void;
+  closeAddCategoryModal: () => void;
 
   isBulkCategorizeOpen: boolean;
   openBulkCategorizeModal: () => void;
   closeBulkCategorizeModal: () => void;
 
-  saveBudgetConfiguration: (
-    categories: TimeCategory[],
-    budgets: Record<string, CategoryBudget>,
-    useDaySpecific?: boolean
-  ) => void;
-
-  addCategory: (
-    catData: Omit<TimeCategory, 'id' | 'displayOrder' | 'isActive'>,
-    targetMinutes: number,
-    periodType?: TargetPeriodType
-  ) => TimeCategory;
-
-  updateCategory: (
-    categoryId: string,
-    partialCat: Partial<TimeCategory>,
-    partialBudget?: Partial<CategoryBudget>
-  ) => void;
-
+  addCategory: (catData: Omit<TimeCategory, 'id' | 'displayOrder' | 'isActive'>) => TimeCategory;
+  updateCategory: (categoryId: string, partialCat: Partial<TimeCategory>) => void;
   deleteCategory: (categoryId: string) => void;
   bulkCategorizeBlocks: (mappings: Record<string, string>) => void; // blockTitle -> categoryId
 }
@@ -50,178 +30,143 @@ interface TimeBudgetContextType {
 const TimeBudgetContext = createContext<TimeBudgetContextType | undefined>(undefined);
 
 export const TimeBudgetProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentWeekScheduledBlocks, updateScheduledBlock, addToast } = useTimetable();
+  const { currentWeekScheduledBlocks, libraryBlocks, updateScheduledBlock, updateLibraryBlock, addToast } = useTimetable();
   const { sessions } = useSession();
 
-  const [userBudget, setUserBudget] = useState<UserTimeBudget>(createDefaultBudget());
+  const [categories, setCategories] = useState<TimeCategory[]>(createDefaultCategories());
   const [dateScope, setDateScope] = useState<DateScopeFilter>('week');
-  const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'planned' | 'actual'>('planned');
+
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [isBulkCategorizeOpen, setIsBulkCategorizeOpen] = useState(false);
 
-  // Load from local storage
+  // Load categories from local storage
   useEffect(() => {
-    setUserBudget(loadUserTimeBudget());
+    setCategories(loadUserTimeCategories());
   }, []);
 
-  const openConfigureModal = useCallback(() => setIsConfigureModalOpen(true), []);
-  const closeConfigureModal = useCallback(() => setIsConfigureModalOpen(false), []);
+  const openAddCategoryModal = useCallback(() => setIsAddCategoryOpen(true), []);
+  const closeAddCategoryModal = useCallback(() => setIsAddCategoryOpen(false), []);
 
   const openBulkCategorizeModal = useCallback(() => setIsBulkCategorizeOpen(true), []);
   const closeBulkCategorizeModal = useCallback(() => setIsBulkCategorizeOpen(false), []);
 
-  // Save budget configuration
-  const saveBudgetConfiguration = useCallback(
-    (categories: TimeCategory[], budgets: Record<string, CategoryBudget>, useDaySpecific: boolean = false) => {
-      const updated: UserTimeBudget = {
-        isConfigured: true,
-        categories,
-        budgets,
-        useDaySpecific,
-        updatedAt: Date.now(),
-      };
-
-      setUserBudget(updated);
-      saveUserTimeBudget(updated);
-      addToast('Personal Time Budget updated! ⏳', 'success');
-    },
-    [addToast]
-  );
-
   // Add custom category
   const addCategory = useCallback(
-    (
-      catData: Omit<TimeCategory, 'id' | 'displayOrder' | 'isActive'>,
-      targetMinutes: number,
-      periodType: TargetPeriodType = 'daily'
-    ): TimeCategory => {
+    (catData: Omit<TimeCategory, 'id' | 'displayOrder' | 'isActive'>): TimeCategory => {
       const newCat: TimeCategory = {
         ...catData,
         id: `cat-${Date.now()}-${Math.random().toString().slice(2, 6)}`,
-        displayOrder: userBudget.categories.length,
+        displayOrder: categories.length,
         isActive: true,
       };
 
-      const newBudget: CategoryBudget = {
-        categoryId: newCat.id,
-        targetMinutes,
-        periodType,
-        targetType: 'preferred',
-      };
-
-      const updatedCategories = [...userBudget.categories, newCat];
-      const updatedBudgets = { ...userBudget.budgets, [newCat.id]: newBudget };
-
-      const updated: UserTimeBudget = {
-        ...userBudget,
-        isConfigured: true,
-        categories: updatedCategories,
-        budgets: updatedBudgets,
-        updatedAt: Date.now(),
-      };
-
-      setUserBudget(updated);
-      saveUserTimeBudget(updated);
-      addToast(`Added category "${newCat.name}"! 🏷️`, 'success');
+      const updated = [...categories, newCat];
+      setCategories(updated);
+      saveUserTimeCategories(updated);
+      addToast(`Added Time Category "${newCat.name}"! 🏷️`, 'success');
       return newCat;
     },
-    [userBudget, addToast]
+    [categories, addToast]
   );
 
   // Update category
   const updateCategory = useCallback(
-    (categoryId: string, partialCat: Partial<TimeCategory>, partialBudget?: Partial<CategoryBudget>) => {
-      const updatedCategories = userBudget.categories.map((c) =>
-        c.id === categoryId ? { ...c, ...partialCat } : c
-      );
-
-      const updatedBudgets = { ...userBudget.budgets };
-      if (partialBudget && updatedBudgets[categoryId]) {
-        updatedBudgets[categoryId] = { ...updatedBudgets[categoryId], ...partialBudget };
-      }
-
-      const updated: UserTimeBudget = {
-        ...userBudget,
-        categories: updatedCategories,
-        budgets: updatedBudgets,
-        updatedAt: Date.now(),
-      };
-
-      setUserBudget(updated);
-      saveUserTimeBudget(updated);
+    (categoryId: string, partialCat: Partial<TimeCategory>) => {
+      const updated = categories.map((c) => (c.id === categoryId ? { ...c, ...partialCat } : c));
+      setCategories(updated);
+      saveUserTimeCategories(updated);
       addToast('Category updated', 'info');
     },
-    [userBudget, addToast]
+    [categories, addToast]
   );
 
   // Delete category (Category Deletion Safety - Requirement 14)
   const deleteCategory = useCallback(
     (categoryId: string) => {
-      const cat = userBudget.categories.find((c) => c.id === categoryId);
+      const cat = categories.find((c) => c.id === categoryId);
 
-      // Check if assigned to any current blocks
-      const assignedCount = currentWeekScheduledBlocks.filter((b) => (b as any).categoryId === categoryId).length;
-      if (assignedCount > 0) {
-        // Remap assigned blocks to undefined (uncategorized)
-        currentWeekScheduledBlocks.forEach((b) => {
-          if ((b as any).categoryId === categoryId) {
-            updateScheduledBlock(b.id, { categoryId: undefined } as any);
-          }
-        });
-      }
+      // Remap scheduled blocks & library blocks assigned to this category to undefined
+      let assignedCount = 0;
+      currentWeekScheduledBlocks.forEach((b) => {
+        if ((b as any).categoryId === categoryId) {
+          updateScheduledBlock(b.id, { categoryId: undefined } as any);
+          assignedCount++;
+        }
+      });
 
-      const updatedCategories = userBudget.categories.filter((c) => c.id !== categoryId);
-      const updatedBudgets = { ...userBudget.budgets };
-      delete updatedBudgets[categoryId];
+      libraryBlocks.forEach((lib) => {
+        if ((lib as any).categoryId === categoryId) {
+          updateLibraryBlock(lib.id, { categoryId: undefined } as any);
+        }
+      });
 
-      const updated: UserTimeBudget = {
-        ...userBudget,
-        categories: updatedCategories,
-        budgets: updatedBudgets,
-        updatedAt: Date.now(),
-      };
+      const updated = categories.filter((c) => c.id !== categoryId);
+      setCategories(updated);
+      saveUserTimeCategories(updated);
 
-      setUserBudget(updated);
-      saveUserTimeBudget(updated);
-      addToast(`Removed category "${cat?.name || ''}". ${assignedCount > 0 ? `${assignedCount} blocks set as Uncategorized.` : ''}`, 'warning');
+      addToast(
+        `Removed category "${cat?.name || ''}". ${
+          assignedCount > 0 ? `${assignedCount} blocks set as Uncategorized.` : ''
+        }`,
+        'warning'
+      );
     },
-    [userBudget, currentWeekScheduledBlocks, updateScheduledBlock, addToast]
+    [categories, currentWeekScheduledBlocks, libraryBlocks, updateScheduledBlock, updateLibraryBlock, addToast]
   );
 
-  // Bulk categorize activity blocks (Part 10)
+  // Bulk categorize activity blocks (Requirement 18)
   const bulkCategorizeBlocks = useCallback(
     (mappings: Record<string, string>) => {
       let count = 0;
+      libraryBlocks.forEach((lib) => {
+        const norm = lib.title.toLowerCase().trim();
+        const matchedKey = Object.keys(mappings).find((k) => k.toLowerCase().trim() === norm);
+        if (matchedKey && mappings[matchedKey]) {
+          const categoryId = mappings[matchedKey];
+          updateLibraryBlock(lib.id, { categoryId } as any);
+          count++;
+        }
+      });
+
       currentWeekScheduledBlocks.forEach((block) => {
         const norm = block.title.toLowerCase().trim();
         const matchedKey = Object.keys(mappings).find((k) => k.toLowerCase().trim() === norm);
-        if (matchedKey) {
+        if (matchedKey && mappings[matchedKey]) {
           const categoryId = mappings[matchedKey];
           updateScheduledBlock(block.id, { categoryId } as any);
-          count++;
         }
       });
 
       addToast(`Categorized ${count} activities! 🏷️`, 'success');
     },
-    [currentWeekScheduledBlocks, updateScheduledBlock, addToast]
+    [libraryBlocks, currentWeekScheduledBlocks, updateLibraryBlock, updateScheduledBlock, addToast]
   );
 
-  const summary = calculateTimeBudgetSummary(userBudget, currentWeekScheduledBlocks, sessions, dateScope);
+  // Derive live Time Allocation Summary from timetable data
+  const summary = calculateTimeAllocationSummary(
+    categories,
+    currentWeekScheduledBlocks,
+    libraryBlocks,
+    sessions,
+    dateScope
+  );
 
   return (
     <TimeBudgetContext.Provider
       value={{
-        userBudget,
+        categories,
         summary,
         dateScope,
         setDateScope,
-        isConfigureModalOpen,
-        openConfigureModal,
-        closeConfigureModal,
+        viewMode,
+        setViewMode,
+        isAddCategoryOpen,
+        openAddCategoryModal,
+        closeAddCategoryModal,
         isBulkCategorizeOpen,
         openBulkCategorizeModal,
         closeBulkCategorizeModal,
-        saveBudgetConfiguration,
         addCategory,
         updateCategory,
         deleteCategory,

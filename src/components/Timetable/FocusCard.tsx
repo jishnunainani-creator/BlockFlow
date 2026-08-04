@@ -9,6 +9,7 @@ import {
 import { useTimetable } from '../../context/TimetableContext';
 import { useSession } from '../../context/SessionContext';
 import { useTimeBudget } from '../../context/TimeBudgetContext';
+import { TimeCategory } from '../../types/timeBudget';
 import { formatDuration, minutesToTimeStr } from '../../utils/timeUtils';
 import { AVAILABLE_ICONS } from '../Library/BlockModal';
 import { StatusPickerPopover } from '../Completion/StatusPickerPopover';
@@ -70,7 +71,7 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
 
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const { userBudget } = useTimeBudget();
+  const { categories } = useTimeBudget();
 
   const completionProb = calculateCompletionProbability(block);
   const currentStatus: CompletionStatus = block.status || 'not_started';
@@ -78,8 +79,8 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
   const isConflicting = conflicts.has(block.id);
 
   // Time Category lookup
-  const matchedCategory = userBudget.categories.find(
-    (c) => c.id === (block as any).categoryId || c.name.toLowerCase() === block.title.toLowerCase()
+  const matchedCategory = categories.find(
+    (c: TimeCategory) => c.id === (block as any).categoryId || c.name.toLowerCase() === block.title.toLowerCase()
   );
   const timeCategoryName = matchedCategory ? matchedCategory.name : 'Uncategorized';
   const priorityLabel = PRIORITY_CONFIG[block.priority]?.label || block.priority;

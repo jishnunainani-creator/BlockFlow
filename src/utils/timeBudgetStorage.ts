@@ -1,7 +1,7 @@
 import { getUserScopedKey } from './userScope';
-import { UserTimeBudget, DEFAULT_SUGGESTED_CATEGORIES } from '../types/timeBudget';
+import { TimeCategory, DEFAULT_TIME_CATEGORIES } from '../types/timeBudget';
 
-const TIME_BUDGET_STORAGE_KEY = 'blockflow_user_time_budget_v1';
+const TIME_CATEGORIES_STORAGE_KEY = 'blockflow_user_time_categories_v1';
 
 const getStorageItem = <T>(key: string, defaultValue: T): T => {
   try {
@@ -23,8 +23,8 @@ const setStorageItem = <T>(key: string, value: T): void => {
   }
 };
 
-export const createDefaultBudget = (): UserTimeBudget => {
-  const categories = DEFAULT_SUGGESTED_CATEGORIES.map((cat, idx) => ({
+export const createDefaultCategories = (): TimeCategory[] => {
+  return DEFAULT_TIME_CATEGORIES.map((cat, idx) => ({
     id: `cat-${cat.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
     name: cat.name,
     color: cat.color,
@@ -33,45 +33,14 @@ export const createDefaultBudget = (): UserTimeBudget => {
     isActive: true,
     isSystemSuggested: true,
   }));
-
-  const defaultTargetsMinutes: Record<string, number> = {
-    'cat-sleep': 480, // 8h
-    'cat-academics': 300, // 5h
-    'cat-career-work': 180, // 3h
-    'cat-fitness': 60, // 1h
-    'cat-personal-routine': 120, // 2h
-    'cat-leisure': 120, // 2h
-    'cat-travel-commute': 60, // 1h
-    'cat-flexible': 120, // 2h
-    'cat-family': 0,
-  };
-
-  const budgets: Record<string, any> = {};
-  categories.forEach((cat) => {
-    budgets[cat.id] = {
-      categoryId: cat.id,
-      targetMinutes: defaultTargetsMinutes[cat.id] || 0,
-      periodType: 'daily',
-      targetType: 'preferred',
-    };
-  });
-
-  return {
-    isConfigured: false,
-    categories,
-    budgets,
-    useDaySpecific: false,
-    updatedAt: Date.now(),
-  };
 };
 
-export const loadUserTimeBudget = (): UserTimeBudget => {
-  const defaultVal = createDefaultBudget();
-  const loaded = getStorageItem<UserTimeBudget | null>(TIME_BUDGET_STORAGE_KEY, null);
-  if (!loaded) return defaultVal;
+export const loadUserTimeCategories = (): TimeCategory[] => {
+  const loaded = getStorageItem<TimeCategory[] | null>(TIME_CATEGORIES_STORAGE_KEY, null);
+  if (!loaded || loaded.length === 0) return createDefaultCategories();
   return loaded;
 };
 
-export const saveUserTimeBudget = (budget: UserTimeBudget): void => {
-  setStorageItem(TIME_BUDGET_STORAGE_KEY, budget);
+export const saveUserTimeCategories = (categories: TimeCategory[]): void => {
+  setStorageItem(TIME_CATEGORIES_STORAGE_KEY, categories);
 };

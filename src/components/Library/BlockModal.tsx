@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LibraryBlock, Priority, PRIORITY_CONFIG } from '../../types/timetable';
 import { useTimetable } from '../../context/TimetableContext';
 import { useTimeBudget } from '../../context/TimeBudgetContext';
+import { TimeCategory } from '../../types/timeBudget';
 import {
   X,
   Code,
@@ -72,7 +73,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   editingBlock,
 }) => {
   const { customCategories, addCustomCategory } = useTimetable();
-  const { userBudget } = useTimeBudget();
+  const { categories } = useTimeBudget();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [title, setTitle] = useState('');
@@ -355,9 +356,9 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                   className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
                 >
                   <option value="">-- Select Time Category (e.g. Academics, Fitness) --</option>
-                  {userBudget.categories
-                    .filter((c) => c.isActive)
-                    .map((cat) => (
+                  {categories
+                    .filter((c: TimeCategory) => c.isActive)
+                    .map((cat: TimeCategory) => (
                       <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>
