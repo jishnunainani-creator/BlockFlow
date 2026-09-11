@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { TimetableProvider, useTimetable } from './context/TimetableContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ExecutionProvider } from './context/ExecutionContext';
@@ -262,6 +263,7 @@ export default function App() {
             <TimeBudgetProvider>
               <DemoProvider>
                 <AppContent />
+                <Analytics />
               </DemoProvider>
             </TimeBudgetProvider>
           </SessionProvider>
