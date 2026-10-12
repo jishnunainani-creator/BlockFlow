@@ -13,6 +13,7 @@ import {
   Menu,
   LayoutDashboard,
   Sun,
+  Zap,
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
@@ -21,6 +22,7 @@ interface MobileBottomNavProps {
   onOpenAddBlock: () => void;
   onOpenAISchedule: (tab: 'voice' | 'text' | 'import') => void;
   onOpenEndOfDay?: () => void;
+  onOpenQuickCapture?: () => void;
   userEmail?: string | null;
   onOpenAuth?: () => void;
   onOpenMobileMenu?: () => void;
@@ -32,6 +34,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenAddBlock,
   onOpenAISchedule,
   onOpenEndOfDay,
+  onOpenQuickCapture,
   userEmail,
   onOpenAuth,
   onOpenMobileMenu,
@@ -60,6 +63,22 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 Close
               </button>
             </div>
+
+            {onOpenQuickCapture && (
+              <button
+                type="button"
+                onClick={() => { setShowQuickActions(false); onOpenQuickCapture(); }}
+                className="w-full flex items-center gap-3 p-3 rounded-lg bg-[#3659C9]/15 hover:bg-[#3659C9]/25 border border-[#3659C9]/30 text-white transition-colors text-left"
+              >
+                <div className="p-2 rounded-lg bg-[#3659C9] text-white">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-[#60A5FA]">Quick Capture</p>
+                  <p className="text-[10px] text-slate-400">Instantly capture any thought, task, or reminder</p>
+                </div>
+              </button>
+            )}
 
             <button
               type="button"

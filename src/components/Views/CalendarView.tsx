@@ -6,6 +6,7 @@ import { TimetableGrid } from '../Timetable/TimetableGrid';
 interface CalendarViewProps {
   onOpenAISchedule?: (tab: 'voice' | 'text' | 'import') => void;
   onOpenAICommandCenter?: () => void;
+  onOpenQuickCapture?: () => void;
   userEmail?: string | null;
   onOpenAuth?: () => void;
   onOpenMobileMenu?: () => void;
@@ -19,6 +20,7 @@ const STORAGE_KEY_LIBRARY_OPEN = 'blockflow_activity_library_open';
 export const CalendarView: React.FC<CalendarViewProps> = ({
   onOpenAISchedule,
   onOpenAICommandCenter,
+  onOpenQuickCapture,
   userEmail,
   onOpenAuth,
   onOpenMobileMenu,
@@ -52,6 +54,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       <AppHeader
         onOpenAISchedule={onOpenAISchedule}
         onOpenAICommandCenter={onOpenAICommandCenter}
+        onOpenQuickCapture={onOpenQuickCapture}
         userEmail={userEmail}
         onOpenAuth={onOpenAuth}
         onOpenMobileMenu={onOpenMobileMenu}

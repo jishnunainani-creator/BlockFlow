@@ -31,6 +31,9 @@ import { TaskInboxView } from './components/ExecutionOS/TaskInboxView';
 import { ToastContainer } from './components/UI/ToastContainer';
 import { getCurrentUser } from './lib/supabase';
 import { syncLocalStateToSupabase } from './lib/supabaseMigration';
+import { QuickCaptureModal } from './components/QuickCapture/QuickCaptureModal';
+import { ConvertCaptureModal } from './components/QuickCapture/ConvertCaptureModal';
+import { QuickCaptureItem } from './types/quickCapture';
 
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { BlockModal } from './components/Library/BlockModal';
@@ -45,6 +48,10 @@ export function AppContent() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showAuthPage, setShowAuthPage] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
+
+  // Quick Capture & Conversion Modals
+  const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
+  const [convertingCaptureItem, setConvertingCaptureItem] = useState<QuickCaptureItem | null>(null);
 
   // Modals State
   const [isFocusModeOpen, setIsFocusModeOpen] = useState(false);
@@ -139,6 +146,12 @@ export function AppContent() {
 
       const key = e.key.toLowerCase();
 
+      if (!pendingG && key === 'q') {
+        e.preventDefault();
+        setIsQuickCaptureOpen(true);
+        return;
+      }
+
       if (key === 'g') {
         pendingG = true;
         clearTimeout(timeout);
@@ -151,6 +164,8 @@ export function AppContent() {
         if (key === 'd') handleNavigate('dashboard');
         if (key === 'c') handleNavigate('calendar');
         if (key === 'g') handleNavigate('goals');
+        if (key === 'u' || key === 'x') handleNavigate('task-inbox');
+        if (key === 'q') setIsQuickCaptureOpen(true);
         if (key === 'f') setIsFocusModeOpen(true);
         if (key === 'v') openAISchedule('voice');
         if (key === 'l') handleNavigate('library');
@@ -196,6 +211,7 @@ export function AppContent() {
         userEmail={userEmail}
         onOpenAuth={() => setShowAuthPage(true)}
         onOpenFocusMode={() => setIsFocusModeOpen(true)}
+        onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
         isMobileOpen={isMobileNavOpen}
         onCloseMobile={() => setIsMobileNavOpen(false)}
       />
@@ -219,6 +235,7 @@ export function AppContent() {
           <CalendarView
             onOpenAISchedule={openAISchedule}
             onOpenAICommandCenter={() => setIsAICommandCenterOpen(true)}
+            onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
             userEmail={userEmail}
             onOpenAuth={() => setShowAuthPage(true)}
             onOpenMobileMenu={() => setIsMobileNavOpen(true)}
@@ -248,9 +265,28 @@ export function AppContent() {
         onOpenAddBlock={() => setIsBlockModalOpen(true)}
         onOpenAISchedule={openAISchedule}
         onOpenEndOfDay={() => setIsAICommandCenterOpen(true)}
+        onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
         userEmail={userEmail}
         onOpenAuth={() => setShowAuthPage(true)}
         onOpenMobileMenu={() => setIsMobileNavOpen(true)}
+      />
+
+      {/* Global Quick Capture Modal (Triggerable from anywhere via 'Q' shortcut or capture buttons) */}
+      <QuickCaptureModal
+        isOpen={isQuickCaptureOpen}
+        onClose={() => setIsQuickCaptureOpen(false)}
+        onSaveAndConvert={(item) => {
+          setIsQuickCaptureOpen(false);
+          setConvertingCaptureItem(item);
+        }}
+      />
+
+      {/* Global Convert Capture Item Modal */}
+      <ConvertCaptureModal
+        isOpen={!!convertingCaptureItem}
+        item={convertingCaptureItem}
+        onClose={() => setConvertingCaptureItem(null)}
+        onConverted={() => setConvertingCaptureItem(null)}
       />
 
       {/* Quick Add Activity Block Modal */}

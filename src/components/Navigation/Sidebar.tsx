@@ -22,6 +22,7 @@ import {
   BookOpen,
   Sun,
 } from 'lucide-react';
+import { getUnprocessedCount } from '../../utils/quickCaptureStorage';
 
 export type NavView =
   | 'my-day'
@@ -62,6 +63,7 @@ interface SidebarProps {
   userEmail?: string | null;
   onOpenAuth: () => void;
   onOpenFocusMode?: () => void;
+  onOpenQuickCapture?: () => void;
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
 }
@@ -76,9 +78,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   userEmail,
   onOpenAuth,
   onOpenFocusMode,
+  onOpenQuickCapture,
   isMobileOpen = false,
   onCloseMobile,
 }) => {
+  // ── 0. UNPROCESSED QUICK CAPTURE COUNT ──
+  const [unprocessedCount, setUnprocessedCount] = useState<number>(() => getUnprocessedCount());
+
+  useEffect(() => {
+    const handleCountUpdate = () => {
+      setUnprocessedCount(getUnprocessedCount());
+    };
+    window.addEventListener('blockflow_quick_capture_changed', handleCountUpdate);
+    window.addEventListener('storage', handleCountUpdate);
+    return () => {
+      window.removeEventListener('blockflow_quick_capture_changed', handleCountUpdate);
+      window.removeEventListener('storage', handleCountUpdate);
+    };
+  }, []);
+
   // ── 1. DEFINING THE NEW 5-GROUP INFORMATION ARCHITECTURE ──
   const navGroups: NavGroupConfig[] = React.useMemo(() => [
     {
@@ -94,7 +112,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'Plan & Organize',
       items: [
         { id: 'calendar', label: 'Calendar & Timetable', icon: Calendar },
-        { id: 'task-inbox', label: 'Task Inbox', icon: Inbox },
+        {
+          id: 'task-inbox',
+          label: 'Universal Inbox',
+          icon: Inbox,
+          badge: unprocessedCount > 0 ? String(unprocessedCount) : undefined,
+        },
         { id: 'assignments', label: 'Assignment Tracker', icon: CheckSquare },
         { id: 'goals', label: 'Goals & Planning', icon: Target },
       ],
@@ -126,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
     },
-  ], [onOpenFocusMode]);
+  ], [onOpenFocusMode, unprocessedCount]);
 
   // ── 2. COLLAPSED GROUPS STATE WITH PERSISTENCE ──
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
@@ -206,6 +229,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex-1 overflow-y-auto px-2 py-3 space-y-3.5 scrollbar-thin select-none"
           aria-label="Main Navigation"
         >
+          {/* Quick Capture Primary CTA */}
+          {onOpenQuickCapture && (
+            <div className="mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenQuickCapture();
+                  if (isMobileDrawer && onCloseMobile) onCloseMobile();
+                }}
+                className={`w-full flex items-center gap-2 py-2 rounded-lg text-xs font-medium transition-colors border ${
+                  isIconOnly
+                    ? 'justify-center px-2 bg-slate-800/80 hover:bg-slate-700/80 border-slate-700/60 text-[#4F73E3]'
+                    : 'px-3 bg-[#3659C9]/10 hover:bg-[#3659C9]/20 border-[#3659C9]/30 text-[#4F73E3] dark:text-[#60A5FA]'
+                }`}
+                title="Quick Capture (Q)"
+                aria-label="Quick Capture"
+              >
+                <Zap className="w-3.5 h-3.5 shrink-0" />
+                {!isIconOnly && (
+                  <span className="flex-1 text-left font-semibold">Quick Capture</span>
+                )}
+                {!isIconOnly && (
+                  <kbd className="px-1.5 py-0.5 text-[9px] font-mono bg-slate-800 border border-slate-700 rounded text-slate-400">
+                    Q
+                  </kbd>
+                )}
+              </button>
+            </div>
+          )}
+
           {navGroups.map((group, groupIdx) => {
             const isGroupCollapsed = !isIconOnly && !!collapsedGroups[group.id];
 

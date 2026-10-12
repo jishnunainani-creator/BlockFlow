@@ -17,6 +17,9 @@ import { DailyGoalsList } from '../MyDay/DailyGoalsList';
 import { AddScheduledBlockModal } from '../MyDay/AddScheduledBlockModal';
 import { AddTaskModal } from '../MyDay/AddTaskModal';
 import { EditScheduledBlockModal } from '../MyDay/EditScheduledBlockModal';
+import { QuickCaptureItem } from '../../types/quickCapture';
+import { QuickCaptureModal } from '../QuickCapture/QuickCaptureModal';
+import { ConvertCaptureModal } from '../QuickCapture/ConvertCaptureModal';
 
 interface MyDayViewProps {
   onNavigate?: (view: NavView) => void;
@@ -48,6 +51,8 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
   // Modal states
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
+  const [convertingCaptureItem, setConvertingCaptureItem] = useState<QuickCaptureItem | null>(null);
   const [editingBlock, setEditingBlock] = useState<ScheduledBlock | null>(null);
 
   // Sync tasks, assignments, and goals on mount or focus
@@ -195,6 +200,7 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
         activeAssignmentsCount={activeAssignmentsCount}
         onOpenAddBlock={() => setIsAddBlockOpen(true)}
         onOpenAddTask={() => setIsAddTaskOpen(true)}
+        onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
         onStartFocusMode={onStartFocusMode}
       />
 
@@ -277,6 +283,34 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
           onSave={handleUpdateBlock}
           onDelete={handleDeleteBlock}
           onStartFocus={onStartFocusMode ? () => onStartFocusMode() : undefined}
+        />
+      )}
+
+      {/* Quick Capture Modal */}
+      {isQuickCaptureOpen && (
+        <QuickCaptureModal
+          isOpen={isQuickCaptureOpen}
+          onClose={() => setIsQuickCaptureOpen(false)}
+          onSaved={() => {
+            setTasks(loadTaskInbox());
+            addToast('Saved to Universal Inbox', 'success');
+          }}
+          onSaveAndConvert={(item) => {
+            setConvertingCaptureItem(item);
+          }}
+        />
+      )}
+
+      {/* Convert Capture Modal */}
+      {convertingCaptureItem && (
+        <ConvertCaptureModal
+          isOpen={Boolean(convertingCaptureItem)}
+          onClose={() => setConvertingCaptureItem(null)}
+          item={convertingCaptureItem}
+          onConverted={() => {
+            setTasks(loadTaskInbox());
+            setGoals(loadGoals());
+          }}
         />
       )}
     </div>

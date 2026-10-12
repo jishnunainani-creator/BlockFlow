@@ -25,6 +25,7 @@ import {
   LogOut,
   Sparkles,
   Home,
+  Zap,
 } from 'lucide-react';
 
 import { ResolutionSelector } from '../Timetable/ResolutionSelector';
@@ -33,6 +34,7 @@ import { FeasibilityBadge } from '../ExecutionOS/FeasibilityBadge';
 interface AppHeaderProps {
   onOpenAISchedule?: (tab: 'voice' | 'text' | 'import') => void;
   onOpenAICommandCenter?: () => void;
+  onOpenQuickCapture?: () => void;
   userEmail?: string | null;
   onOpenAuth?: () => void;
   onOpenMobileMenu?: () => void;
@@ -42,6 +44,7 @@ interface AppHeaderProps {
 export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenAISchedule,
   onOpenAICommandCenter,
+  onOpenQuickCapture,
   userEmail,
   onOpenAuth,
   onOpenMobileMenu,
@@ -236,6 +239,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <span className="hidden sm:inline">New Block</span>
           <span className="sm:hidden">Block</span>
         </button>
+
+        {/* Quick Capture Action */}
+        {onOpenQuickCapture && (
+          <button
+            type="button"
+            onClick={onOpenQuickCapture}
+            className="px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[#60A5FA] border border-blue-500/30 font-medium text-xs rounded-lg flex items-center gap-1.5 transition-colors shrink-0"
+            title="Quick Capture any item (Press Q)"
+          >
+            <Zap className="w-3.5 h-3.5 text-[#60A5FA]" />
+            <span className="hidden sm:inline">Quick Capture</span>
+            <span className="sm:hidden">Capture</span>
+          </button>
+        )}
 
         {/* Primary Action 2: AI Schedule */}
         <button
