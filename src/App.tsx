@@ -13,13 +13,13 @@ import { AuthPage } from './components/Auth/AuthPage';
 import { DashboardView } from './components/Views/DashboardView';
 import { CalendarView } from './components/Views/CalendarView';
 import { GoalsView } from './components/Views/GoalsView';
-import { FocusModeModal } from './components/Focus/FocusModeModal';
 import EnhancedFocusMode from './components/Focus/EnhancedFocusMode';
 import AssignmentsView from './components/Views/AssignmentsView';
 import { AIScheduleModal } from './components/AI/AIScheduleModal';
 import { AICommandCenterModal } from './components/AI/AICommandCenterModal';
 import { ImportWizardModal } from './components/Migration/ImportWizardModal';
 import { LibraryView } from './components/Views/LibraryView';
+import { ResourcesView } from './components/Views/ResourcesView';
 import { TemplatesView } from './components/Views/TemplatesView';
 import { AnalyticsView } from './components/Views/AnalyticsView';
 import { AICoachView } from './components/Views/AICoachView';
@@ -33,13 +33,15 @@ import { syncLocalStateToSupabase } from './lib/supabaseMigration';
 
 import { MobileBottomNav } from './components/Navigation/MobileBottomNav';
 import { BlockModal } from './components/Library/BlockModal';
+import { BlockFlowIntro } from './components/Intro/BlockFlowIntro';
+import { getInitialNavView, syncRouteUrl } from './utils/routes';
 
 export function AppContent() {
-  const { libraryBlocks, currentWeekScheduledBlocks, templates, customCategories, importJSONBackup, addToast, addLibraryBlock } = useTimetable();
+  const { libraryBlocks, currentWeekScheduledBlocks, templates, importJSONBackup, addLibraryBlock } = useTimetable();
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const [currentView, setCurrentView] = useState<NavView>(isMobile ? 'calendar' : 'dashboard');
+  const [currentView, setCurrentView] = useState<NavView>(getInitialNavView);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showAuthPage, setShowAuthPage] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
 
@@ -54,6 +56,22 @@ export function AppContent() {
   const [detectedLegacyJson, setDetectedLegacyJson] = useState<string | null>(null);
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('blockflow_session_intro_seen') !== 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleIntroComplete = () => {
+    try {
+      sessionStorage.setItem('blockflow_session_intro_seen', 'true');
+    } catch {
+      // ignore
+    }
+    setShowIntro(false);
+  };
 
   // Auto-detect legacy data key or check mount backup
   useEffect(() => {
@@ -86,6 +104,25 @@ export function AppContent() {
     setIsAIScheduleOpen(true);
   };
 
+  const handleNavigate = (view: NavView) => {
+    setCurrentView(view);
+    syncRouteUrl(view);
+  };
+
+  // Sync route URL with browser Back and Forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentView(getInitialNavView());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Normalize initial route URL upon mount
+  useEffect(() => {
+    syncRouteUrl(currentView, true);
+  }, []);
+
   // Keyboard Shortcuts
   useEffect(() => {
     let pendingG = false;
@@ -109,18 +146,18 @@ export function AppContent() {
         }, 1200);
       } else if (pendingG) {
         pendingG = false;
-        if (key === 'd') setCurrentView('dashboard');
-        if (key === 'c') setCurrentView('calendar');
-        if (key === 'g') setCurrentView('goals');
+        if (key === 'd') handleNavigate('dashboard');
+        if (key === 'c') handleNavigate('calendar');
+        if (key === 'g') handleNavigate('goals');
         if (key === 'f') setIsFocusModeOpen(true);
         if (key === 'v') openAISchedule('voice');
-        if (key === 'l') setCurrentView('library');
-        if (key === 't') setCurrentView('templates');
-        if (key === 'a') setCurrentView('analytics');
-        if (key === 'i') setCurrentView('ai-insights');
-        if (key === 'e') setCurrentView('execution');
-        if (key === 'r') setCurrentView('reminders');
-        if (key === 's') setCurrentView('settings');
+        if (key === 'l') handleNavigate('library');
+        if (key === 't') handleNavigate('templates');
+        if (key === 'a') handleNavigate('analytics');
+        if (key === 'i') handleNavigate('ai-insights');
+        if (key === 'e') handleNavigate('execution');
+        if (key === 'r') handleNavigate('reminders');
+        if (key === 's') handleNavigate('settings');
       }
     };
 
@@ -148,19 +185,24 @@ export function AppContent() {
       {/* Sidebar Navigation */}
       <Sidebar
         currentView={currentView}
-        onSelectView={setCurrentView}
+        onSelectView={(view) => {
+          handleNavigate(view);
+          setIsMobileNavOpen(false);
+        }}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         userEmail={userEmail}
         onOpenAuth={() => setShowAuthPage(true)}
         onOpenFocusMode={() => setIsFocusModeOpen(true)}
+        isMobileOpen={isMobileNavOpen}
+        onCloseMobile={() => setIsMobileNavOpen(false)}
       />
 
       {/* Main SaaS Module Views */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative pb-16 md:pb-0">
         {currentView === 'dashboard' && (
           <DashboardView
-            onNavigate={setCurrentView}
+            onNavigate={handleNavigate}
             userEmail={userEmail}
             onStartFocusMode={() => setIsFocusModeOpen(true)}
           />
@@ -171,31 +213,36 @@ export function AppContent() {
             onOpenAICommandCenter={() => setIsAICommandCenterOpen(true)}
             userEmail={userEmail}
             onOpenAuth={() => setShowAuthPage(true)}
+            onOpenMobileMenu={() => setIsMobileNavOpen(true)}
+            onOpenAddBlock={() => setIsBlockModalOpen(true)}
+            onNavigateHome={() => handleNavigate('dashboard')}
           />
         )}
-        {currentView === 'goals' && <GoalsView />}
-        {currentView === 'task-inbox' && <TaskInboxView />}
-        {currentView === 'assignments' && <AssignmentsView />}
-        {currentView === 'library' && <LibraryView />}
-        {currentView === 'templates' && <TemplatesView onNavigate={setCurrentView} />}
-        {currentView === 'analytics' && <AnalyticsView />}
-        {currentView === 'execution' && <ExecutionDashboardView />}
-        {currentView === 'ai-insights' && <AICoachView />}
-        {currentView === 'reminders' && <RemindersView />}
+        {currentView === 'goals' && <GoalsView onNavigate={handleNavigate} />}
+        {currentView === 'task-inbox' && <TaskInboxView onNavigate={handleNavigate} />}
+        {currentView === 'assignments' && <AssignmentsView onNavigate={handleNavigate} />}
+        {currentView === 'library' && <LibraryView onNavigate={handleNavigate} />}
+        {currentView === 'resources' && <ResourcesView onNavigate={handleNavigate} />}
+        {currentView === 'templates' && <TemplatesView onNavigate={handleNavigate} />}
+        {currentView === 'analytics' && <AnalyticsView onNavigate={handleNavigate} />}
+        {currentView === 'execution' && <ExecutionDashboardView onNavigate={handleNavigate} />}
+        {currentView === 'ai-insights' && <AICoachView onNavigate={handleNavigate} />}
+        {currentView === 'reminders' && <RemindersView onNavigate={handleNavigate} />}
         {currentView === 'settings' && (
-          <SettingsView userEmail={userEmail} onOpenAuth={() => setShowAuthPage(true)} />
+          <SettingsView userEmail={userEmail} onOpenAuth={() => setShowAuthPage(true)} onNavigate={handleNavigate} />
         )}
       </main>
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav
         currentView={currentView}
-        onSelectView={setCurrentView}
+        onSelectView={handleNavigate}
         onOpenAddBlock={() => setIsBlockModalOpen(true)}
         onOpenAISchedule={openAISchedule}
         onOpenEndOfDay={() => setIsAICommandCenterOpen(true)}
         userEmail={userEmail}
         onOpenAuth={() => setShowAuthPage(true)}
+        onOpenMobileMenu={() => setIsMobileNavOpen(true)}
       />
 
       {/* Quick Add Activity Block Modal */}
@@ -232,7 +279,7 @@ export function AppContent() {
           isOpen={isImportWizardOpen}
           onClose={() => setIsImportWizardOpen(false)}
           rawJsonData={detectedLegacyJson}
-          onApplyMigration={(result) => {
+          onApplyMigration={() => {
             importJSONBackup(JSON.stringify(detectedLegacyJson));
           }}
         />
@@ -249,6 +296,9 @@ export function AppContent() {
 
       {/* Interactive Product Spotlight Tour */}
       <GuidedTour onNavigate={setCurrentView} />
+
+      {/* Signature 2D Stickman Loading & Welcome Journey */}
+      {showIntro && <BlockFlowIntro onComplete={handleIntroComplete} />}
     </div>
   );
 }

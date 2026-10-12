@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { DemoProfileType, DEMO_PROFILES } from '../types/demo';
 import { TOUR_STEPS, TourStep } from '../types/onboarding';
 import { getDemoProfileData } from '../utils/demoProfiles';
@@ -215,25 +215,39 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [loadDemoProfile]);
 
+  const contextValue = useMemo(() => ({
+    isDemoMode,
+    activeProfile,
+    loadDemoProfile,
+    clearDemoData,
+    isOnboardingOpen,
+    isTourActive,
+    currentTourStep: TOUR_STEPS[currentStepIndex] || TOUR_STEPS[0],
+    currentStepIndex,
+    startTour,
+    nextTourStep,
+    prevTourStep,
+    closeTour,
+    skipOnboarding,
+    completeOnboarding,
+  }), [
+    isDemoMode,
+    activeProfile,
+    loadDemoProfile,
+    clearDemoData,
+    isOnboardingOpen,
+    isTourActive,
+    currentStepIndex,
+    startTour,
+    nextTourStep,
+    prevTourStep,
+    closeTour,
+    skipOnboarding,
+    completeOnboarding,
+  ]);
+
   return (
-    <DemoContext.Provider
-      value={{
-        isDemoMode,
-        activeProfile,
-        loadDemoProfile,
-        clearDemoData,
-        isOnboardingOpen,
-        isTourActive,
-        currentTourStep: TOUR_STEPS[currentStepIndex] || TOUR_STEPS[0],
-        currentStepIndex,
-        startTour,
-        nextTourStep,
-        prevTourStep,
-        closeTour,
-        skipOnboarding,
-        completeOnboarding,
-      }}
-    >
+    <DemoContext.Provider value={contextValue}>
       {children}
     </DemoContext.Provider>
   );

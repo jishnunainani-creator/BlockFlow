@@ -180,7 +180,7 @@ export function loadScheduledBlocks(currentWeekId: string): ScheduledBlock[] {
   } catch (e) {
     console.error('Failed to load scheduled blocks from storage', e);
   }
-  return [];
+  return getDefaultScheduledBlocks(currentWeekId);
 }
 
 export function saveScheduledBlocks(blocks: ScheduledBlock[]): void {
@@ -216,18 +216,103 @@ export function saveResolution(resolution: Resolution): void {
 
 const GOALS_STORAGE_KEY = 'blockflow_goals_v1';
 
+export const DEFAULT_SMART_GOALS: Goal[] = [
+  {
+    id: 'goal-default-dsa',
+    title: 'Complete First Six Chapters of Data Structures',
+    category: 'Academics',
+    description: 'Master Arrays, Linked Lists, Stacks, Queues, Trees, and Graph algorithms with practice problems.',
+    color: '#3659C9',
+    status: 'active',
+    createdAt: Date.now() - 86400000 * 5,
+    smart: {
+      specificDetails: 'Read theoretical foundations and solve LeetCode practice problems for chapters 1 through 6.',
+      measurableType: 'quantity',
+      targetValue: 6,
+      currentValue: 2,
+      unit: 'chapters',
+      estimatedTotalHours: 12,
+      dailyAvailableHours: 1,
+      weeklyAvailableHours: 6,
+      preferredDays: [0, 2, 4], // Mon, Wed, Fri
+      preferredSessionMinutes: 60,
+      preferredEnergyWindow: 'morning',
+      feasibilityNote: 'Estimated 12 total hours at 1 hour/day requires ~12 study days. With 20 days until deadline, this target is realistic.',
+      motivation: 'Core requirement for technical internship interviews and semester end-term exams.',
+      startDate: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0],
+      deadline: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
+    },
+    targetDate: new Date(Date.now() + 86400000 * 20).toISOString().split('T')[0],
+    targetWeeklyHours: 6,
+    preferredSessionMinutes: 60,
+    preferredEnergyWindow: 'morning',
+    totalRequiredHours: 12,
+  },
+];
+
+export function normalizeGoal(g: any): Goal {
+  const deadline =
+    g.smart?.deadline ||
+    g.targetDate ||
+    g.deadline ||
+    new Date(Date.now() + 86400000 * 30).toISOString().split('T')[0];
+  const startDate =
+    g.smart?.startDate ||
+    new Date(g.createdAt || Date.now()).toISOString().split('T')[0];
+  const targetVal =
+    g.smart?.targetValue ??
+    g.totalRequiredHours ??
+    (g.targetWeeklyHours ? g.targetWeeklyHours * 2 : 10);
+  const currentVal = g.smart?.currentValue ?? 0;
+  const unit = g.smart?.unit || (g.smart?.measurableType === 'effort' ? 'hours' : 'chapters');
+  const estHours = g.smart?.estimatedTotalHours ?? g.totalRequiredHours ?? 12;
+
+  return {
+    ...g,
+    id: g.id || `goal-${Date.now()}`,
+    title: g.title || 'Untitled Goal',
+    category: g.category || 'Academics',
+    color: g.color || '#3659C9',
+    status: g.status || 'active',
+    createdAt: g.createdAt || Date.now(),
+    smart: {
+      specificDetails: g.smart?.specificDetails || g.description || '',
+      measurableType: g.smart?.measurableType || (unit === 'hours' ? 'effort' : 'quantity'),
+      targetValue: targetVal,
+      currentValue: currentVal,
+      unit: unit,
+      estimatedTotalHours: estHours,
+      dailyAvailableHours:
+        g.smart?.dailyAvailableHours ||
+        (g.targetWeeklyHours ? Math.round((g.targetWeeklyHours / 7) * 10) / 10 : 1),
+      weeklyAvailableHours: g.smart?.weeklyAvailableHours || g.targetWeeklyHours || 6,
+      preferredDays: g.smart?.preferredDays || [0, 2, 4],
+      preferredSessionMinutes: g.smart?.preferredSessionMinutes || g.preferredSessionMinutes || 60,
+      preferredEnergyWindow: g.smart?.preferredEnergyWindow || g.preferredEnergyWindow || 'morning',
+      feasibilityNote: g.smart?.feasibilityNote,
+      motivation: g.smart?.motivation || g.purpose || '',
+      startDate,
+      deadline,
+    },
+    targetDate: deadline,
+    deadline,
+  };
+}
+
 export function loadGoals(): Goal[] {
   try {
     const key = getUserScopedKey(GOALS_STORAGE_KEY);
     const data = localStorage.getItem(key);
     if (data) {
       const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((g: any) => normalizeGoal(g));
+      }
     }
   } catch (e) {
     console.error('Failed to load goals from storage', e);
   }
-  return [];
+  return DEFAULT_SMART_GOALS;
 }
 
 export function saveGoals(goals: Goal[]): void {
@@ -238,4 +323,25 @@ export function saveGoals(goals: Goal[]): void {
     console.error('Failed to save goals to storage', e);
   }
 }
+
+const SMART_ONBOARDING_KEY = 'blockflow_smart_onboarding_seen_v1';
+
+export function isSmartOnboardingSeen(): boolean {
+  try {
+    const key = getUserScopedKey(SMART_ONBOARDING_KEY);
+    return localStorage.getItem(key) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function setSmartOnboardingSeen(seen: boolean = true): void {
+  try {
+    const key = getUserScopedKey(SMART_ONBOARDING_KEY);
+    localStorage.setItem(key, seen ? 'true' : 'false');
+  } catch (e) {
+    console.error('Failed to save onboarding preference', e);
+  }
+}
+
 

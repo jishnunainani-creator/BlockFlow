@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTimetable } from '../../context/TimetableContext';
 import { PRIORITY_CONFIG, Priority } from '../../types/timetable';
 import { formatDuration, DAYS_OF_WEEK } from '../../utils/timeUtils';
@@ -15,45 +15,85 @@ import {
 } from 'lucide-react';
 import ProductivityHeatmap from '../Analytics/ProductivityHeatmap';
 import LifeBalanceMeter from '../Analytics/LifeBalanceMeter';
+import { NavView } from '../Navigation/Sidebar';
+import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
 
-export const AnalyticsView: React.FC = () => {
+interface AnalyticsViewProps {
+  onNavigate?: (view: NavView) => void;
+}
+
+export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigate }) => {
   const { currentWeekScheduledBlocks, currentWeekId } = useTimetable();
 
-  const totalMinutes = currentWeekScheduledBlocks.reduce((acc, b) => acc + b.duration, 0);
+  const {
+    totalMinutes,
+    studyMinutes,
+    workMinutes,
+    completedBlocks,
+    missedBlocks,
+    completionRate,
+    productivityScore,
+    focusScore,
+    dailyTotals,
+    maxDailyMinutes,
+  } = useMemo(() => {
+    const totalMins = currentWeekScheduledBlocks.reduce((acc, b) => acc + b.duration, 0);
 
-  const studyMinutes = currentWeekScheduledBlocks
-    .filter((b) => b.priority === 'high' || b.priority === 'Study' || b.title.toLowerCase().includes('dsa') || b.title.toLowerCase().includes('study'))
-    .reduce((acc, b) => acc + b.duration, 0);
-
-  const workMinutes = currentWeekScheduledBlocks
-    .filter((b) => b.priority === 'medium' || b.priority === 'Work' || b.title.toLowerCase().includes('work') || b.title.toLowerCase().includes('internship'))
-    .reduce((acc, b) => acc + b.duration, 0);
-
-  const completedBlocks = currentWeekScheduledBlocks.filter((b) => b.status === 'completed' || b.status === 'faster');
-  const missedBlocks = currentWeekScheduledBlocks.filter((b) => b.status === 'missed');
-  
-  const completionRate = currentWeekScheduledBlocks.length > 0
-    ? Math.round((completedBlocks.length / currentWeekScheduledBlocks.length) * 100)
-    : 0;
-
-  const productivityScore = Math.min(100, Math.round(completionRate * 0.8 + (studyMinutes > 300 ? 20 : 10)));
-  const focusScore = Math.min(100, Math.round(85 + (completedBlocks.length > 3 ? 10 : 0) - missedBlocks.length * 5));
-
-  const dailyTotals = DAYS_OF_WEEK.map((day) => {
-    const minutes = currentWeekScheduledBlocks
-      .filter((b) => b.dayOfWeek === day.index)
+    const studyMins = currentWeekScheduledBlocks
+      .filter((b) => b.priority === 'high' || b.priority === 'Study' || b.title.toLowerCase().includes('dsa') || b.title.toLowerCase().includes('study'))
       .reduce((acc, b) => acc + b.duration, 0);
-    return {
-      day: day.short,
-      minutes,
-      hours: (minutes / 60).toFixed(1),
-    };
-  });
 
-  const maxDailyMinutes = Math.max(...dailyTotals.map((d) => d.minutes), 60);
+    const workMins = currentWeekScheduledBlocks
+      .filter((b) => b.priority === 'medium' || b.priority === 'Work' || b.title.toLowerCase().includes('work') || b.title.toLowerCase().includes('internship'))
+      .reduce((acc, b) => acc + b.duration, 0);
+
+    const completed = currentWeekScheduledBlocks.filter((b) => b.status === 'completed' || b.status === 'faster');
+    const missed = currentWeekScheduledBlocks.filter((b) => b.status === 'missed');
+    
+    const rate = currentWeekScheduledBlocks.length > 0
+      ? Math.round((completed.length / currentWeekScheduledBlocks.length) * 100)
+      : 0;
+
+    const prodScore = Math.min(100, Math.round(rate * 0.8 + (studyMins > 300 ? 20 : 10)));
+    const focScore = Math.min(100, Math.round(85 + (completed.length > 3 ? 10 : 0) - missed.length * 5));
+
+    const totals = DAYS_OF_WEEK.map((day) => {
+      const minutes = currentWeekScheduledBlocks
+        .filter((b) => b.dayOfWeek === day.index)
+        .reduce((acc, b) => acc + b.duration, 0);
+      return {
+        day: day.short,
+        minutes,
+        hours: (minutes / 60).toFixed(1),
+      };
+    });
+
+    const maxMins = Math.max(...totals.map((d) => d.minutes), 60);
+
+    return {
+      totalMinutes: totalMins,
+      studyMinutes: studyMins,
+      workMinutes: workMins,
+      completedBlocks: completed,
+      missedBlocks: missed,
+      completionRate: rate,
+      productivityScore: prodScore,
+      focusScore: focScore,
+      dailyTotals: totals,
+      maxDailyMinutes: maxMins,
+    };
+  }, [currentWeekScheduledBlocks]);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-6 select-none scrollbar-thin">
+    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-5 select-none scrollbar-thin">
+      {/* ── BREADCRUMB ── */}
+      {onNavigate && (
+        <PageBreadcrumb
+          items={[{ label: 'Productivity Analytics' }]}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>

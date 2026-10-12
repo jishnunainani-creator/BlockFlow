@@ -144,35 +144,54 @@ export const TimeBudgetProvider: React.FC<{ children: ReactNode }> = ({ children
   );
 
   // Derive live Time Allocation Summary from timetable data
-  const summary = calculateTimeAllocationSummary(
+  const summary = React.useMemo(() => {
+    return calculateTimeAllocationSummary(
+      categories,
+      currentWeekScheduledBlocks,
+      libraryBlocks,
+      sessions,
+      dateScope
+    );
+  }, [categories, currentWeekScheduledBlocks, libraryBlocks, sessions, dateScope]);
+
+  const contextValue = React.useMemo(() => ({
     categories,
-    currentWeekScheduledBlocks,
-    libraryBlocks,
-    sessions,
-    dateScope
-  );
+    summary,
+    dateScope,
+    setDateScope,
+    viewMode,
+    setViewMode,
+    isAddCategoryOpen,
+    openAddCategoryModal,
+    closeAddCategoryModal,
+    isBulkCategorizeOpen,
+    openBulkCategorizeModal,
+    closeBulkCategorizeModal,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    bulkCategorizeBlocks,
+  }), [
+    categories,
+    summary,
+    dateScope,
+    setDateScope,
+    viewMode,
+    setViewMode,
+    isAddCategoryOpen,
+    openAddCategoryModal,
+    closeAddCategoryModal,
+    isBulkCategorizeOpen,
+    openBulkCategorizeModal,
+    closeBulkCategorizeModal,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    bulkCategorizeBlocks,
+  ]);
 
   return (
-    <TimeBudgetContext.Provider
-      value={{
-        categories,
-        summary,
-        dateScope,
-        setDateScope,
-        viewMode,
-        setViewMode,
-        isAddCategoryOpen,
-        openAddCategoryModal,
-        closeAddCategoryModal,
-        isBulkCategorizeOpen,
-        openBulkCategorizeModal,
-        closeBulkCategorizeModal,
-        addCategory,
-        updateCategory,
-        deleteCategory,
-        bulkCategorizeBlocks,
-      }}
-    >
+    <TimeBudgetContext.Provider value={contextValue}>
       {children}
     </TimeBudgetContext.Provider>
   );

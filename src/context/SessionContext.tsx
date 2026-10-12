@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useTimetable } from './TimetableContext';
 import { ScheduledBlock } from '../types/timetable';
 import {
@@ -11,9 +11,7 @@ import {
 } from '../types/sessionLog';
 import {
   loadExecutionSessions,
-  saveExecutionSessions,
   loadDeviations,
-  saveDeviations,
   appendExecutionSession,
   appendDeviationRecord,
 } from '../utils/sessionStorage';
@@ -57,7 +55,7 @@ interface SessionContextType {
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentWeekScheduledBlocks, updateScheduledBlock, addScheduledBlock, addToast } = useTimetable();
+  const { currentWeekScheduledBlocks, updateScheduledBlock, addToast } = useTimetable();
 
   const [sessions, setSessions] = useState<ExecutionSession[]>([]);
   const [deviations, setDeviations] = useState<DeviationRecord[]>([]);
@@ -226,26 +224,42 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
     return detectPlanningPatterns(sessions, deviations);
   }, [sessions, deviations]);
 
+  const contextValue = useMemo(() => ({
+    sessions,
+    deviations,
+    activeSessionLogBlock,
+    openSessionLogModal,
+    closeSessionLogModal,
+    activeReplaceBlock,
+    openReplaceModal,
+    closeReplaceModal,
+    logSession,
+    replaceActivity,
+    extendSession,
+    getPlanVsRealityForDate,
+    getDeviationAnalytics,
+    getStudyHistory,
+    getPlanningInsights,
+  }), [
+    sessions,
+    deviations,
+    activeSessionLogBlock,
+    openSessionLogModal,
+    closeSessionLogModal,
+    activeReplaceBlock,
+    openReplaceModal,
+    closeReplaceModal,
+    logSession,
+    replaceActivity,
+    extendSession,
+    getPlanVsRealityForDate,
+    getDeviationAnalytics,
+    getStudyHistory,
+    getPlanningInsights,
+  ]);
+
   return (
-    <SessionContext.Provider
-      value={{
-        sessions,
-        deviations,
-        activeSessionLogBlock,
-        openSessionLogModal,
-        closeSessionLogModal,
-        activeReplaceBlock,
-        openReplaceModal,
-        closeReplaceModal,
-        logSession,
-        replaceActivity,
-        extendSession,
-        getPlanVsRealityForDate,
-        getDeviationAnalytics,
-        getStudyHistory,
-        getPlanningInsights,
-      }}
-    >
+    <SessionContext.Provider value={contextValue}>
       {children}
     </SessionContext.Provider>
   );

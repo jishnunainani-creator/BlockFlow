@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTimetable } from '../../context/TimetableContext';
 import { getWeekDaysWithDates, minutesToTimeStr, snapToResolution } from '../../utils/timeUtils';
 import { ScheduledBlockItem } from './ScheduledBlockItem';
@@ -7,7 +7,7 @@ import { ConflictBanner } from '../Conflict/ConflictBanner';
 import { MobileAddBlockSheet } from './MobileAddBlockSheet';
 import { ExportModal } from '../Export/ExportModal';
 import { PrintCalendar } from '../Export/PrintCalendar';
-import { Plus, Calendar, CalendarDays, LayoutGrid, Download, Bookmark } from 'lucide-react';
+import { Plus, Calendar, CalendarDays, LayoutGrid, Download, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BulkSaveToLibraryModal } from '../Library/BulkSaveToLibraryModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -27,18 +27,22 @@ const DENSITY_ORDER: Density[] = ['comfortable', 'balanced', 'compact'];
 
 const TIME_COL_WIDTH  = 72; // px — sticky time column
 const DAY_COL_MIN_W   = 160; // px — minimum day column width
-const HEADER_HEIGHT   = 80;  // px — tall day header
+const HEADER_HEIGHT   = 54;  // px — compact day header
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 interface TimetableGridProps {
   startHour?: number;
   endHour?: number;
+  isLibraryOpen?: boolean;
+  onToggleLibrary?: () => void;
 }
 
 export const TimetableGrid: React.FC<TimetableGridProps> = ({
   startHour = 6,
   endHour   = 24,
+  isLibraryOpen = true,
+  onToggleLibrary,
 }) => {
   const {
     currentWeekId,
@@ -55,7 +59,6 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     duplicateSelectedBlock,
     deleteSelectedBlock,
     deselectAll,
-    conflicts,
   } = useTimetable();
 
   // ── Local UI State ──────────────────────────────────────────────────────────
@@ -140,13 +143,28 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const hoursCount = endHour - startHour;
   const totalHeight = hoursCount * hourHeight;
 
-  const daysWithDates = getWeekDaysWithDates(currentWeekId);
-  const workDays      = daysWithDates.filter((d) => d.index < 5);
-  const displayDays   = viewMode === 'workweek' ? workDays : daysWithDates;
+  const daysWithDates = useMemo(() => getWeekDaysWithDates(currentWeekId), [currentWeekId]);
+  const workDays      = useMemo(() => daysWithDates.filter((d) => d.index < 5), [daysWithDates]);
+  const displayDays   = useMemo(() => (viewMode === 'workweek' ? workDays : daysWithDates), [viewMode, workDays, daysWithDates]);
+
+  // Pre-index blocks by day for O(1) column access
+  const blocksByDay = useMemo(() => {
+    const map = new Map<number, typeof currentWeekScheduledBlocks>();
+    for (let i = 0; i < 7; i++) map.set(i, []);
+    for (const b of currentWeekScheduledBlocks) {
+      const list = map.get(b.dayOfWeek);
+      if (list) list.push(b);
+      else map.set(b.dayOfWeek, [b]);
+    }
+    return map;
+  }, [currentWeekScheduledBlocks]);
 
   // Mobile single day display
   const activeDayIndex = typeof mobileActiveDay === 'number' ? mobileActiveDay : todayDayIndex;
-  const mobileDisplayDays = daysWithDates.filter((d) => d.index === activeDayIndex);
+  const mobileDisplayDays = useMemo(
+    () => daysWithDates.filter((d) => d.index === activeDayIndex),
+    [daysWithDates, activeDayIndex]
+  );
 
   // ── Shift+Scroll → horizontal ───────────────────────────────────────────────
   useEffect(() => {
@@ -214,11 +232,12 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const handleDragOver = useCallback((e: React.DragEvent, dayIndex: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    const rect       = e.currentTarget.getBoundingClientRect();
-    const offsetY    = e.clientY - rect.top;
-    const rawMinutes = startHour * 60 + (offsetY / hourHeight) * 60;
-    setDragOverCol(dayIndex);
-    setDragOverTime(snapToResolution(rawMinutes, resolution));
+    const rect        = e.currentTarget.getBoundingClientRect();
+    const offsetY     = e.clientY - rect.top;
+    const rawMinutes  = startHour * 60 + (offsetY / hourHeight) * 60;
+    const snappedTime = snapToResolution(rawMinutes, resolution);
+    setDragOverCol((prev) => (prev === dayIndex ? prev : dayIndex));
+    setDragOverTime((prev) => (prev === snappedTime ? prev : snappedTime));
   }, [hourHeight, resolution, startHour]);
 
   const handleDragLeave = useCallback(() => {
@@ -260,8 +279,8 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
     setSelectedBlockId(null);
   }, [hourHeight, resolution, startHour, setSelectedCell, setSelectedBlockId]);
 
-  // ── Sub-Grid Lines ──────────────────────────────────────────────────────────
-  const renderSubGridLines = () => {
+  // ── Sub-Grid Lines (Memoized for high performance) ──────────────────────────
+  const subGridLines = useMemo(() => {
     const lines: React.ReactNode[] = [];
     const stepMinutes = Math.min(30, resolution);
     const totalMinutes = hoursCount * 60;
@@ -284,7 +303,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       );
     }
     return lines;
-  };
+  }, [hoursCount, hourHeight, resolution]);
 
   // ── Density Cycle ───────────────────────────────────────────────────────────
   const cycleDensity = () => {
@@ -301,14 +320,41 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
       className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 select-none"
     >
       {/* ── TOOLBAR (Desktop) ─────────────────────────────────────────────── */}
-      <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-900/80 border-b border-slate-800/60 shrink-0 z-20 backdrop-blur-sm">
+      <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-900 border-b border-slate-800/60 shrink-0 z-20">
+        {/* Persistent Activity Library Sidebar Toggle */}
+        {onToggleLibrary && (
+          <>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleLibrary();
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-slate-500"
+              title={isLibraryOpen ? 'Hide Activity Library' : 'Show Activity Library'}
+              aria-label={isLibraryOpen ? 'Hide Activity Library' : 'Show Activity Library'}
+              aria-expanded={isLibraryOpen}
+            >
+              {isLibraryOpen ? (
+                <ChevronLeft className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+              <span className="text-[11px]">
+                {isLibraryOpen ? 'Hide Library' : 'Activity Library'}
+              </span>
+            </button>
+            <div className="w-px h-4 bg-slate-700/60 shrink-0" />
+          </>
+        )}
+
         {/* View Mode Toggle */}
-        <div className="flex items-center bg-slate-800/60 rounded-xl p-0.5 gap-0.5 border border-slate-700/40">
+        <div className="flex items-center bg-slate-800 rounded-lg p-0.5 gap-0.5 border border-slate-700/60">
           <button
             onClick={(e) => { e.stopPropagation(); setViewMode('workweek'); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
               viewMode === 'workweek'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                ? 'bg-[#3659C9] dark:bg-[#4F73E3] text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -317,9 +363,9 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setViewMode('fullweek'); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
               viewMode === 'fullweek'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/30'
+                ? 'bg-[#3659C9] dark:bg-[#4F73E3] text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -333,11 +379,11 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         {/* Density Toggle */}
         <button
           onClick={(e) => { e.stopPropagation(); cycleDensity(); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/40 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-colors"
           title="Toggle density"
         >
-          <LayoutGrid className="w-3.5 h-3.5" />
-          {DENSITY_CONFIG[density].label}
+          <LayoutGrid className="w-3.5 h-3.5 text-slate-400" />
+          <span>{DENSITY_CONFIG[density].label}</span>
         </button>
 
         <div className="w-px h-4 bg-slate-700/60" />
@@ -345,156 +391,144 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         {/* Bulk Save to Library Button */}
         <button
           onClick={(e) => { e.stopPropagation(); setShowBulkSaveModal(true); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-xl text-xs font-bold text-purple-300 hover:text-white transition-all shadow-sm active:scale-95 ml-auto"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-colors ml-auto"
           title="Save Timetable Activities to Library"
         >
-          <Bookmark className="w-3.5 h-3.5" />
+          <Bookmark className="w-3.5 h-3.5 text-slate-400" />
           <span>Save to Library</span>
         </button>
 
         {/* Export Button */}
         <button
           onClick={(e) => { e.stopPropagation(); setShowExportModal(true); }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 rounded-xl text-xs font-bold text-indigo-300 hover:text-white transition-all shadow-sm active:scale-95"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700/60 rounded-lg text-xs font-medium text-slate-200 hover:text-white transition-colors shadow-sm"
           title="Export Timetable Planner"
         >
-          <Download className="w-3.5 h-3.5" />
-          <span>Export ▼</span>
+          <Download className="w-3.5 h-3.5 text-slate-400" />
+          <span>Export</span>
         </button>
       </div>
 
-
-
       {/* ── MAIN CALENDAR AREA ───────────────────────────────────────────────── */}
-      {/* Desktop: sticky header + horizontally scrollable columns */}
+      {/* Desktop: unified scroll container with sticky header and sticky time column */}
       <div id="calendar-export" className="hidden sm:flex flex-col flex-1 overflow-hidden relative">
-
-        {/* ── STICKY HEADER ROW ─────────────────────────────────────────────── */}
         <div
-          className="flex shrink-0 border-b border-slate-800/80 bg-slate-900/95 backdrop-blur-md z-30"
-          style={{ height: `${HEADER_HEIGHT}px` }}
+          ref={scrollRef}
+          id="timetable-printable-area"
+          className="flex flex-col flex-1 overflow-y-auto overflow-x-auto scrollbar-thin relative"
         >
-          {/* Corner cell — sticky on both axes */}
+          {/* ── STICKY HEADER ROW ─────────────────────────────────────────────── */}
           <div
-            className="shrink-0 bg-slate-900/95 border-r border-slate-800/60 flex items-end justify-center pb-3 z-40"
-            style={{ width: `${TIME_COL_WIDTH}px`, position: 'sticky', left: 0 }}
+            className="sticky top-0 z-30 flex shrink-0 border-b border-slate-800/80 bg-slate-900"
+            style={{
+              height: `${HEADER_HEIGHT}px`,
+              minWidth: `${TIME_COL_WIDTH + displayDays.length * DAY_COL_MIN_W}px`,
+            }}
           >
-            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Time</span>
-          </div>
+            {/* Corner cell — sticky on both axes */}
+            <div
+              className="sticky left-0 top-0 z-40 bg-slate-900 border-r border-slate-800/60 flex items-center justify-center shrink-0"
+              style={{ width: `${TIME_COL_WIDTH}px`, height: `${HEADER_HEIGHT}px` }}
+            >
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Time</span>
+            </div>
 
-          {/* Scrollable header columns — mirrors the grid scroll */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-x-auto overflow-y-hidden scrollbar-none"
-            id="cal-header-scroll"
-          >
-            <div className="flex" style={{ minWidth: `${displayDays.length * DAY_COL_MIN_W}px` }}>
+            {/* Header Day Columns — exact same flex basis and minWidth as body columns */}
+            <div className="flex flex-1" style={{ height: `${HEADER_HEIGHT}px` }}>
               {displayDays.map((day) => {
                 const isWeekend = day.index >= 5;
                 return (
                   <div
                     key={day.index}
                     style={{ flex: '1 1 0%', minWidth: `${DAY_COL_MIN_W}px` }}
-                    className={`relative flex flex-col items-center justify-end pb-3 border-r border-slate-800/50 transition-all duration-300 ease-in-out ${
+                    className={`relative flex items-center justify-between px-3 border-r border-slate-800/50 transition-colors ${
                       day.isToday
-                        ? 'bg-gradient-to-b from-emerald-950/40 via-emerald-950/10 to-transparent border-t-[3px] border-t-emerald-400'
+                        ? 'bg-[#3659C9]/10 border-t-2 border-t-[#3659C9] dark:border-t-[#4F73E3]'
                         : isWeekend
-                        ? 'bg-slate-900/30'
+                        ? 'bg-slate-900/40'
                         : 'hover:bg-slate-800/20'
                     }`}
                   >
-                    {/* Day full name */}
-                    <span className={`text-[10px] font-bold uppercase tracking-[0.2em] mb-1 ${
-                      day.isToday ? 'text-emerald-400' : isWeekend ? 'text-slate-500' : 'text-slate-400'
-                    }`}>
-                      {day.full}
-                    </span>
-
-                    {/* Date number — large & prominent */}
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[22px] font-bold leading-none ${
-                        day.isToday ? 'text-emerald-300' : isWeekend ? 'text-slate-500' : 'text-slate-200'
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-xs font-bold uppercase tracking-wider ${
+                        day.isToday ? 'text-[#3659C9] dark:text-[#4F73E3]' : isWeekend ? 'text-slate-500' : 'text-slate-300'
+                      }`}>
+                        {day.short}
+                      </span>
+                      <span className={`text-sm font-bold leading-none ${
+                        day.isToday ? 'text-[#3659C9] dark:text-[#4F73E3]' : isWeekend ? 'text-slate-500' : 'text-slate-100'
                       }`}>
                         {day.dateNum}
                       </span>
-                      {day.isToday && (
-                        <span className="flex h-2 w-2 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                        </span>
-                      )}
+                      <span className={`text-[10px] font-medium ${
+                        day.isToday ? 'text-[#3659C9]/80 dark:text-[#4F73E3]/80' : 'text-slate-500'
+                      }`}>
+                        {day.monthShort}
+                      </span>
                     </div>
 
-                    {/* Month abbreviation */}
-                    <span className={`text-[11px] font-medium mt-0.5 ${
-                      day.isToday ? 'text-emerald-500/80' : 'text-slate-600'
-                    }`}>
-                      {day.monthShort}
-                    </span>
+                    {day.isToday && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#3659C9]/20 text-[#3659C9] dark:text-[#4F73E3] uppercase tracking-wider">
+                        Today
+                      </span>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
-        </div>
 
-        {/* ── SCROLLABLE BODY ───────────────────────────────────────────────── */}
-        <div
-          id="timetable-printable-area"
-          className="flex flex-1 overflow-y-auto overflow-x-auto scrollbar-thin"
-          onScroll={(e) => {
-            // Sync horizontal scroll with header
-            const headerScroll = document.getElementById('cal-header-scroll');
-            if (headerScroll) headerScroll.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
-          }}
-        >
-          {/* Sticky Time Column */}
+          {/* ── GRID BODY ROW ─────────────────────────────────────────────────── */}
           <div
-            className="shrink-0 bg-slate-900/60 border-r border-slate-800/60 relative z-20 backdrop-blur-sm"
+            className="flex flex-1 relative"
             style={{
-              width: `${TIME_COL_WIDTH}px`,
               height: `${totalHeight}px`,
-              position: 'sticky',
-              left: 0,
+              minWidth: `${TIME_COL_WIDTH + displayDays.length * DAY_COL_MIN_W}px`,
             }}
           >
-            {timeLabels.map(({ hour, label }) => {
-              const topPx     = (hour - startHour) * hourHeight;
-              const halfTopPx = topPx + hourHeight / 2;
-              return (
-                <React.Fragment key={hour}>
-                  <div
-                    style={{ top: `${topPx}px` }}
-                    className="absolute left-0 right-0 -translate-y-2.5 flex items-center justify-end pr-3"
-                  >
-                    <span className="text-[11px] font-mono font-semibold text-slate-500 tabular-nums">
-                      {label}
-                    </span>
-                  </div>
-                  {hour < endHour && (
+            {/* Sticky Time Column */}
+            <div
+              className="sticky left-0 z-20 bg-slate-900/90 border-r border-slate-800/60 shrink-0 backdrop-blur-sm"
+              style={{
+                width: `${TIME_COL_WIDTH}px`,
+                height: `${totalHeight}px`,
+              }}
+            >
+              {timeLabels.map(({ hour, label }) => {
+                const topPx     = (hour - startHour) * hourHeight;
+                const halfTopPx = topPx + hourHeight / 2;
+                return (
+                  <React.Fragment key={hour}>
                     <div
-                      style={{ top: `${halfTopPx}px` }}
-                      className="absolute left-0 right-0 -translate-y-2 flex items-center justify-end pr-3 pointer-events-none"
+                      style={{ top: `${topPx}px` }}
+                      className="absolute left-0 right-0 -translate-y-2.5 flex items-center justify-end pr-3"
                     >
-                      <span className="text-[9px] font-mono text-slate-700">:30</span>
+                      <span className="text-[11px] font-mono font-semibold text-slate-500 tabular-nums">
+                        {label}
+                      </span>
                     </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+                    {hour < endHour && (
+                      <div
+                        style={{ top: `${halfTopPx}px` }}
+                        className="absolute left-0 right-0 -translate-y-2 flex items-center justify-end pr-3 pointer-events-none"
+                      >
+                        <span className="text-[9px] font-mono text-slate-700">:30</span>
+                      </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
 
-          {/* Day Columns */}
-          <div
-            className="flex relative"
-            style={{
-              height: `${totalHeight}px`,
-              minWidth: `${displayDays.length * DAY_COL_MIN_W}px`,
-              flex: 1,
-            }}
-          >
+            {/* Day Columns */}
+            <div
+              className="flex flex-1 relative"
+              style={{
+                height: `${totalHeight}px`,
+              }}
+            >
             {displayDays.map((day) => {
-              const dayBlocks   = currentWeekScheduledBlocks.filter((sb) => sb.dayOfWeek === day.index);
+              const dayBlocks   = blocksByDay.get(day.index) || [];
               const isOverDay   = dragOverCol === day.index;
               const isWeekend   = day.index >= 5;
 
@@ -510,11 +544,11 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                     height: `${totalHeight}px`,
                     minWidth: `${DAY_COL_MIN_W}px`,
                   }}
-                  className={`relative border-r border-slate-800/40 transition-all duration-300 ease-in-out ${
+                  className={`relative border-r border-slate-800/40 transition-colors ${
                     day.isToday ? 'bg-emerald-950/8' : isWeekend ? 'bg-slate-900/20' : ''
                   } ${isOverDay ? 'bg-indigo-950/25 ring-inset ring-1 ring-indigo-500/30' : 'hover:bg-slate-900/15'}`}
                 >
-                  {renderSubGridLines()}
+                  {subGridLines}
 
                   {/* Selected cell indicator */}
                   {selectedCell && selectedCell.dayOfWeek === day.index && (
@@ -560,6 +594,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
           </div>
         </div>
       </div>
+    </div>
 
       {/* ── MOBILE GRID (Calendar-First Philosophy: 100% Height, Touch Swipeable) ── */}
       <div
@@ -571,15 +606,37 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
         <div className="sticky top-0 flex flex-col border-b border-slate-800 bg-slate-900/95 backdrop-blur-md shrink-0 z-30">
           {/* 7-Day Pill Strip */}
           <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-800/60 bg-slate-950/60">
-            <button
-              type="button"
-              onClick={() => setMobileActiveDay((prev) => Math.max(0, prev - 1))}
-              disabled={activeDayIndex === 0}
-              className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 text-xs font-bold"
-              title="Previous Day"
-            >
-              ◀
-            </button>
+            <div className="flex items-center gap-1">
+              {onToggleLibrary && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleLibrary();
+                  }}
+                  className="flex items-center gap-1 px-1.5 py-1 text-[10px] font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/60 transition-colors shrink-0"
+                  title={isLibraryOpen ? 'Hide Activity Library' : 'Show Activity Library'}
+                  aria-label={isLibraryOpen ? 'Hide Activity Library' : 'Show Activity Library'}
+                  aria-expanded={isLibraryOpen}
+                >
+                  {isLibraryOpen ? (
+                    <ChevronLeft className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                  <span>Library</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setMobileActiveDay((prev) => Math.max(0, prev - 1))}
+                disabled={activeDayIndex === 0}
+                className="p-1 rounded text-slate-400 hover:text-white disabled:opacity-30 text-xs font-bold"
+                title="Previous Day"
+              >
+                ◀
+              </button>
+            </div>
 
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
               {daysWithDates.map((d) => {
@@ -670,7 +727,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
           {/* Mobile day columns */}
           <div className="flex-1 grid divide-x divide-slate-800/60 relative" style={{ gridTemplateColumns: `repeat(${mobileDisplayDays.length}, 1fr)`, height: `${totalHeight}px` }}>
             {mobileDisplayDays.map((day) => {
-              const dayBlocks = currentWeekScheduledBlocks.filter((sb) => sb.dayOfWeek === day.index);
+              const dayBlocks = blocksByDay.get(day.index) || [];
               const isOverDay = dragOverCol === day.index;
               return (
                 <div
@@ -682,7 +739,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                   className={`relative transition-colors ${day.isToday ? 'bg-indigo-950/15' : ''} ${isOverDay ? 'bg-indigo-950/30' : 'hover:bg-slate-900/20'}`}
                   style={{ height: `${totalHeight}px` }}
                 >
-                  {renderSubGridLines()}
+                  {subGridLines}
                   {selectedCell && selectedCell.dayOfWeek === day.index && (
                     <div
                       style={{

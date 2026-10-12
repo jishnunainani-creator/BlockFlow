@@ -184,47 +184,35 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
       >
         {/* Card shell */}
         <div
-          className="relative overflow-hidden rounded-[28px]"
+          className="relative overflow-hidden rounded-2xl bg-slate-900 border border-slate-700/60 shadow-2xl"
           style={{
-            background: `linear-gradient(160deg, #0d1120 0%, #080d1a 100%)`,
-            border:     `1px solid rgba(255,255,255,0.08)`,
-            borderTop:  `3px solid ${block.color}`,
-            boxShadow:  `0 32px 80px rgba(0,0,0,0.7), 0 8px 32px ${block.color}18, 0 0 0 1px rgba(255,255,255,0.04)`,
+            borderTop: `3px solid ${block.color}`,
           }}
         >
-          {/* Color glow at top-right corner */}
-          <div
-            className="absolute top-0 right-0 w-40 h-40 pointer-events-none"
-            style={{
-              background: `radial-gradient(circle at top right, ${block.color}12 0%, transparent 70%)`,
-            }}
-          />
-
           {/* ── HEADER ── */}
-          <div className="relative px-5 pt-5 pb-4 border-b border-white/[0.06]">
+          <div className="relative px-5 pt-5 pb-4 border-b border-slate-800/80">
             <div className="flex items-start justify-between gap-3">
               {/* Icon + Title + Time */}
               <div className="flex items-start gap-3.5 min-w-0">
                 <div
-                  className="relative p-2.5 rounded-2xl text-white shrink-0 mt-0.5"
+                  className="relative p-2.5 rounded-xl text-white shrink-0 mt-0.5"
                   style={{
                     backgroundColor: block.color,
-                    boxShadow: `0 6px 20px ${block.color}50`,
                   }}
                 >
                   <IconComp className="w-5 h-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-[17px] font-bold text-white leading-tight tracking-tight">
+                  <h3 className="text-base font-bold text-white leading-tight tracking-tight">
                     {block.title}
                   </h3>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <Clock className="w-3 h-3 text-slate-500 shrink-0" />
-                    <span className="text-[12px] font-mono text-slate-400 tabular-nums">
+                    <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="text-xs font-mono text-slate-400 tabular-nums">
                       {startTime} – {endTime}
                     </span>
-                    <span className="text-slate-700 text-[12px]">·</span>
-                    <span className="text-[12px] text-slate-500">{formatDuration(block.duration)}</span>
+                    <span className="text-slate-600 text-xs">·</span>
+                    <span className="text-xs text-slate-400">{formatDuration(block.duration)}</span>
                   </div>
                 </div>
               </div>
@@ -232,7 +220,7 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl text-slate-500 hover:text-white hover:bg-white/8 transition-all shrink-0 mt-0.5"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors shrink-0 mt-0.5"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -241,9 +229,7 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
 
             {/* Conflict notice */}
             {isConflicting && (
-              <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-xl border"
-                style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.2)' }}
-              >
+              <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg border bg-rose-500/10 border-rose-500/20">
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                 <span className="text-[11px] font-medium text-rose-300">Overlaps with another activity</span>
               </div>
@@ -257,15 +243,15 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
             <div className="flex flex-wrap gap-2 items-center">
               {/* Linked Goal Badge */}
               {block.goalTitle && (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20 shadow-sm">
-                  <span className="text-purple-400">🎯 Goal:</span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700/60">
+                  <span className="text-[#3659C9] dark:text-[#4F73E3]">Goal:</span>
                   <span className="truncate max-w-[160px]">{block.goalTitle}</span>
                 </div>
               )}
 
               {/* Time Category */}
               <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold border"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border"
                 style={{
                   color: matchedCategory ? matchedCategory.color : block.color,
                   borderColor: matchedCategory ? `${matchedCategory.color}30` : `${block.color}30`,
@@ -273,18 +259,18 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 }}
               >
                 <Tag className="w-3 h-3 shrink-0" />
-                <span>Category: {timeCategoryName}</span>
+                <span>{timeCategoryName}</span>
               </span>
 
               {/* Priority */}
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-slate-800/80 text-slate-300 border border-slate-700">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700/60">
                 <span>Priority: {priorityLabel}</span>
               </span>
 
               {/* Status — interactive */}
               <button
                 onClick={(e) => { e.stopPropagation(); setShowStatusPicker(!showStatusPicker); }}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all hover:scale-105 active:scale-95 ${statusCfg.bgClass}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${statusCfg.bgClass}`}
               >
                 <span>{statusCfg.badge}</span>
                 <span>{statusCfg.label}</span>
@@ -299,9 +285,9 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                     openSessionLogModal(block);
                     onClose();
                   }}
-                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-[11px] font-bold bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-500/30 transition-all shadow-sm"
+                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition-colors"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
                   Log Reality
                 </button>
 
@@ -312,9 +298,9 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                     openReplaceModal(block);
                     onClose();
                   }}
-                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-[11px] font-bold bg-pink-500/10 text-pink-300 hover:bg-pink-500/20 border border-pink-500/20 transition-all shadow-sm"
+                  className="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition-colors"
                 >
-                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-slate-400" />
                   Replace
                 </button>
               </div>
@@ -324,9 +310,9 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setShowSaveLibModal(true); }}
-                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-[11px] font-bold bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/20 transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition-colors"
                 >
-                  <Bookmark className="w-3.5 h-3.5" />
+                  <Bookmark className="w-3.5 h-3.5 text-slate-400" />
                   Save to Activity Library
                 </button>
               )}
@@ -346,11 +332,11 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
             {/* ── Notes / Description ── */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Notes</span>
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Notes</span>
                 {!isEditingNotes && (
                   <button
                     onClick={() => { setIsEditingNotes(true); setTempNotes(block.description || ''); }}
-                    className="flex items-center gap-1 text-[11px] font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+                    className="flex items-center gap-1 text-[11px] font-medium text-[#3659C9] dark:text-[#4F73E3] hover:underline transition-colors"
                   >
                     <Edit3 className="w-3 h-3" /> Edit
                   </button>
@@ -363,14 +349,7 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                     value={tempNotes}
                     onChange={(e) => setTempNotes(e.target.value)}
                     rows={4}
-                    className="w-full p-3 rounded-2xl text-[12px] text-white placeholder-slate-600 focus:outline-none resize-none leading-relaxed transition-colors"
-                    style={{
-                      backgroundColor: 'rgba(255,255,255,0.04)',
-                      border:          '1px solid rgba(255,255,255,0.10)',
-                      outlineColor:    block.color,
-                    }}
-                    onFocus={(e) => { e.target.style.borderColor = `${block.color}50`; }}
-                    onBlur={(e)  => { e.target.style.borderColor = 'rgba(255,255,255,0.10)'; }}
+                    className="w-full p-2.5 rounded-lg text-xs bg-slate-800 border border-slate-700/60 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#3659C9] resize-none leading-relaxed transition-colors"
                     placeholder="Add notes, links, or preparation reminders..."
                     autoFocus
                     onClick={(e) => e.stopPropagation()}
@@ -378,14 +357,13 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => setIsEditingNotes(false)}
-                      className="px-3 py-1.5 rounded-xl text-[11px] font-medium text-slate-300 transition-colors"
-                      style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSaveNotes}
-                      className="px-3 py-1.5 rounded-xl text-[11px] font-semibold text-white transition-colors"
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors"
                       style={{ backgroundColor: block.color }}
                     >
                       Save
@@ -394,14 +372,13 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 </div>
               ) : (
                 <div
-                  className="p-3 rounded-2xl min-h-[56px] cursor-text transition-colors hover:bg-white/[0.03]"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  className="p-3 rounded-lg min-h-[52px] bg-slate-800/40 border border-slate-700/60 cursor-text transition-colors hover:bg-slate-800/60"
                   onClick={() => { setIsEditingNotes(true); setTempNotes(block.description || ''); }}
                 >
                   {block.description ? (
-                    <p className="text-[12px] text-slate-300 leading-relaxed whitespace-pre-wrap">{block.description}</p>
+                    <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{block.description}</p>
                   ) : (
-                    <p className="text-[12px] text-slate-600 italic">Click to add notes...</p>
+                    <p className="text-xs text-slate-500 italic">Click to add notes...</p>
                   )}
                 </div>
               )}
@@ -413,12 +390,12 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 onClick={(e) => { e.stopPropagation(); setShowReminderMenu(!showReminderMenu); }}
                 className="w-full flex items-center justify-between group"
               >
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Reminder</span>
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 group-hover:text-slate-200 transition-colors">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Reminder</span>
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 group-hover:text-slate-200 transition-colors">
                   <span>{block.reminderMinutes ? `${block.reminderMinutes} min before` : 'None'}</span>
                   {showReminderMenu
-                    ? <ChevronUp className="w-3 h-3" />
-                    : <ChevronDown className="w-3 h-3" />}
+                    ? <ChevronUp className="w-3.5 h-3.5" />
+                    : <ChevronDown className="w-3.5 h-3.5" />}
                 </div>
               </button>
 
@@ -428,23 +405,18 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                     <button
                       key={m}
                       onClick={() => handleSetReminder(m)}
-                      className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold transition-all hover:scale-105 active:scale-95 ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
                         block.reminderMinutes === m
-                          ? 'text-amber-300'
-                          : 'text-slate-400 hover:text-slate-200'
+                          ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
+                          : 'bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-slate-200'
                       }`}
-                      style={{
-                        backgroundColor: block.reminderMinutes === m ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.05)',
-                        border:          block.reminderMinutes === m ? '1px solid rgba(245,158,11,0.30)' : '1px solid rgba(255,255,255,0.07)',
-                      }}
                     >
                       {m}m
                     </button>
                   ))}
                   <button
                     onClick={() => handleSetReminder(0)}
-                    className="px-3 py-1.5 rounded-xl text-[11px] font-medium text-slate-500 hover:text-slate-300 transition-colors"
-                    style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-slate-200 transition-colors"
                   >
                     None
                   </button>
@@ -453,51 +425,37 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
             </div>
 
             {/* ── AI Insight ── */}
-            <div
-              className="flex items-center gap-3 px-3.5 py-3 rounded-2xl"
-              style={{ backgroundColor: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.14)' }}
-            >
-              <div className="p-1.5 rounded-xl shrink-0" style={{ backgroundColor: 'rgba(16,185,129,0.12)' }}>
+            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="p-1 rounded bg-emerald-500/20 shrink-0">
                 <Zap className="w-3.5 h-3.5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-[12px] font-semibold text-emerald-400">
+                <p className="text-xs font-semibold text-emerald-400">
                   {completionProb}% completion probability
                 </p>
-                <p className="text-[10px] text-emerald-600/80 mt-0.5">Based on your historical execution patterns</p>
+                <p className="text-[10px] text-emerald-600/80 mt-0.5">Based on historical execution</p>
               </div>
             </div>
           </div>
 
           {/* ── ACTION FOOTER ── */}
-          <div
-            className="px-5 py-4 flex items-center gap-2.5"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-          >
+          <div className="px-5 py-4 flex items-center gap-2 border-t border-slate-800/80">
             {/* Mark Complete */}
             <button
               onClick={handleMarkComplete}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl text-[12px] font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium text-white transition-colors"
               style={{
-                backgroundColor: isCompleted ? 'rgba(16,185,129,0.15)' : block.color,
-                border:           isCompleted ? '1px solid rgba(16,185,129,0.25)' : 'none',
-                color:            isCompleted ? '#6EE7B7' : '#fff',
-                boxShadow:        isCompleted ? 'none' : `0 4px 16px ${block.color}35`,
+                backgroundColor: isCompleted ? '#1E8E3E' : block.color,
               }}
             >
               <Check className="w-3.5 h-3.5" />
-              {isCompleted ? '✓ Completed' : 'Mark Complete'}
+              {isCompleted ? 'Completed' : 'Mark Complete'}
             </button>
 
             {/* Reminder shortcut */}
             <button
               onClick={(e) => { e.stopPropagation(); setShowReminderMenu(!showReminderMenu); }}
-              className="p-2.5 rounded-2xl transition-all hover:scale-110 active:scale-95"
-              style={{
-                backgroundColor: block.reminderMinutes ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.05)',
-                border:           block.reminderMinutes ? '1px solid rgba(245,158,11,0.22)' : '1px solid rgba(255,255,255,0.08)',
-                color:            block.reminderMinutes ? '#FBBF24' : '#64748B',
-              }}
+              className="p-2 rounded-lg bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-slate-200 transition-colors"
               title="Set reminder"
             >
               <Bell className="w-4 h-4" />
@@ -506,18 +464,7 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
             {/* Delete */}
             <button
               onClick={handleDelete}
-              className="p-2.5 rounded-2xl transition-all hover:scale-110 active:scale-95"
-              style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#64748B' }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239,68,68,0.12)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor     = 'rgba(239,68,68,0.22)';
-                (e.currentTarget as HTMLButtonElement).style.color           = '#F87171';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(255,255,255,0.05)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor     = 'rgba(255,255,255,0.08)';
-                (e.currentTarget as HTMLButtonElement).style.color           = '#64748B';
-              }}
+              className="p-2 rounded-lg bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors"
               title="Delete"
             >
               <Trash2 className="w-4 h-4" />

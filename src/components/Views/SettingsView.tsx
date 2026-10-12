@@ -25,13 +25,16 @@ import {
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
+import { NavView } from '../Navigation/Sidebar';
+import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
 
 interface SettingsViewProps {
   userEmail?: string | null;
   onOpenAuth: () => void;
+  onNavigate?: (view: NavView) => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAuth }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAuth, onNavigate }) => {
   const { resolution, setResolution, exportJSONBackup, clearCurrentWeek, addToast } = useTimetable();
   const { theme, setTheme } = useTheme();
   const { isDemoMode, activeProfile, loadDemoProfile, clearDemoData, startTour } = useDemo();
@@ -42,7 +45,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-8 select-none scrollbar-thin max-w-4xl">
+    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-6 select-none scrollbar-thin max-w-4xl">
+      {/* ── BREADCRUMB ── */}
+      {onNavigate && (
+        <PageBreadcrumb
+          items={[{ label: 'Settings' }]}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {/* Header Bar */}
       <div className="border-b border-slate-800 pb-5">
         <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -86,55 +97,55 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
       </div>
 
       {/* ── 2. APPEARANCE & THEME SECTION ── */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800/80 pb-3">
-          <Sun className="w-4 h-4 text-amber-400" />
-          <span>Appearance & Enterprise Theme</span>
+      <div className="p-5 rounded-lg bg-slate-900 border border-slate-800 space-y-4">
+        <h3 className="text-sm font-semibold text-white flex items-center gap-2 border-b border-slate-800/80 pb-3">
+          <Sun className="w-4 h-4 text-slate-400" />
+          <span>Appearance & Theme</span>
         </h3>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button
             onClick={() => setTheme('dark')}
-            className={`p-4 rounded-xl border text-left space-y-2 transition-all ${
+            className={`p-4 rounded-lg border text-left space-y-2 transition-colors ${
               theme === 'dark'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-800 border-[#3659C9] dark:border-[#4F73E3] ring-1 ring-[#3659C9] dark:ring-[#4F73E3]'
+                : 'bg-slate-800/40 border-slate-700/60 hover:border-slate-600'
             }`}
           >
-            <Moon className="w-5 h-5 text-indigo-400" />
+            <Moon className="w-5 h-5 text-slate-400" />
             <div>
-              <p className="text-xs font-bold">Enterprise Dark Mode</p>
-              <p className="text-[10px] text-slate-500">Slate-950 quiet aesthetic</p>
+              <p className="text-xs font-semibold text-slate-200">Dark Theme</p>
+              <p className="text-[11px] text-slate-400">Calm, deep contrast</p>
             </div>
           </button>
 
           <button
             onClick={() => setTheme('light')}
-            className={`p-4 rounded-xl border text-left space-y-2 transition-all ${
+            className={`p-4 rounded-lg border text-left space-y-2 transition-colors ${
               theme === 'light'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-800 border-[#3659C9] dark:border-[#4F73E3] ring-1 ring-[#3659C9] dark:ring-[#4F73E3]'
+                : 'bg-slate-800/40 border-slate-700/60 hover:border-slate-600'
             }`}
           >
-            <Sun className="w-5 h-5 text-amber-400" />
+            <Sun className="w-5 h-5 text-slate-400" />
             <div>
-              <p className="text-xs font-bold">Clean Light Mode</p>
-              <p className="text-[10px] text-slate-500">Minimal high contrast</p>
+              <p className="text-xs font-semibold text-slate-200">Light Theme</p>
+              <p className="text-[11px] text-slate-400">Warm, paper aesthetic</p>
             </div>
           </button>
 
           <button
             onClick={() => setTheme('system')}
-            className={`p-4 rounded-xl border text-left space-y-2 transition-all ${
+            className={`p-4 rounded-lg border text-left space-y-2 transition-colors ${
               theme === 'system'
-                ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-800 border-[#3659C9] dark:border-[#4F73E3] ring-1 ring-[#3659C9] dark:ring-[#4F73E3]'
+                : 'bg-slate-800/40 border-slate-700/60 hover:border-slate-600'
             }`}
           >
-            <Monitor className="w-5 h-5 text-sky-400" />
+            <Monitor className="w-5 h-5 text-slate-400" />
             <div>
-              <p className="text-xs font-bold">System Theme</p>
-              <p className="text-[10px] text-slate-500">Follow OS settings</p>
+              <p className="text-xs font-semibold text-slate-200">System Match</p>
+              <p className="text-[11px] text-slate-400">Sync with device OS</p>
             </div>
           </button>
         </div>

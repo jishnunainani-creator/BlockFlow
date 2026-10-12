@@ -49,12 +49,25 @@ export function useUndoRedo<T>(initialPresent: T) {
           ? (newPresent as (prev: T) => T)(curr.present)
           : newPresent;
 
-      // Don't push if equal
+      // Fast reference check to avoid expensive JSON serialization
+      if (curr.present === resolvedPresent) {
+        return curr;
+      }
+
+      // Quick JSON compare to prevent duplicate states
       if (JSON.stringify(curr.present) === JSON.stringify(resolvedPresent)) {
         return curr;
       }
+
+      // Cap undo history to 30 snapshots to prevent memory bloat
+      const maxHistory = 30;
+      const trimmedPast =
+        curr.past.length >= maxHistory
+          ? curr.past.slice(curr.past.length - maxHistory + 1)
+          : curr.past;
+
       return {
-        past: [...curr.past, curr.present],
+        past: [...trimmedPast, curr.present],
         present: resolvedPresent,
         future: [],
       };

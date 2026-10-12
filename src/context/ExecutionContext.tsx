@@ -92,11 +92,16 @@ export const ExecutionProvider: React.FC<{ children: ReactNode }> = ({ children 
     return currentWeekScheduledBlocks.filter(b => b.dayOfWeek === todayIndex);
   }, [currentWeekScheduledBlocks]);
 
+  const lastScoreHashRef = React.useRef<string>('');
+
   // 2. Recalculate Today's Score
   const recalculateTodayScore = useCallback(() => {
     const blocks = getTodayBlocks();
-    // Assuming focus sessions count and daily mission can be retrieved from elsewhere, passing 0 and false for now
     const score = calculateDailyExecutionScore(blocks, false, 0);
+    const scoreHash = `${score.overallScore}_${score.completedCount}_${score.totalCount}_${score.timeAccuracyPct}`;
+    if (lastScoreHashRef.current === scoreHash) return;
+    lastScoreHashRef.current = scoreHash;
+
     setTodayScore(score);
     
     setDailyScores(prev => {
@@ -132,7 +137,7 @@ export const ExecutionProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, [todayScore, reflections, refreshInsights]);
 
   // Save Reflection
-  const saveDailyReflection = (reflection: DailyReflection) => {
+  const saveDailyReflection = useCallback((reflection: DailyReflection) => {
     const updatedReflections = { ...reflections, [reflection.date]: reflection };
     setReflections(updatedReflections);
     saveReflections(updatedReflections);
@@ -165,18 +170,18 @@ export const ExecutionProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
     
     refreshInsights();
-  };
+  }, [reflections, getTodayBlocks, todayScore, streaks, dailyScores, achievements, weeklyReports, refreshInsights]);
 
   // Save Mood
-  const saveMood = (mood: MoodType) => {
+  const saveMood = useCallback((mood: MoodType) => {
     const entry: MoodEntry = { date: todayStr, mood, createdAt: Date.now() };
     const updatedMoods = { ...moods, [todayStr]: entry };
     setMoods(updatedMoods);
     saveMoods(updatedMoods);
-  };
+  }, [todayStr, moods]);
 
   // Generate Reports
-  const generateWeeklyReport = (weekId: string): WeeklyExecutionReport => {
+  const generateWeeklyReport = useCallback((weekId: string): WeeklyExecutionReport => {
     // Simplified stub. Aggregates past 7 days based on dailyScores
     const report: WeeklyExecutionReport = {
       weekId,
@@ -201,9 +206,9 @@ export const ExecutionProvider: React.FC<{ children: ReactNode }> = ({ children 
     setWeeklyReports(next);
     saveWeeklyReports(next);
     return report;
-  };
+  }, [weeklyReports]);
 
-  const generateMonthlyReport = (month: string): MonthlyPerformanceReport => {
+  const generateMonthlyReport = useCallback((month: string): MonthlyPerformanceReport => {
     const report: MonthlyPerformanceReport = {
       month,
       monthlyScore: 0,
@@ -227,33 +232,40 @@ export const ExecutionProvider: React.FC<{ children: ReactNode }> = ({ children 
     setMonthlyReports(next);
     saveMonthlyReports(next);
     return report;
-  };
+  }, [monthlyReports]);
+
+  const contextValue = React.useMemo(() => ({
+    todayScore,
+    todayMood: moods[todayStr] || null,
+    todayReflection: reflections[todayStr] || null,
+    dailyScores,
+    reflections,
+    moods,
+    weeklyReports,
+    monthlyReports,
+    streaks,
+    achievements,
+    habitCorrelations,
+    aiMemory,
+    improvementSuggestions,
+    performanceSummary,
+    tomorrowSuggestions,
+    reflectionInsights,
+    saveDailyReflection,
+    saveMood,
+    recalculateTodayScore,
+    generateWeeklyReport,
+    generateMonthlyReport,
+    refreshInsights,
+  }), [
+    todayScore, moods, todayStr, reflections, dailyScores, weeklyReports, monthlyReports,
+    streaks, achievements, habitCorrelations, aiMemory, improvementSuggestions,
+    performanceSummary, tomorrowSuggestions, reflectionInsights, recalculateTodayScore,
+    refreshInsights, saveDailyReflection, saveMood, generateWeeklyReport, generateMonthlyReport
+  ]);
 
   return (
-    <ExecutionContext.Provider value={{
-      todayScore,
-      todayMood: moods[todayStr] || null,
-      todayReflection: reflections[todayStr] || null,
-      dailyScores,
-      reflections,
-      moods,
-      weeklyReports,
-      monthlyReports,
-      streaks,
-      achievements,
-      habitCorrelations,
-      aiMemory,
-      improvementSuggestions,
-      performanceSummary,
-      tomorrowSuggestions,
-      reflectionInsights,
-      saveDailyReflection,
-      saveMood,
-      recalculateTodayScore,
-      generateWeeklyReport,
-      generateMonthlyReport,
-      refreshInsights
-    }}>
+    <ExecutionContext.Provider value={contextValue}>
       {children}
     </ExecutionContext.Provider>
   );

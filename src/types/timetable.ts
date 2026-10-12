@@ -145,25 +145,58 @@ export interface GoalMilestone {
   weightPct: number; // e.g. 25
 }
 
+export type SmartGoalStatus = 'active' | 'completed' | 'archived';
+
+export interface SmartCriteria {
+  // S - Specific
+  specificDetails?: string;
+
+  // M - Measurable
+  measurableType?: 'quantity' | 'effort';
+  targetValue?: number; // e.g. 6 chapters, 30 problems, 12 hours
+  currentValue?: number; // current progress
+  unit?: string; // e.g. "chapters", "problems", "hours", "assignments"
+
+  // A - Achievable
+  estimatedTotalHours?: number; // total effort
+  dailyAvailableHours?: number; // e.g. 1 hour/day
+  weeklyAvailableHours?: number; // e.g. 6 hours/week
+  preferredDays?: number[]; // [0..6] (0 = Mon)
+  preferredSessionMinutes?: number; // e.g. 60
+  preferredEnergyWindow?: 'morning' | 'afternoon' | 'evening';
+  feasibilityNote?: string;
+
+  // R - Relevant
+  motivation?: string; // Why this matters
+
+  // T - Time-bound
+  startDate?: string; // YYYY-MM-DD
+  deadline?: string; // YYYY-MM-DD
+}
+
 export interface Goal {
   id: string;
   title: string;
-  category: string; // e.g. "Career", "Academics", "Fitness", "Skill Development", "Financial", "Personal Growth"
+  category: string; // e.g. "Academics", "Career", "Fitness", "Personal Growth", "Skill Development"
   description?: string;
-  purpose?: string; // Step 2: Why this matters
-  derailObstacle?: string; // Step 2: What could derail
-  targetDate?: string; // Step 3: ISO date or formatted date
-  targetWeeklyHours?: number; // Step 4: Weekly hours commitment
-  preferredSessionMinutes?: number; // Step 4: e.g. 60, 90, 120
+  color: string;
+  status?: SmartGoalStatus;
+  createdAt?: number;
+  completedAt?: number;
+
+  // Full SMART Framework
+  smart?: SmartCriteria;
+
+  // Legacy & auxiliary support (preserved for backward-compatibility)
+  purpose?: string;
+  derailObstacle?: string;
+  targetDate?: string;
+  targetWeeklyHours?: number;
+  preferredSessionMinutes?: number;
   preferredEnergyWindow?: 'morning' | 'afternoon' | 'evening';
   totalRequiredHours?: number;
-  color: string;
-  createdAt?: number;
-
   components?: GoalComponent[];
   milestones?: GoalMilestone[];
-
-  // Compatibility fields
   deadline?: string;
   targetHoursPerDay?: number;
   progressPct?: number;

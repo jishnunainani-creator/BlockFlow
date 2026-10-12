@@ -19,7 +19,7 @@ interface AICommandCenterModalProps {
 }
 
 export const AICommandCenterModal: React.FC<AICommandCenterModalProps> = ({ isOpen, onClose }) => {
-  const { libraryBlocks, currentWeekId, addScheduledBlock, addToast } = useTimetable();
+  const { libraryBlocks, currentWeekId, bulkAddScheduledBlocks, addToast } = useTimetable();
 
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string; actionText?: string; onAction?: () => void }>>([
@@ -50,8 +50,7 @@ export const AICommandCenterModal: React.FC<AICommandCenterModalProps> = ({ isOp
             actionText: '✨ Apply 45-Day Study Plan',
             onAction: () => {
               const blocks = generateAISmartSchedule(libraryBlocks, currentWeekId);
-              blocks.forEach((b) => addScheduledBlock(b));
-              addToast('Applied 45-Day Study Plan to weekly timetable! 🎯', 'success');
+              bulkAddScheduledBlocks(blocks);
               onClose();
             },
           },
@@ -65,8 +64,7 @@ export const AICommandCenterModal: React.FC<AICommandCenterModalProps> = ({ isOp
             actionText: '✨ Generate Semester 3 Timetable',
             onAction: () => {
               const blocks = generateAISmartSchedule(libraryBlocks, currentWeekId);
-              blocks.forEach((b) => addScheduledBlock(b));
-              addToast('Generated & Applied Semester 3 Timetable! 📚', 'success');
+              bulkAddScheduledBlocks(blocks);
               onClose();
             },
           },

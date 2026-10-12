@@ -40,20 +40,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveTheme(effectiveTheme);
     document.documentElement.setAttribute('data-theme', effectiveTheme);
     if (effectiveTheme === 'light') {
-      document.documentElement.classList.add('light-theme');
-      document.documentElement.classList.remove('dark-theme');
+      document.documentElement.classList.add('light-theme', 'light');
+      document.documentElement.classList.remove('dark-theme', 'dark');
     } else {
-      document.documentElement.classList.add('dark-theme');
-      document.documentElement.classList.remove('light-theme');
+      document.documentElement.classList.add('dark-theme', 'dark');
+      document.documentElement.classList.remove('light-theme', 'light');
     }
   }, [theme]);
 
-  const setTheme = (mode: ThemeMode) => {
+  const setTheme = React.useCallback((mode: ThemeMode) => {
     setThemeState(mode);
-  };
+  }, []);
+
+  const contextValue = React.useMemo(() => ({
+    theme,
+    setTheme,
+    activeTheme,
+  }), [theme, setTheme, activeTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, activeTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

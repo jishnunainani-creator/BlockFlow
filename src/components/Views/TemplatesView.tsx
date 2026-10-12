@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTimetable } from '../../context/TimetableContext';
 import { TimetableTemplate } from '../../types/timetable';
 import { NavView } from '../Navigation/Sidebar';
+import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
 import { formatDuration } from '../../utils/timeUtils';
 import {
   Bookmark,
@@ -48,7 +49,13 @@ export const TemplatesView: React.FC<TemplatesViewProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-6 select-none scrollbar-thin">
+    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-5 select-none scrollbar-thin">
+      {/* ── BREADCRUMB ── */}
+      <PageBreadcrumb
+        items={[{ label: 'Templates' }]}
+        onNavigate={onNavigate}
+      />
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>

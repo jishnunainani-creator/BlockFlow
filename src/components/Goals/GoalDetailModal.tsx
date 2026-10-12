@@ -1,26 +1,25 @@
 import React, { useState } from 'react';
-import { Goal, GoalComponent, GoalMilestone, ScheduledBlock } from '../../types/timetable';
+import { Goal, ScheduledBlock } from '../../types/timetable';
 import { calculateGoalMetrics } from '../../utils/goalEngine';
 import { useTimetable } from '../../context/TimetableContext';
-import { ScheduleGoalBlockModal } from './ScheduleGoalBlockModal';
-import { AIGoalBreakdownModal } from './AIGoalBreakdownModal';
-import { AIGoalScheduleModal } from './AIGoalScheduleModal';
+import { PlanGoalScheduleModal } from './PlanGoalScheduleModal';
+import { normalizeGoal } from '../../utils/storage';
 import {
   Target,
   Clock,
   Calendar,
   Sparkles,
   Plus,
+  Minus,
   CheckCircle2,
   Trash2,
   X,
-  Layers,
-  Flag,
-  Flame,
-  ShieldAlert,
-  BarChart3,
-  TrendingUp,
+  Archive,
+  RotateCcw,
+  AlertCircle,
+  CalendarPlus,
 } from 'lucide-react';
+import { DAYS_OF_WEEK, minutesToTimeStr } from '../../utils/timeUtils';
 
 interface GoalDetailModalProps {
   goal: Goal | null;
@@ -31,7 +30,7 @@ interface GoalDetailModalProps {
 }
 
 export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
-  goal,
+  goal: rawGoal,
   isOpen,
   onClose,
   onUpdateGoal,
@@ -40,367 +39,439 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   const { currentWeekScheduledBlocks, scheduledBlocks, addToast } = useTimetable();
   const allBlocks = currentWeekScheduledBlocks?.length > 0 ? currentWeekScheduledBlocks : scheduledBlocks || [];
 
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
-  const [isAIScheduleOpen, setIsAIScheduleOpen] = useState(false);
+  const [isPlanScheduleOpen, setIsPlanScheduleOpen] = useState(false);
+  const [isEditingProgress, setIsEditingProgress] = useState(false);
+  const [editValue, setEditValue] = useState<number>(0);
+  const [isEditingDeadline, setIsEditingDeadline] = useState(false);
+  const [newDeadline, setNewDeadline] = useState('');
 
-  // New sub-component form state
-  const [newCompTitle, setNewCompTitle] = useState('');
-  const [newCompHours, setNewCompHours] = useState(10);
-  const [showAddComp, setShowAddComp] = useState(false);
-
-  // New milestone form state
-  const [newMileTitle, setNewMileTitle] = useState('');
-  const [newMileWeight, setNewMileWeight] = useState(25);
-  const [showAddMile, setShowAddMile] = useState(false);
-
-  if (!isOpen || !goal) return null;
+  if (!isOpen || !rawGoal) return null;
+  const goal = normalizeGoal(rawGoal);
 
   const metrics = calculateGoalMetrics(goal, allBlocks);
   const linkedBlocks = allBlocks.filter((b) => b && b.goalId === goal.id);
 
-  // Add Component
-  const handleAddComponent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCompTitle.trim()) return;
-
-    const newComp: GoalComponent = {
-      id: `comp-${Date.now()}`,
-      title: newCompTitle.trim(),
-      targetHours: newCompHours,
-      completedHours: 0,
-      status: 'pending',
+  const handleUpdateCurrentValue = (newVal: number) => {
+    const clamped = Math.max(0, newVal);
+    const targetVal = goal.smart?.targetValue ?? 10;
+    const unitStr = goal.smart?.unit ?? 'units';
+    const updated: Goal = {
+      ...goal,
+      smart: {
+        ...goal.smart,
+        currentValue: clamped,
+      },
+      status: clamped >= targetVal ? 'completed' : goal.status === 'completed' ? 'active' : goal.status,
     };
+    onUpdateGoal(updated);
+    addToast(`Updated progress to ${clamped} ${unitStr}`, 'info');
+  };
+
+  const handleToggleComplete = () => {
+    const isNowCompleted = goal.status !== 'completed';
+    const currentVal = goal.smart?.currentValue ?? 0;
+    const targetVal = goal.smart?.targetValue ?? 10;
+    const updated: Goal = {
+      ...goal,
+      status: isNowCompleted ? 'completed' : 'active',
+      completedAt: isNowCompleted ? Date.now() : undefined,
+      smart: {
+        ...goal.smart,
+        currentValue: isNowCompleted ? Math.max(currentVal, targetVal) : currentVal,
+      },
+    };
+    onUpdateGoal(updated);
+    addToast(isNowCompleted ? `Marked "${goal.title}" as completed!` : `Reopened "${goal.title}"`, 'success');
+  };
+
+  const handleArchiveToggle = () => {
+    const isArchived = goal.status === 'archived';
+    const updated: Goal = {
+      ...goal,
+      status: isArchived ? 'active' : 'archived',
+    };
+    onUpdateGoal(updated);
+    addToast(isArchived ? `Restored "${goal.title}" from archive` : `Archived "${goal.title}"`, 'info');
+  };
+
+  const handleSaveRevisedDeadline = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDeadline) return;
 
     const updated: Goal = {
       ...goal,
-      components: [...(goal.components || []), newComp],
+      smart: {
+        ...goal.smart,
+        deadline: newDeadline,
+      },
+      targetDate: newDeadline,
+      deadline: newDeadline,
     };
-
     onUpdateGoal(updated);
-    setNewCompTitle('');
-    setShowAddComp(false);
-    addToast('Added sub-component to Goal plan! 🎯', 'success');
-  };
-
-  // Add Milestone
-  const handleAddMilestone = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMileTitle.trim()) return;
-
-    const newMile: GoalMilestone = {
-      id: `mile-${Date.now()}`,
-      title: newMileTitle.trim(),
-      targetDate: goal.targetDate || '2026-12-31',
-      isUnlocked: false,
-      weightPct: newMileWeight,
-    };
-
-    const updated: Goal = {
-      ...goal,
-      milestones: [...(goal.milestones || []), newMile],
-    };
-
-    onUpdateGoal(updated);
-    setNewMileTitle('');
-    setShowAddMile(false);
-    addToast('Added intermediate milestone to Goal plan! 🚩', 'success');
-  };
-
-  // Toggle Milestone Unlock
-  const handleToggleMilestone = (mileId: string) => {
-    const updatedMilestones = (goal.milestones || []).map((m) => {
-      if (m.id === mileId) {
-        const next = !m.isUnlocked;
-        if (next) addToast(`Unlocked Goal Milestone: "${m.title}"! 🏆`, 'success');
-        return { ...m, isUnlocked: next, unlockedDate: next ? new Date().toLocaleDateString() : undefined };
-      }
-      return m;
-    });
-
-    onUpdateGoal({ ...goal, milestones: updatedMilestones });
+    setIsEditingDeadline(false);
+    addToast(`Revised deadline to ${newDeadline}`, 'success');
   };
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-fade-in select-none">
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl relative max-h-[92vh] flex flex-col">
-          {/* Header */}
-          <div className="p-6 border-b border-slate-800 flex justify-between items-start bg-slate-950/60" style={{ borderLeft: `6px solid ${goal.color}` }}>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-400 font-mono bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-fade-in select-none">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative flex flex-col max-h-[92vh]">
+          
+          {/* ── Header ── */}
+          <div className="p-6 border-b border-slate-800 flex justify-between items-start bg-slate-900/90 backdrop-blur-sm">
+            <div className="space-y-2 max-w-lg">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
+                  style={{ backgroundColor: `${goal.color}20`, color: goal.color }}
+                >
                   {goal.category}
                 </span>
-                <span className="text-xs text-slate-400 font-mono">
-                  Deadline: {goal.targetDate} ({metrics.daysRemaining} days left)
-                </span>
+                {goal.status === 'completed' && (
+                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                    <CheckCircle2 size={11} /> Completed
+                  </span>
+                )}
+                {goal.status === 'archived' && (
+                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+                    <Archive size={11} /> Archived
+                  </span>
+                )}
+                {metrics.isOverdue && goal.status === 'active' && (
+                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                    <AlertCircle size={11} /> Overdue by {metrics.daysOverdue}d
+                  </span>
+                )}
               </div>
-              <h2 className="text-2xl font-black text-white">{goal.title}</h2>
-              {goal.description && <p className="text-xs text-slate-400 mt-1">{goal.description}</p>}
+              <h2 className="text-xl font-bold text-white tracking-tight leading-snug">{goal.title}</h2>
+              {goal.smart?.specificDetails && (
+                <p className="text-xs text-slate-400 leading-relaxed">{goal.smart.specificDetails}</p>
+              )}
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Close goal details"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* ── Modal Body ── */}
+          <div className="p-6 sm:p-7 overflow-y-auto space-y-6 flex-1">
+            
+            {/* ── Section 1: Measurable Progress Card ── */}
+            <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Measurable Progress
+                  </span>
+                  <p className="text-sm font-semibold text-white mt-0.5">
+                    {metrics.actualCurrentValue} of {metrics.targetValue} {metrics.unit} completed
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                    {metrics.progressPct}% Complete
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${metrics.progressPct}%`,
+                    backgroundColor: goal.color || '#3659C9',
+                  }}
+                />
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                {metrics.naturalProgressSummary}
+              </p>
+
+              {/* Quick Update Progress Controls */}
+              <div className="pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800/80">
+                <span className="text-xs text-slate-400 font-medium">Quick Progress Logger:</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleUpdateCurrentValue(metrics.actualCurrentValue - 1)}
+                    disabled={metrics.actualCurrentValue <= 0}
+                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-200 transition-colors"
+                    title={`Subtract 1 ${metrics.unit}`}
+                  >
+                    <Minus size={13} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditValue(metrics.actualCurrentValue);
+                      setIsEditingProgress(true);
+                    }}
+                    className="px-3 py-1.5 text-xs font-mono font-semibold bg-slate-800 hover:bg-slate-700 rounded-lg text-white border border-slate-700"
+                  >
+                    {metrics.actualCurrentValue} {metrics.unit}
+                  </button>
+                  <button
+                    onClick={() => handleUpdateCurrentValue(metrics.actualCurrentValue + 1)}
+                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors"
+                    title={`Add 1 ${metrics.unit}`}
+                  >
+                    <Plus size={13} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Manual numeric input popover */}
+              {isEditingProgress && (
+                <div className="p-3 rounded-lg bg-slate-900 border border-slate-700 mt-2 flex items-center gap-2.5 animate-fade-in">
+                  <label className="text-xs text-slate-300">Set exact amount:</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editValue}
+                    onChange={(e) => setEditValue(Number(e.target.value))}
+                    className="w-24 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white font-mono"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      handleUpdateCurrentValue(editValue);
+                      setIsEditingProgress(false);
+                    }}
+                    className="px-3 py-1.5 bg-[#3659C9] text-white text-xs font-semibold rounded-lg"
+                  >
+                    Update
+                  </button>
+                  <button
+                    onClick={() => setIsEditingProgress(false)}
+                    className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
             </div>
 
+            {/* ── Section 2: Effort Breakdown Grid ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Target Effort</span>
+                <p className="text-lg font-bold text-white font-mono">{metrics.estimatedTotalHours}h</p>
+                <p className="text-xs text-slate-400">Total estimated time</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Completed Sessions</span>
+                <p className="text-lg font-bold text-emerald-400 font-mono">{metrics.completedHours}h</p>
+                <p className="text-xs text-slate-400">Invested in finished blocks</p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Remaining Effort</span>
+                <p className="text-lg font-bold text-[#3659C9] font-mono">{metrics.remainingHours}h</p>
+                <p className="text-xs text-slate-400">To schedule in timetable</p>
+              </div>
+            </div>
+
+            {/* ── Section 3: SMART Criteria Details ── */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                SMART Framework Evaluation
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Specific & Relevant */}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <span className="text-[10px] font-bold text-[#3659C9] uppercase tracking-wider block">
+                    R — Relevance &amp; Purpose
+                  </span>
+                  <p className="text-slate-300 leading-relaxed italic text-xs">
+                    "{goal.smart?.motivation || 'Important personal or academic priority.'}"
+                  </p>
+                </div>
+
+                {/* Achievable & Feasibility */}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <span className="text-[10px] font-bold text-[#3659C9] uppercase tracking-wider block">
+                    A — Feasibility Assessment
+                  </span>
+                  <p className="text-slate-300 text-xs leading-relaxed">
+                    {metrics.feasibility.message}
+                  </p>
+                </div>
+              </div>
+
+              {/* Time-bound Bar */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-[#3659C9] uppercase tracking-wider block">
+                    T — Time-Bound Target
+                  </span>
+                  <p className="text-slate-200">
+                    Target Deadline: <strong className="text-white">{new Date(metrics.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setNewDeadline(metrics.deadline);
+                    setIsEditingDeadline(true);
+                  }}
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 self-start sm:self-auto"
+                >
+                  Revise Deadline
+                </button>
+              </div>
+
+              {isEditingDeadline && (
+                <form onSubmit={handleSaveRevisedDeadline} className="p-4 rounded-xl bg-slate-950 border border-slate-700 flex flex-wrap items-center gap-3 text-xs animate-fade-in">
+                  <label className="text-slate-300 font-medium">New Target Date:</label>
+                  <input
+                    type="date"
+                    required
+                    value={newDeadline}
+                    onChange={(e) => setNewDeadline(e.target.value)}
+                    className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                  />
+                  <button type="submit" className="px-3.5 py-1.5 bg-[#3659C9] hover:bg-[#2F4EB8] text-white rounded-lg font-semibold">
+                    Save Revision
+                  </button>
+                  <button type="button" onClick={() => setIsEditingDeadline(false)} className="text-slate-400 hover:text-white">
+                    Cancel
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* ── Section 4: Next Recommended Action Banner ── */}
+            <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/60 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Next Recommended Action
+                </span>
+                <p className="text-sm font-semibold text-white">{metrics.nextAction}</p>
+              </div>
+
+              <button
+                onClick={() => setIsPlanScheduleOpen(true)}
+                className="px-4 py-2 bg-[#3659C9] hover:bg-[#2F4EB8] text-white font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5 shrink-0 shadow-sm self-start sm:self-auto"
+              >
+                <CalendarPlus size={15} />
+                <span>Plan in Timetable</span>
+              </button>
+            </div>
+
+            {/* ── Section 5: Linked Timetable Blocks List ── */}
+            <div className="space-y-3 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Linked Timetable Sessions ({linkedBlocks.length})
+                </h3>
+                <span className="text-xs text-slate-500 font-mono">
+                  {metrics.plannedHours}h scheduled this week
+                </span>
+              </div>
+
+              {linkedBlocks.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {linkedBlocks.map((b) => {
+                    const dayName = DAYS_OF_WEEK.find((d) => d.index === b.dayOfWeek)?.short || 'Day';
+                    const timeRange = `${minutesToTimeStr(b.startMinutes)} – ${minutesToTimeStr(b.startMinutes + b.duration)}`;
+                    const isDone = b.status === 'completed' || b.status === 'faster';
+
+                    return (
+                      <div
+                        key={b.id}
+                        className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${isDone ? 'bg-emerald-400' : 'bg-[#3659C9]'}`} />
+                          <span className="font-medium text-white">{b.title}</span>
+                          <span className="text-slate-400 font-mono text-[11px]">
+                            {dayName} {timeRange}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500 font-mono">{b.duration}m</span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${
+                              isDone
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-slate-800 text-slate-400 border border-slate-700'
+                            }`}
+                          >
+                            {b.status || 'Scheduled'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-4 rounded-lg bg-slate-950 border border-slate-800/80 text-center text-xs text-slate-400">
+                  No blocks currently scheduled for this goal. Click "Plan in Timetable" to schedule focus sessions.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer Controls */}
+          <div className="p-4 border-t border-slate-800 flex items-center justify-between bg-slate-900">
             <div className="flex items-center gap-2">
               <button
+                onClick={handleToggleComplete}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                  goal.status === 'completed'
+                    ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30'
+                }`}
+              >
+                {goal.status === 'completed' ? <RotateCcw size={14} /> : <CheckCircle2 size={14} />}
+                <span>{goal.status === 'completed' ? 'Reopen Goal' : 'Mark Complete'}</span>
+              </button>
+
+              <button
+                onClick={handleArchiveToggle}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title={goal.status === 'archived' ? 'Restore from archive' : 'Archive goal'}
+              >
+                <Archive size={14} />
+              </button>
+
+              <button
                 onClick={() => {
-                  if (confirm(`Are you sure you want to delete goal "${goal.title}"?`)) {
+                  if (window.confirm(`Are you sure you want to delete goal "${goal.title}"?`)) {
                     onDeleteGoal(goal.id);
                     onClose();
                   }
                 }}
-                className="text-slate-500 hover:text-rose-400 p-2 rounded-xl bg-slate-900 border border-slate-800 transition-colors"
-                title="Delete Goal"
+                className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                title="Delete goal"
               >
-                <Trash2 size={16} />
-              </button>
-              <button onClick={onClose} className="text-slate-400 hover:text-white p-2 rounded-xl bg-slate-900 border border-slate-800">
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-
-          {/* Body Content */}
-          <div className="p-6 overflow-y-auto space-y-6 flex-1 scrollbar-thin">
-            {/* DUAL METRICS DISPLAY */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Metric 1: Plan Progress */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold uppercase text-slate-400">
-                  <span className="flex items-center gap-1.5 text-purple-400">
-                    <BarChart3 size={16} /> Overall Plan Progress
-                  </span>
-                  <span className="text-lg font-black text-white font-mono">{metrics.planProgressPct}%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 bg-purple-500"
-                    style={{ width: `${metrics.planProgressPct}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-slate-500">
-                  {metrics.totalCompletedHours}h completed out of {metrics.totalRequiredHours}h required total
-                </p>
-              </div>
-
-              {/* Metric 2: Commitment Adherence */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between text-xs font-bold uppercase text-slate-400">
-                  <span className="flex items-center gap-1.5 text-emerald-400">
-                    <TrendingUp size={16} /> Weekly Commitment Adherence
-                  </span>
-                  <span className="text-lg font-black text-white font-mono">{metrics.commitmentAdherencePct}%</span>
-                </div>
-                <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 bg-emerald-500"
-                    style={{ width: `${metrics.commitmentAdherencePct}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-slate-500">
-                  {metrics.weeklyCompletedHours}h done this week out of {goal.targetWeeklyHours}h target commitment
-                </p>
-              </div>
-            </div>
-
-            {/* PURPOSE & MOTIVATION BOX */}
-            {goal.purpose && (
-              <div className="bg-gradient-to-r from-purple-950/20 to-slate-950 border border-purple-500/20 p-4 rounded-2xl space-y-1">
-                <span className="text-[10px] font-bold uppercase text-purple-400 flex items-center gap-1">
-                  <Flame size={12} className="text-amber-400" /> Purpose &amp; Motivation
-                </span>
-                <p className="text-xs text-slate-200 italic leading-relaxed">"{goal.purpose}"</p>
-                {goal.derailObstacle && (
-                  <p className="text-[11px] text-rose-300/80 pt-1 border-t border-purple-500/10 flex items-center gap-1">
-                    <ShieldAlert size={12} className="text-rose-400 shrink-0" />
-                    <span>Watch out for: {goal.derailObstacle}</span>
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* ACTION TOOLBAR */}
-            <div className="flex flex-wrap gap-2 pt-1">
-              <button
-                onClick={() => setIsScheduleOpen(true)}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow flex items-center gap-1.5"
-              >
-                <Plus size={14} /> + Schedule Block
-              </button>
-              <button
-                onClick={() => setIsAIScheduleOpen(true)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 font-bold text-xs rounded-xl border border-indigo-500/30 flex items-center gap-1.5"
-              >
-                <Sparkles size={14} className="text-indigo-400" /> ✨ AI Schedule Goal Slots
-              </button>
-              <button
-                onClick={() => setIsBreakdownOpen(true)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold text-xs rounded-xl border border-purple-500/30 flex items-center gap-1.5"
-              >
-                <Sparkles size={14} className="text-purple-400" /> ✨ AI Breakdown Plan
+                <Trash2 size={14} />
               </button>
             </div>
 
-            {/* SUB-COMPONENTS SECTION */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-bold uppercase text-slate-300 flex items-center gap-1.5">
-                  <Layers size={14} className="text-purple-400" /> Goal Plan Sub-Components ({(goal.components || []).length})
-                </h3>
-                <button
-                  onClick={() => setShowAddComp(!showAddComp)}
-                  className="text-xs font-bold text-purple-400 hover:underline flex items-center gap-1"
-                >
-                  <Plus size={12} /> Add Component
-                </button>
-              </div>
-
-              {showAddComp && (
-                <form onSubmit={handleAddComponent} className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex gap-2 items-center">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Component Title (e.g. Operating Systems Revision)"
-                    value={newCompTitle}
-                    onChange={(e) => setNewCompTitle(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={newCompHours}
-                    onChange={(e) => setNewCompHours(Number(e.target.value))}
-                    className="w-20 px-2 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono"
-                  />
-                  <button type="submit" className="px-3 py-1.5 bg-purple-600 text-white font-bold text-xs rounded-lg">
-                    Add
-                  </button>
-                </form>
-              )}
-
-              {goal.components && goal.components.length > 0 ? (
-                <div className="space-y-2">
-                  {goal.components.map((c) => (
-                    <div key={c.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-200">{c.title}</span>
-                      <span className="font-mono text-slate-400">{c.completedHours} / {c.targetHours}h</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center text-xs text-slate-500">
-                  No sub-components defined yet. Click "✨ AI Breakdown Plan" to automatically generate a plan.
-                </div>
-              )}
-            </div>
-
-            {/* INTERMEDIATE MILESTONES SECTION */}
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xs font-bold uppercase text-slate-300 flex items-center gap-1.5">
-                  <Flag size={14} className="text-emerald-400" /> Intermediate Milestones ({(goal.milestones || []).length})
-                </h3>
-                <button
-                  onClick={() => setShowAddMile(!showAddMile)}
-                  className="text-xs font-bold text-emerald-400 hover:underline flex items-center gap-1"
-                >
-                  <Plus size={12} /> Add Milestone
-                </button>
-              </div>
-
-              {showAddMile && (
-                <form onSubmit={handleAddMilestone} className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex gap-2 items-center">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Milestone Title (e.g. Complete Syllabus Phase 1)"
-                    value={newMileTitle}
-                    onChange={(e) => setNewMileTitle(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    min={5}
-                    max={100}
-                    value={newMileWeight}
-                    onChange={(e) => setNewMileWeight(Number(e.target.value))}
-                    className="w-20 px-2 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono"
-                  />
-                  <button type="submit" className="px-3 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-lg">
-                    Add
-                  </button>
-                </form>
-              )}
-
-              {goal.milestones && goal.milestones.length > 0 ? (
-                <div className="space-y-2">
-                  {goal.milestones.map((m) => (
-                    <div
-                      key={m.id}
-                      onClick={() => handleToggleMilestone(m.id)}
-                      className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between text-xs transition-all ${
-                        m.isUnlocked
-                          ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 size={16} className={m.isUnlocked ? 'text-emerald-400' : 'text-slate-600'} />
-                        <span className={`font-bold ${m.isUnlocked ? 'line-through opacity-70' : ''}`}>{m.title}</span>
-                      </div>
-                      <span className="font-mono text-[10px] text-slate-400">{m.weightPct}% weight</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center text-xs text-slate-500">
-                  No intermediate milestones added yet. Click "+ Add Milestone" or "✨ AI Breakdown Plan".
-                </div>
-              )}
-            </div>
-
-            {/* LINKED TIMETABLE BLOCKS SECTION */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase text-slate-300 flex items-center gap-1.5">
-                <Clock size={14} className="text-indigo-400" /> Linked Timetable Blocks ({linkedBlocks.length})
-              </h3>
-              {linkedBlocks.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {linkedBlocks.map((b) => (
-                    <div key={b.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs flex justify-between items-center">
-                      <div>
-                        <span className="font-bold text-white block">{b.title}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{b.duration} mins</span>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                        b.status === 'completed' || b.status === 'faster' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {b.status || 'Scheduled'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center text-xs text-slate-500">
-                  No timetable blocks currently linked. Click "+ Schedule Block" to schedule an activity on your timetable.
-                </div>
-              )}
-            </div>
+            <button
+              onClick={() => setIsPlanScheduleOpen(true)}
+              className="px-4 py-2 bg-[#3659C9] hover:bg-[#2F4EB8] text-white font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"
+            >
+              <CalendarPlus size={14} />
+              <span>Plan in Timetable</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Sub-modals */}
-      <ScheduleGoalBlockModal goal={goal} isOpen={isScheduleOpen} onClose={() => setIsScheduleOpen(false)} />
-
-      <AIGoalBreakdownModal
+      {/* Plan Schedule Modal */}
+      <PlanGoalScheduleModal
         goal={goal}
-        isOpen={isBreakdownOpen}
-        onClose={() => setIsBreakdownOpen(false)}
-        onApplyBreakdown={onUpdateGoal}
+        isOpen={isPlanScheduleOpen}
+        onClose={() => setIsPlanScheduleOpen(false)}
       />
-
-      <AIGoalScheduleModal goal={goal} isOpen={isAIScheduleOpen} onClose={() => setIsAIScheduleOpen(false)} />
     </>
   );
 };

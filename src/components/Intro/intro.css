@@ -1,0 +1,101 @@
+/* Stickman Walking & Movement Animations */
+.stickman-container {
+  display: inline-block;
+  transform-box: view-box;
+}
+
+.stickman-walking .stickman-left-leg {
+  animation: stickman-leg-left 0.36s ease-in-out infinite;
+  transform-origin: 30px 54px;
+}
+
+.stickman-walking .stickman-right-leg {
+  animation: stickman-leg-right 0.36s ease-in-out infinite;
+  transform-origin: 30px 54px;
+}
+
+.stickman-walking .stickman-left-arm {
+  animation: stickman-arm-left 0.36s ease-in-out infinite;
+  transform-origin: 30px 32px;
+}
+
+.stickman-walking .stickman-right-arm {
+  animation: stickman-arm-right 0.36s ease-in-out infinite;
+  transform-origin: 30px 32px;
+}
+
+.stickman-walking svg {
+  animation: stickman-bounce 0.18s ease-in-out infinite;
+}
+
+/* Stickman celebration pose */
+.stickman-celebrating .stickman-arm-celebrate-left {
+  animation: stickman-celebrate-wave-left 0.8s ease-in-out infinite alternate;
+  transform-origin: 30px 32px;
+}
+
+.stickman-celebrating .stickman-arm-celebrate-right {
+  animation: stickman-celebrate-wave-right 0.8s ease-in-out infinite alternate;
+  transform-origin: 30px 32px;
+}
+
+@keyframes stickman-celebrate-wave-left {
+  0% { transform: rotate(-5deg); }
+  100% { transform: rotate(10deg); }
+}
+
+@keyframes stickman-celebrate-wave-right {
+  0% { transform: rotate(5deg); }
+  100% { transform: rotate(-10deg); }
+}
+
+@keyframes stickman-leg-left {
+  0%, 100% { transform: rotate(-16deg); }
+  50% { transform: rotate(16deg); }
+}
+
+@keyframes stickman-leg-right {
+  0%, 100% { transform: rotate(16deg); }
+  50% { transform: rotate(-16deg); }
+}
+
+@keyframes stickman-arm-left {
+  0%, 100% { transform: rotate(14deg); }
+  50% { transform: rotate(-14deg); }
+}
+
+@keyframes stickman-arm-right {
+  0%, 100% { transform: rotate(-14deg); }
+  50% { transform: rotate(14deg); }
+}
+
+@keyframes stickman-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+/* Subtle target pulse when reached */
+@keyframes target-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+  70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+  100% { transform: scale(1.05); box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+
+.target-highlight {
+  animation: target-pulse 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .stickman-walking .stickman-left-leg,
+  .stickman-walking .stickman-right-leg,
+  .stickman-walking .stickman-left-arm,
+  .stickman-walking .stickman-right-arm,
+  .stickman-celebrating .stickman-arm-celebrate-left,
+  .stickman-celebrating .stickman-arm-celebrate-right,
+  .stickman-walking svg,
+  .target-highlight {
+    animation: none !important;
+  }
+}
+

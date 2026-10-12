@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Assignment } from '../../types/executionOS';
 import { loadAssignments, saveAssignments } from '../../utils/assignmentStorage';
 import { generateAssignmentStudyPlan } from '../../utils/scheduleOptimizerEngine';
@@ -54,7 +54,7 @@ const INITIAL_SAMPLE_ASSIGNMENTS: Assignment[] = [
 ];
 
 export default function AssignmentTracker() {
-  const { addToast, addScheduledBlock, currentWeekId } = useTimetable();
+  const { addToast, addScheduledBlock, bulkAddScheduledBlocks, currentWeekId } = useTimetable();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -149,11 +149,10 @@ export default function AssignmentTracker() {
   const handleAcceptStudyPlan = (asgn: Assignment) => {
     if (!asgn.studyPlan || asgn.studyPlan.length === 0) return;
 
-    let addedCount = 0;
-    asgn.studyPlan.forEach((slot, idx) => {
+    const blocksToAdd = asgn.studyPlan.map((slot, idx) => {
       const slotDate = new Date(slot.date);
       const dayOfWeek = (slotDate.getDay() + 6) % 7; // Monday = 0
-      addScheduledBlock({
+      return {
         blockId: `asgn-plan-${asgn.id}-${idx}`,
         title: slot.title,
         description: `Study session for assignment: ${asgn.title}`,
@@ -163,18 +162,19 @@ export default function AssignmentTracker() {
         dayOfWeek,
         startMinutes: 840 + idx * 120, // 2:00 PM onwards
         duration: slot.durationMinutes,
-      });
-      addedCount++;
+      };
     });
 
-    addToast(`Added ${addedCount} study sessions to your calendar! 📅`, 'success');
+    bulkAddScheduledBlocks(blocksToAdd);
   };
 
-  const filteredAssignments = assignments.filter(a => {
-    if (filterStatus === 'All') return true;
-    const mappedKey = filterStatus.toLowerCase().replace(' ', '_');
-    return a.status === mappedKey;
-  });
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter(a => {
+      if (filterStatus === 'All') return true;
+      const mappedKey = filterStatus.toLowerCase().replace(' ', '_');
+      return a.status === mappedKey;
+    });
+  }, [assignments, filterStatus]);
 
   const getStatusBadge = (status: Assignment['status']) => {
     switch (status) {

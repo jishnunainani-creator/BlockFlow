@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TaskInboxItem } from '../../types/executionOS';
 import { Priority } from '../../types/timetable';
 import { loadTaskInbox, saveTaskInbox, loadPersonalRules } from '../../utils/taskInboxStorage';
@@ -10,19 +10,20 @@ import { Goal } from '../../types/timetable';
 import {
   Inbox,
   Plus,
-  Calendar,
-  Clock,
   Sparkles,
-  CheckCircle2,
   Trash2,
   X,
-  AlertTriangle,
   Lock,
   Target,
-  ArrowRight,
 } from 'lucide-react';
+import { NavView } from '../Navigation/Sidebar';
+import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
 
-export const TaskInboxView: React.FC = () => {
+interface TaskInboxViewProps {
+  onNavigate?: (view: NavView) => void;
+}
+
+export const TaskInboxView: React.FC<TaskInboxViewProps> = ({ onNavigate }) => {
   const { currentWeekScheduledBlocks, addScheduledBlock, addToast } = useTimetable();
   const [tasks, setTasks] = useState<TaskInboxItem[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -42,6 +43,13 @@ export const TaskInboxView: React.FC = () => {
     setTasks(loadTaskInbox());
     setGoals(loadGoals());
   }, []);
+
+  const tasksWithRisk = useMemo(() => {
+    return tasks.map((t) => ({
+      task: t,
+      risk: calculateDeadlineRisk(t, currentWeekScheduledBlocks),
+    }));
+  }, [tasks, currentWeekScheduledBlocks]);
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,7 +75,7 @@ export const TaskInboxView: React.FC = () => {
     const updated = [newTask, ...tasks];
     setTasks(updated);
     saveTaskInbox(updated);
-    addToast(`Added "${newTask.title}" to Task Inbox Backlog! 📥`, 'success');
+    addToast(`Added "${newTask.title}" to backlog`, 'success');
 
     setTitle('');
     setDescription('');
@@ -86,7 +94,7 @@ export const TaskInboxView: React.FC = () => {
       blockId: `lib-task-${task.id}`,
       title: task.title,
       description: task.description || `Task from Inbox: ${task.title}`,
-      color: task.isFixed ? '#0EA5E9' : '#8B5CF6',
+      color: task.isFixed ? '#0EA5E9' : '#3659C9',
       priority: task.priority,
       icon: 'check-square',
       dayOfWeek: rec.dayOfWeek,
@@ -104,84 +112,93 @@ export const TaskInboxView: React.FC = () => {
     setTasks(updatedTasks);
     saveTaskInbox(updatedTasks);
 
-    addToast(`AI Scheduled "${task.title}" to Timetable! ✨`, 'success');
+    addToast(`Scheduled "${task.title}" to timetable`, 'success');
   };
 
   const handleDeleteTask = (taskId: string) => {
     const updated = tasks.filter((t) => t.id !== taskId);
     setTasks(updated);
     saveTaskInbox(updated);
-    addToast('Removed task from Inbox', 'info');
+    addToast('Task removed', 'info');
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-6 select-none scrollbar-thin">
+    <div className="flex-1 overflow-y-auto bg-slate-950 p-5 sm:p-8 space-y-5 select-none scrollbar-thin">
+      {/* ── BREADCRUMB ── */}
+      {onNavigate && (
+        <PageBreadcrumb
+          items={[{ label: 'Task Inbox' }]}
+          onNavigate={onNavigate}
+        />
+      )}
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            <Inbox className="w-6 h-6 text-indigo-400" />
-            <span>Task Inbox / Backlog</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <Inbox className="w-5 h-5 text-[#3659C9]" />
+            <span>Task Inbox</span>
           </h1>
           <p className="text-xs text-slate-400 font-medium mt-1">
-            Capture unscheduled tasks independently of calendar blocks ({tasks.length} tasks in backlog)
+            Capture unscheduled tasks to place into your schedule ({tasks.length} items)
           </p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg flex items-center gap-1.5 transition-all shrink-0"
+          className="px-4 py-2 bg-[#3659C9] hover:bg-[#2F4EB8] text-white font-semibold text-xs rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Add Task to Backlog</span>
+          <span>Add Task</span>
         </button>
       </div>
 
       {/* Creation Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <form
             onSubmit={handleCreateTask}
-            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl"
+            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Inbox className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Inbox className="w-4 h-4 text-[#3659C9]" />
                 <span>Add Task to Backlog</span>
               </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Task Title *</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Task Title *</label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Prepare OS Lab Report, Review Client Proposal"
+                autoFocus
+                placeholder="e.g. Prepare presentation, Review document"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#3659C9]"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Priority</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-white focus:outline-none focus:border-[#3659C9]"
                 >
-                  <option value="high">High Priority</option>
-                  <option value="medium">Medium Priority</option>
-                  <option value="low">Low Priority</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Duration (mins)</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Duration (mins)</label>
                 <input
                   type="number"
                   min={15}
@@ -189,28 +206,28 @@ export const TaskInboxView: React.FC = () => {
                   step={15}
                   value={estimatedDuration}
                   onChange={(e) => setEstimatedDuration(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-white font-mono focus:outline-none focus:border-[#3659C9]"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Deadline (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Deadline (Optional)</label>
                 <input
                   type="date"
                   value={deadline}
                   onChange={(e) => setDeadline(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-white focus:outline-none focus:border-[#3659C9]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Link to Goal</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Link to Goal</label>
                 <select
                   value={goalId}
                   onChange={(e) => setGoalId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-white focus:outline-none focus:border-[#3659C9]"
                 >
                   <option value="">-- No Linked Goal --</option>
                   {goals.map((g) => (
@@ -228,17 +245,17 @@ export const TaskInboxView: React.FC = () => {
                 id="isFixed"
                 checked={isFixed}
                 onChange={(e) => setIsFixed(e.target.checked)}
-                className="w-4 h-4 accent-indigo-500 rounded cursor-pointer"
+                className="w-4 h-4 accent-[#3659C9] rounded cursor-pointer"
               />
-              <label htmlFor="isFixed" className="text-xs text-slate-300 font-semibold cursor-pointer">
-                Mark as Fixed Commitment (🔒 Cannot be moved by AI)
+              <label htmlFor="isFixed" className="text-xs text-slate-300 cursor-pointer">
+                Fixed Commitment (Cannot be rescheduled)
               </label>
             </div>
 
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow"
+                className="w-full py-2 bg-[#3659C9] hover:bg-[#2F4EB8] text-white font-semibold text-xs rounded-lg transition-colors"
               >
                 Add to Backlog
               </button>
@@ -249,59 +266,59 @@ export const TaskInboxView: React.FC = () => {
 
       {/* Task List or Clean Empty State */}
       {tasks.length > 0 ? (
-        <div className="space-y-3">
-          {tasks.map((t) => {
-            const risk = calculateDeadlineRisk(t, currentWeekScheduledBlocks);
+        <div className="space-y-2.5">
+          {tasksWithRisk.map(({ task: t, risk }) => {
 
             return (
               <div
                 key={t.id}
-                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-all"
+                className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition-colors"
               >
-                <div className="space-y-1.5 min-w-0">
+                <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 font-mono">
                       {t.category}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${risk.badgeColorClass}`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${risk.badgeColorClass}`}>
                       {risk.badgeLabel}
                     </span>
                     {t.isFixed && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center gap-1">
                         <Lock size={10} /> Fixed
                       </span>
                     )}
                     {t.status === 'scheduled' && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
                         Scheduled
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-sm font-bold text-white leading-tight">{t.title}</h3>
+                  <h3 className="text-sm font-semibold text-white leading-tight">{t.title}</h3>
                   {t.goalTitle && (
-                    <span className="text-xs text-purple-400 font-semibold flex items-center gap-1">
-                      <Target size={12} /> Goal: {t.goalTitle}
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Target size={12} className="text-[#3659C9]" /> Goal: {t.goalTitle}
                     </span>
                   )}
                   <p className="text-[11px] text-slate-400">{risk.explanation}</p>
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-                  <span className="text-xs font-mono text-slate-400">{t.estimatedDuration} mins</span>
+                  <span className="text-xs font-mono text-slate-400">{t.estimatedDuration}m</span>
                   {t.status !== 'scheduled' && (
                     <button
                       onClick={() => handleAIScheduleTask(t)}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow flex items-center gap-1"
+                      className="px-3 py-1.5 bg-[#3659C9] hover:bg-[#2F4EB8] text-white font-medium text-xs rounded-lg transition-colors flex items-center gap-1"
                     >
-                      <Sparkles size={12} /> AI Schedule
+                      <Sparkles size={12} /> Auto-Schedule
                     </button>
                   )}
                   <button
                     onClick={() => handleDeleteTask(t.id)}
-                    className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg transition-colors"
+                    className="text-slate-500 hover:text-rose-400 p-1.5 rounded-md transition-colors"
+                    title="Delete task"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>
@@ -309,17 +326,17 @@ export const TaskInboxView: React.FC = () => {
           })}
         </div>
       ) : (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-3 max-w-lg mx-auto my-8">
-          <Inbox size={32} className="text-indigo-400 mx-auto opacity-80" />
-          <h3 className="text-base font-bold text-white">Your Task Backlog is Empty</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-            Capture tasks you know need doing, even before picking a timetable slot. BlockFlow AI will schedule them for you.
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-10 text-center space-y-3 max-w-md mx-auto my-8">
+          <Inbox size={28} className="text-slate-400 mx-auto" />
+          <h3 className="text-sm font-semibold text-white">Your Task Backlog is Empty</h3>
+          <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+            Capture quick items here to schedule them when you plan your week.
           </p>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow inline-flex items-center gap-1.5"
+            className="px-4 py-2 bg-[#3659C9] hover:bg-[#2F4EB8] text-white font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1.5"
           >
-            <Plus size={16} /> Add Task to Backlog
+            <Plus size={14} /> Add First Task
           </button>
         </div>
       )}

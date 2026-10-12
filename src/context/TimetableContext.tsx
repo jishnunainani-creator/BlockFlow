@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   LibraryBlock,
   ScheduledBlock,
@@ -15,6 +15,9 @@ import {
   loadResolution,
   saveResolution,
   INITIAL_LIBRARY_BLOCKS,
+  loadGoals,
+  saveGoals,
+  normalizeGoal,
 } from '../utils/storage';
 import { getISOWeekString, snapToResolution } from '../utils/timeUtils';
 import { useUndoRedo } from '../hooks/useUndoRedo';
@@ -175,6 +178,7 @@ interface TimetableContextType {
 
   // Scheduled block actions
   addScheduledBlock: (block: Omit<ScheduledBlock, 'id' | 'weekId'>) => void;
+  bulkAddScheduledBlocks: (blocks: Omit<ScheduledBlock, 'id' | 'weekId'>[]) => void;
   moveScheduledBlock: (id: string, dayOfWeek: number, startMinutes: number) => void;
   resizeScheduledBlock: (id: string, newDuration: number) => void;
   updateScheduledBlock: (id: string, partial: Partial<ScheduledBlock>) => void;
@@ -270,10 +274,14 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     canRedo,
   } = useUndoRedo<AppState>(initialAppState);
 
-  const currentWeekScheduledBlocks = appState.scheduledBlocks.filter(
-    (sb) => sb.weekId === currentWeekId
+  const currentWeekScheduledBlocks = useMemo(
+    () => appState.scheduledBlocks.filter((sb) => sb.weekId === currentWeekId),
+    [appState.scheduledBlocks, currentWeekId]
   );
-  const conflicts = detectConflicts(currentWeekScheduledBlocks);
+  const conflicts = useMemo(
+    () => detectConflicts(currentWeekScheduledBlocks),
+    [currentWeekScheduledBlocks]
+  );
 
   useEffect(() => {
     saveLibraryBlocks(appState.libraryBlocks);
@@ -342,7 +350,7 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     addToast(`Added category "${trimmed}"!`, 'success');
   }, [appState, updateAppState, addToast]);
 
-  const enableNotifications = async () => {
+  const enableNotifications = useCallback(async () => {
     const granted = await requestNotificationPermission();
     setNotificationsEnabled(granted);
     if (granted) {
@@ -350,12 +358,15 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } else {
       addToast('Notifications permission denied', 'warning');
     }
-  };
+  }, [addToast]);
+
+  const notifiedSetRef = useRef<Set<string>>(new Set());
+  const blocksRef = useRef(currentWeekScheduledBlocks);
+  blocksRef.current = currentWeekScheduledBlocks;
 
   useEffect(() => {
-    const notifiedSet = new Set<string>();
     const interval = setInterval(() => {
-      checkPendingReminders(currentWeekScheduledBlocks, notifiedSet, (block, minutesBefore) => {
+      checkPendingReminders(blocksRef.current, notifiedSetRef.current, (block, minutesBefore) => {
         playReminderChime();
         const msg = `"${block.title}" starts in ${minutesBefore} minutes!`;
         addToast(`⏰ Reminder: ${msg}`, 'warning');
@@ -364,7 +375,7 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [currentWeekScheduledBlocks, addToast]);
+  }, [addToast]);
 
   const setResolution = useCallback((newRes: Resolution) => {
     setResolutionState(newRes);
@@ -475,63 +486,64 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 
   const updateLibraryBlock = useCallback((id: string, partial: Partial<LibraryBlock>) => {
-    const updatedBlocks = appState.libraryBlocks.map((b) => (b.id === id ? { ...b, ...partial } : b));
-    const updatedScheduled = appState.scheduledBlocks.map((sb) => {
-      if (sb.blockId === id) {
-        return {
-          ...sb,
-          title: partial.title !== undefined ? partial.title : sb.title,
-          description: partial.description !== undefined ? partial.description : sb.description,
-          color: partial.color !== undefined ? partial.color : sb.color,
-          priority: partial.priority !== undefined ? partial.priority : sb.priority,
-          icon: partial.icon !== undefined ? partial.icon : sb.icon,
-        };
-      }
-      return sb;
-    });
+    updateAppState((prev) => {
+      const updatedBlocks = prev.libraryBlocks.map((b) => (b.id === id ? { ...b, ...partial } : b));
+      const updatedScheduled = prev.scheduledBlocks.map((sb) => {
+        if (sb.blockId === id) {
+          return {
+            ...sb,
+            title: partial.title !== undefined ? partial.title : sb.title,
+            description: partial.description !== undefined ? partial.description : sb.description,
+            color: partial.color !== undefined ? partial.color : sb.color,
+            priority: partial.priority !== undefined ? partial.priority : sb.priority,
+            icon: partial.icon !== undefined ? partial.icon : sb.icon,
+          };
+        }
+        return sb;
+      });
 
-    updateAppState({
-      ...appState,
-      libraryBlocks: updatedBlocks,
-      scheduledBlocks: updatedScheduled,
+      return {
+        ...prev,
+        libraryBlocks: updatedBlocks,
+        scheduledBlocks: updatedScheduled,
+      };
     });
 
     addToast(`Updated block library`, 'info');
-  }, [appState, updateAppState, addToast]);
+  }, [updateAppState, addToast]);
 
   const deleteLibraryBlock = useCallback((id: string) => {
-    const block = appState.libraryBlocks.find((b) => b.id === id);
-    const updatedBlocks = appState.libraryBlocks.filter((b) => b.id !== id);
-    const updatedScheduled = appState.scheduledBlocks.filter((sb) => sb.blockId !== id);
-
-    updateAppState({
-      ...appState,
-      libraryBlocks: updatedBlocks,
-      scheduledBlocks: updatedScheduled,
+    let deletedTitle = '';
+    updateAppState((prev) => {
+      const block = prev.libraryBlocks.find((b) => b.id === id);
+      deletedTitle = block?.title || '';
+      return {
+        ...prev,
+        libraryBlocks: prev.libraryBlocks.filter((b) => b.id !== id),
+        scheduledBlocks: prev.scheduledBlocks.filter((sb) => sb.blockId !== id),
+      };
     });
 
-    addToast(`Deleted block "${block?.title || ''}"`, 'warning');
-  }, [appState, updateAppState, addToast]);
+    addToast(`Deleted block "${deletedTitle}"`, 'warning');
+  }, [updateAppState, addToast]);
 
   const updateBlockStatus = useCallback((id: string, status: CompletionStatus) => {
-    const updatedScheduled = appState.scheduledBlocks.map((sb) => {
-      if (sb.id === id) {
-        return {
-          ...sb,
-          status,
-          completedAt: status === 'completed' || status === 'faster' || status === 'took_longer' ? Date.now() : sb.completedAt,
-        };
-      }
-      return sb;
-    });
-
-    updateAppState({
-      ...appState,
-      scheduledBlocks: updatedScheduled,
-    });
+    updateAppState((prev) => ({
+      ...prev,
+      scheduledBlocks: prev.scheduledBlocks.map((sb) => {
+        if (sb.id === id) {
+          return {
+            ...sb,
+            status,
+            completedAt: status === 'completed' || status === 'faster' || status === 'took_longer' ? Date.now() : sb.completedAt,
+          };
+        }
+        return sb;
+      }),
+    }));
 
     addToast(`Updated status to ${status.replace('_', ' ')}`, 'info');
-  }, [appState, updateAppState, addToast]);
+  }, [updateAppState, addToast]);
 
   // Scheduled Actions
   const addScheduledBlock = useCallback((blockData: Omit<ScheduledBlock, 'id' | 'weekId'>) => {
@@ -548,68 +560,106 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       status: blockData.status || 'not_started',
     };
 
-    const updatedLibrary = appState.libraryBlocks.map((b) => {
-      if (b.id === blockData.blockId) {
-        return {
-          ...b,
-          lastUsedAt: Date.now(),
-          usageCount: (b.usageCount || 0) + 1,
-        };
-      }
-      return b;
-    });
+    updateAppState((prev) => {
+      const updatedLibrary = prev.libraryBlocks.map((b) => {
+        if (b.id === blockData.blockId) {
+          return {
+            ...b,
+            lastUsedAt: Date.now(),
+            usageCount: (b.usageCount || 0) + 1,
+          };
+        }
+        return b;
+      });
 
-    updateAppState({
-      ...appState,
-      libraryBlocks: updatedLibrary,
-      scheduledBlocks: [...appState.scheduledBlocks, newScheduled],
+      return {
+        ...prev,
+        libraryBlocks: updatedLibrary,
+        scheduledBlocks: [...prev.scheduledBlocks, newScheduled],
+      };
     });
 
     setSelectedBlockId(newScheduled.id);
     addToast(`Scheduled "${newScheduled.title}"`, 'success');
-  }, [appState, updateAppState, resolution, currentWeekId, addToast]);
+  }, [updateAppState, resolution, currentWeekId, addToast]);
+
+  const bulkAddScheduledBlocks = useCallback(
+    (blocksData: Omit<ScheduledBlock, 'id' | 'weekId'>[]) => {
+      if (!blocksData || blocksData.length === 0) return;
+
+      const newBlocks: ScheduledBlock[] = blocksData.map((b, idx) => ({
+        ...b,
+        id: `sched-${Date.now()}-${idx}-${Math.random().toString().slice(2, 6)}`,
+        startMinutes: snapToResolution(b.startMinutes, resolution),
+        duration: snapToResolution(b.duration, resolution),
+        weekId: currentWeekId,
+        reminderMinutes: b.reminderMinutes || 15,
+        status: b.status || 'not_started',
+      }));
+
+      const blockIdCounts = new Map<string, number>();
+      newBlocks.forEach((b) => {
+        if (b.blockId) {
+          blockIdCounts.set(b.blockId, (blockIdCounts.get(b.blockId) || 0) + 1);
+        }
+      });
+
+      updateAppState((prev) => {
+        const updatedLibrary = prev.libraryBlocks.map((lib) => {
+          const count = blockIdCounts.get(lib.id);
+          if (count) {
+            return {
+              ...lib,
+              lastUsedAt: Date.now(),
+              usageCount: (lib.usageCount || 0) + count,
+            };
+          }
+          return lib;
+        });
+
+        return {
+          ...prev,
+          libraryBlocks: updatedLibrary,
+          scheduledBlocks: [...prev.scheduledBlocks, ...newBlocks],
+        };
+      });
+
+      addToast(`Scheduled ${blocksData.length} activities!`, 'success');
+    },
+    [updateAppState, resolution, currentWeekId, addToast]
+  );
 
   const moveScheduledBlock = useCallback((id: string, dayOfWeek: number, startMinutes: number) => {
     const snappedStart = snapToResolution(startMinutes, resolution);
-    
-    const updatedScheduled = appState.scheduledBlocks.map((sb) => {
-      if (sb.id === id) {
-        return {
-          ...sb,
-          dayOfWeek,
-          startMinutes: snappedStart,
-          weekId: currentWeekId,
-        };
-      }
-      return sb;
-    });
 
-    updateAppState({
-      ...appState,
-      scheduledBlocks: updatedScheduled,
-    });
+    updateAppState((prev) => ({
+      ...prev,
+      scheduledBlocks: prev.scheduledBlocks.map((sb) => {
+        if (sb.id === id) {
+          return {
+            ...sb,
+            dayOfWeek,
+            startMinutes: snappedStart,
+            weekId: currentWeekId,
+          };
+        }
+        return sb;
+      }),
+    }));
 
     addToast(`Moved block`, 'info');
-  }, [appState, updateAppState, resolution, currentWeekId, addToast]);
+  }, [updateAppState, resolution, currentWeekId, addToast]);
 
   const resizeScheduledBlock = useCallback((id: string, newDuration: number) => {
     const snappedDuration = snapToResolution(newDuration, resolution);
 
-    const updatedScheduled = appState.scheduledBlocks.map((sb) => {
-      if (sb.id === id) {
-        return {
-          ...sb,
-          duration: snappedDuration,
-        };
-      }
-      return sb;
-    });
-
-    updateAppState({
-      ...appState,
-      scheduledBlocks: updatedScheduled,
-    });
-  }, [appState, updateAppState, resolution]);
+    updateAppState((prev) => ({
+      ...prev,
+      scheduledBlocks: prev.scheduledBlocks.map((sb) =>
+        sb.id === id ? { ...sb, duration: snappedDuration } : sb
+      ),
+    }));
+  }, [updateAppState, resolution]);
 
   const updateScheduledBlock = useCallback((id: string, partial: Partial<ScheduledBlock>) => {
     updateAppState((prev) => ({
@@ -845,6 +895,7 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       scheduledBlocks: appState.scheduledBlocks,
       templates: appState.templates,
       customCategories: appState.customCategories,
+      goals: loadGoals(),
       resolution,
     };
     const jsonStr = JSON.stringify(backupData, null, 2);
@@ -860,6 +911,17 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const importJSONBackup = useCallback((jsonStr: string) => {
     try {
+      // Check if goals exist in the JSON payload
+      try {
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.goals && Array.isArray(parsed.goals)) {
+          const normalizedGoals = parsed.goals.map((g: any) => normalizeGoal(g));
+          saveGoals(normalizedGoals);
+        }
+      } catch {
+        // continue with migration
+      }
+
       const result = migrateBlockFlowJSON(jsonStr);
       if (result) {
         const allBlocks: ScheduledBlock[] = [];
@@ -898,63 +960,118 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }, [canRedo, historyRedo, addToast]);
 
+  const contextValue = useMemo(() => ({
+    libraryBlocks: appState.libraryBlocks,
+    scheduledBlocks: appState.scheduledBlocks,
+    currentWeekScheduledBlocks,
+    currentWeekId,
+    setCurrentWeekId,
+    resolution,
+    setResolution,
+    searchQuery,
+    setSearchQuery,
+    customCategories: appState.customCategories,
+    addCustomCategory,
+    selectedBlockId,
+    setSelectedBlockId,
+    selectedCell,
+    setSelectedCell,
+    copiedBlock,
+    copySelectedBlock,
+    pasteCopiedBlock,
+    duplicateSelectedBlock,
+    deleteSelectedBlock,
+    deselectAll,
+    conflicts,
+    updateBlockStatus,
+    addLibraryBlock,
+    addLibraryBlockAndLinkScheduled,
+    bulkAddLibraryBlocksAndLink,
+    updateLibraryBlock,
+    deleteLibraryBlock,
+    addScheduledBlock,
+    bulkAddScheduledBlocks,
+    moveScheduledBlock,
+    resizeScheduledBlock,
+    updateScheduledBlock,
+    deleteScheduledBlock,
+    duplicateCurrentWeekTo,
+    clearCurrentWeek,
+    templates: appState.templates,
+    saveCurrentWeekAsTemplate,
+    loadTemplate,
+    deleteTemplate,
+    duplicateTemplate,
+    runAISmartSchedule,
+    enableNotifications,
+    notificationsEnabled,
+    exportJSONBackup,
+    importJSONBackup,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    toasts,
+    addToast,
+    removeToast,
+  }), [
+    appState.libraryBlocks,
+    appState.scheduledBlocks,
+    currentWeekScheduledBlocks,
+    currentWeekId,
+    setCurrentWeekId,
+    resolution,
+    setResolution,
+    searchQuery,
+    setSearchQuery,
+    appState.customCategories,
+    addCustomCategory,
+    selectedBlockId,
+    setSelectedBlockId,
+    selectedCell,
+    setSelectedCell,
+    copiedBlock,
+    copySelectedBlock,
+    pasteCopiedBlock,
+    duplicateSelectedBlock,
+    deleteSelectedBlock,
+    deselectAll,
+    conflicts,
+    updateBlockStatus,
+    addLibraryBlock,
+    addLibraryBlockAndLinkScheduled,
+    bulkAddLibraryBlocksAndLink,
+    updateLibraryBlock,
+    deleteLibraryBlock,
+    addScheduledBlock,
+    bulkAddScheduledBlocks,
+    moveScheduledBlock,
+    resizeScheduledBlock,
+    updateScheduledBlock,
+    deleteScheduledBlock,
+    duplicateCurrentWeekTo,
+    clearCurrentWeek,
+    appState.templates,
+    saveCurrentWeekAsTemplate,
+    loadTemplate,
+    deleteTemplate,
+    duplicateTemplate,
+    runAISmartSchedule,
+    enableNotifications,
+    notificationsEnabled,
+    exportJSONBackup,
+    importJSONBackup,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    toasts,
+    addToast,
+    removeToast,
+  ]);
+
   return (
-    <TimetableContext.Provider
-      value={{
-        libraryBlocks: appState.libraryBlocks,
-        scheduledBlocks: appState.scheduledBlocks,
-        currentWeekScheduledBlocks,
-        currentWeekId,
-        setCurrentWeekId,
-        resolution,
-        setResolution,
-        searchQuery,
-        setSearchQuery,
-        customCategories: appState.customCategories,
-        addCustomCategory,
-        selectedBlockId,
-        setSelectedBlockId,
-        selectedCell,
-        setSelectedCell,
-        copiedBlock,
-        copySelectedBlock,
-        pasteCopiedBlock,
-        duplicateSelectedBlock,
-        deleteSelectedBlock,
-        deselectAll,
-        conflicts,
-        updateBlockStatus,
-        addLibraryBlock,
-        addLibraryBlockAndLinkScheduled,
-        bulkAddLibraryBlocksAndLink,
-        updateLibraryBlock,
-        deleteLibraryBlock,
-        addScheduledBlock,
-        moveScheduledBlock,
-        resizeScheduledBlock,
-        updateScheduledBlock,
-        deleteScheduledBlock,
-        duplicateCurrentWeekTo,
-        clearCurrentWeek,
-        templates: appState.templates,
-        saveCurrentWeekAsTemplate,
-        loadTemplate,
-        deleteTemplate,
-        duplicateTemplate,
-        runAISmartSchedule,
-        enableNotifications,
-        notificationsEnabled,
-        exportJSONBackup,
-        importJSONBackup,
-        undo,
-        redo,
-        canUndo,
-        canRedo,
-        toasts,
-        addToast,
-        removeToast,
-      }}
-    >
+    <TimetableContext.Provider value={contextValue}>
       {children}
     </TimetableContext.Provider>
   );

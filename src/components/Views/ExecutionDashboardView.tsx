@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useExecution } from '../../context/ExecutionContext';
 import { useTimetable } from '../../context/TimetableContext';
 import { DailyExecutionScoreCard } from '../Execution/DailyExecutionScoreCard';
@@ -32,7 +32,14 @@ import {
 
 type EIActiveTab = 'overview' | 'reports' | 'milestones' | 'reflections' | 'plan_vs_reality' | 'session_journal' | 'study_history';
 
-export const ExecutionDashboardView: React.FC = () => {
+import { NavView } from '../Navigation/Sidebar';
+import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
+
+interface ExecutionDashboardViewProps {
+  onNavigate?: (view: NavView) => void;
+}
+
+export const ExecutionDashboardView: React.FC<ExecutionDashboardViewProps> = ({ onNavigate }) => {
   const {
     todayScore,
     streaks,
@@ -47,28 +54,39 @@ export const ExecutionDashboardView: React.FC = () => {
   const [showEndOfDay, setShowEndOfDay] = useState(false);
 
   // Calculate weekly trend
-  const recentScores = Object.values(dailyScores)
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 7);
-  const weeklyAvg =
-    recentScores.length > 0
-      ? Math.round(recentScores.reduce((s, d) => s + d.overallScore, 0) / recentScores.length)
-      : 0;
+  const { recentScores, weeklyAvg, monthlyAvg, monthScores } = useMemo(() => {
+    const recents = Object.values(dailyScores)
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 7);
+    const wAvg =
+      recents.length > 0
+        ? Math.round(recents.reduce((s, d) => s + d.overallScore, 0) / recents.length)
+        : 0;
 
-  // Monthly trend
-  const monthScores = Object.values(dailyScores).filter((s) => {
-    const d = new Date(s.date);
     const now = new Date();
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-  const monthlyAvg =
-    monthScores.length > 0
-      ? Math.round(monthScores.reduce((s, d) => s + d.overallScore, 0) / monthScores.length)
-      : 0;
+    const mScores = Object.values(dailyScores).filter((s) => {
+      const d = new Date(s.date);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const mAvg =
+      mScores.length > 0
+        ? Math.round(mScores.reduce((s, d) => s + d.overallScore, 0) / mScores.length)
+        : 0;
+
+    return { recentScores: recents, weeklyAvg: wAvg, monthlyAvg: mAvg, monthScores: mScores };
+  }, [dailyScores]);
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto bg-slate-950 p-4 sm:p-6 space-y-6 select-none scrollbar-thin">
+      <div className="flex-1 overflow-y-auto bg-slate-950 p-4 sm:p-6 space-y-5 select-none scrollbar-thin">
+        {/* ── BREADCRUMB ── */}
+        {onNavigate && (
+          <PageBreadcrumb
+            items={[{ label: 'Execution Intelligence' }]}
+            onNavigate={onNavigate}
+          />
+        )}
+
         {/* ── HEADER & NAVIGATION TABS ── */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">

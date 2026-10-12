@@ -81,20 +81,27 @@ export default function EnhancedFocusMode({
   const completionTriggeredRef = useRef(false);
   const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'BlockFlow');
 
-  // Today's active task blocks
+  // Today's active task blocks (Memoized)
   const todayIndex = (new Date().getDay() + 6) % 7;
-  const todayBlocks = currentWeekScheduledBlocks
-    .filter((b) => b.dayOfWeek === todayIndex)
-    .sort((a, b) => a.startMinutes - b.startMinutes);
+  const todayBlocks = React.useMemo(() => {
+    return currentWeekScheduledBlocks
+      .filter((b) => b.dayOfWeek === todayIndex)
+      .sort((a, b) => a.startMinutes - b.startMinutes);
+  }, [currentWeekScheduledBlocks, todayIndex]);
 
-  const activeTask =
-    todayBlocks.find((b) => b.status === 'in_progress') ||
-    todayBlocks.find((b) => !b.status || b.status === 'not_started') ||
-    todayBlocks[0];
+  const activeTask = React.useMemo(() => {
+    return (
+      todayBlocks.find((b) => b.status === 'in_progress') ||
+      todayBlocks.find((b) => !b.status || b.status === 'not_started') ||
+      todayBlocks[0]
+    );
+  }, [todayBlocks]);
 
-  const nextTask = todayBlocks.find(
-    (b) => b.id !== activeTask?.id && (!b.status || b.status === 'not_started')
-  );
+  const nextTask = React.useMemo(() => {
+    return todayBlocks.find(
+      (b) => b.id !== activeTask?.id && (!b.status || b.status === 'not_started')
+    );
+  }, [todayBlocks, activeTask]);
 
   // Load persisted session on mount / refresh
   useEffect(() => {
@@ -226,7 +233,7 @@ export default function EnhancedFocusMode({
             if (timerId) clearInterval(timerId);
             triggerSessionCompletion(activeTask?.title || 'Focus Task', mode);
           } else {
-            setSecondsRemaining(diffSeconds);
+            setSecondsRemaining((prev) => (prev === diffSeconds ? prev : diffSeconds));
           }
         }
       }, 250);
@@ -606,7 +613,7 @@ export default function EnhancedFocusMode({
             {mode === 'focus' && (
               <button
                 onClick={handleMarkActivityComplete}
-                className="px-5 py-4 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold text-xs rounded-2xl flex items-center gap-1.5 transition-colors"
+                className="px-5 py-4 bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 dark:text-emerald-300 dark:border dark:border-emerald-500/30 font-bold text-xs rounded-2xl flex items-center gap-1.5 transition-colors shadow-sm"
               >
                 <CheckCircle2 size={18} />
                 Mark Complete
@@ -617,54 +624,54 @@ export default function EnhancedFocusMode({
           {/* Stat Cards */}
           <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Up Next Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-1">
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Up Next</p>
-              <p className="text-slate-200 font-bold truncate">
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-1 shadow-xs">
+              <p className="text-slate-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider">Up Next</p>
+              <p className="text-slate-900 dark:text-slate-200 font-bold truncate">
                 {nextTask?.title || 'No further tasks scheduled for today'}
               </p>
             </div>
 
             {/* Timer Mode Selector Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 backdrop-blur-sm relative">
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 backdrop-blur-sm relative shadow-xs">
+              <p className="text-slate-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">
                 Timer Preset
               </p>
               <button
                 onClick={() => setShowPresetDropdown(!showPresetDropdown)}
-                className="text-slate-200 font-bold text-sm flex items-center justify-between w-full hover:text-indigo-400 transition-colors"
+                className="text-slate-900 dark:text-slate-200 font-bold text-sm flex items-center justify-between w-full hover:text-[#2563EB] dark:hover:text-indigo-400 transition-colors"
               >
                 <span>{presetLabels[preset]}</span>
-                <ChevronDown size={16} className="text-slate-400" />
+                <ChevronDown size={16} className="text-slate-500 dark:text-slate-400" />
               </button>
 
               {showPresetDropdown && (
-                <div className="absolute left-0 right-0 bottom-full mb-2 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl z-20 space-y-1">
+                <div className="absolute left-0 right-0 bottom-full mb-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-2xl z-20 space-y-1">
                   <button
                     onClick={() => handleSelectPreset('25_5')}
-                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-200 hover:bg-slate-800"
+                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     Pomodoro (25m work / 5m break)
                   </button>
                   <button
                     onClick={() => handleSelectPreset('50_10')}
-                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-200 hover:bg-slate-800"
+                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     Focus (50m work / 10m break)
                   </button>
                   <button
                     onClick={() => handleSelectPreset('90_20')}
-                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-200 hover:bg-slate-800"
+                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     Deep Work (90m work / 20m break)
                   </button>
-                  <div className="p-2 border-t border-slate-800 flex items-center gap-2">
+                  <div className="p-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">
                     <input
                       type="number"
                       min="1"
                       max="180"
                       value={customMins}
                       onChange={(e) => setCustomMins(Number(e.target.value))}
-                      className="w-16 bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs text-white text-center"
+                      className="w-16 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg p-1 text-xs text-slate-900 dark:text-white text-center"
                     />
                     <button
                       onClick={() => handleSelectPreset('custom', customMins)}
@@ -678,15 +685,15 @@ export default function EnhancedFocusMode({
             </div>
 
             {/* Execution Score Card */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-1">
-              <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-1 shadow-xs">
+              <p className="text-slate-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider">
                 Execution Score
               </p>
               <div className="flex items-center gap-2">
-                <span className="text-2xl font-black text-emerald-400">
+                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
                   {todayScore?.overallScore || 88}%
                 </span>
-                <span className="text-emerald-400/80 text-[10px] font-semibold">
+                <span className="text-emerald-700 dark:text-emerald-400/80 text-[10px] font-semibold">
                   Today's Performance
                 </span>
               </div>

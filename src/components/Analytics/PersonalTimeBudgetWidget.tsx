@@ -49,18 +49,18 @@ export default function PersonalTimeBudgetWidget() {
 
   return (
     <>
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 space-y-5 select-none shadow-xl">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 sm:p-6 space-y-5 select-none shadow-xs">
         {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800/80 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+            <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
               <PieChart className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 TIME ALLOCATION
               </h2>
-              <p className="text-xs text-indigo-400 font-semibold tracking-wide mt-0.5">
+              <p className="text-xs text-[#2563EB] dark:text-indigo-400 font-semibold tracking-wide mt-0.5">
                 See where your scheduled time is going.
               </p>
             </div>
@@ -151,46 +151,46 @@ export default function PersonalTimeBudgetWidget() {
 
         {/* Top Summary Stat Cards (Requirement 16) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
-              <Clock className="w-3 h-3 text-indigo-400" /> Total Scheduled
+          <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3.5 space-y-1 shadow-xs">
+            <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-500 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-indigo-600 dark:text-indigo-400" /> Total Scheduled
             </span>
-            <div className="text-xl font-black text-white font-mono">{totalScheduledHoursStr}</div>
+            <div className="text-xl font-black text-slate-900 dark:text-white font-mono">{totalScheduledHoursStr}</div>
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
-              <PieChart className="w-3 h-3 text-blue-400" /> Largest Category
+          <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3.5 space-y-1 shadow-xs">
+            <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-500 flex items-center gap-1">
+              <PieChart className="w-3 h-3 text-blue-600 dark:text-blue-400" /> Largest Category
             </span>
-            <div className="text-sm font-bold text-white truncate">
+            <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
               {summary.largestCategoryName || 'None'}
             </div>
             {summary.largestCategoryMinutes ? (
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">
                 {formatDuration(summary.largestCategoryMinutes)}
               </span>
             ) : null}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
-              <BarChart2 className="w-3 h-3 text-emerald-400" /> Top Activity
+          <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3.5 space-y-1 shadow-xs">
+            <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-500 flex items-center gap-1">
+              <BarChart2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> Top Activity
             </span>
-            <div className="text-sm font-bold text-white truncate">
+            <div className="text-sm font-bold text-slate-900 dark:text-white truncate">
               {summary.mostScheduledActivityTitle || 'None'}
             </div>
             {summary.mostScheduledActivityMinutes ? (
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">
                 {formatDuration(summary.mostScheduledActivityMinutes)}
               </span>
             ) : null}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3.5 space-y-1">
-            <span className="text-[10px] uppercase font-bold text-slate-500 flex items-center gap-1">
-              <Tag className="w-3 h-3 text-amber-400" /> Uncategorized
+          <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3.5 space-y-1 shadow-xs">
+            <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-500 flex items-center gap-1">
+              <Tag className="w-3 h-3 text-amber-600 dark:text-amber-400" /> Uncategorized
             </span>
-            <div className="text-xl font-black text-white font-mono">
+            <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
               {formatDuration(summary.uncategorizedMinutes)}
             </div>
           </div>
@@ -199,13 +199,13 @@ export default function PersonalTimeBudgetWidget() {
         {/* Visual Distribution Bar (Requirement 15) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs font-semibold">
-            <span className="text-slate-400">Scheduled Time Distribution</span>
-            <span className="text-slate-500 font-mono">
+            <span className="text-slate-700 dark:text-slate-400">Scheduled Time Distribution</span>
+            <span className="text-slate-600 dark:text-slate-500 font-mono">
               {dateScope === 'today' ? 'Today' : dateScope === 'month' ? 'This Month' : 'This Week'}
             </span>
           </div>
 
-          <div className="flex h-4 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 p-0.5 gap-0.5">
+          <div className="flex h-4 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-0.5 gap-0.5">
             {summary.allocations.map((item) => {
               if (item.scheduledMinutes <= 0) return null;
               const pct = item.percentageOfTotalScheduled;
@@ -227,7 +227,7 @@ export default function PersonalTimeBudgetWidget() {
                     (summary.uncategorizedMinutes / summary.totalScheduledMinutes) * 100
                   )}%`,
                 }}
-                className="h-full bg-slate-700/80 rounded-md transition-all relative"
+                className="h-full bg-slate-400 dark:bg-slate-700/80 rounded-md transition-all relative"
                 title={`Uncategorized: ${formatDuration(summary.uncategorizedMinutes)}`}
               />
             )}
@@ -236,11 +236,11 @@ export default function PersonalTimeBudgetWidget() {
 
         {/* Mathematical Insights Banner (Requirement 27) */}
         {insights.length > 0 && (
-          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-3 flex items-start gap-2.5 text-xs text-indigo-300">
-            <Sparkles className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-            <div className="space-y-0.5 flex-1">
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl p-3.5 flex items-start gap-2.5 text-xs text-indigo-950 dark:text-indigo-200 font-medium">
+            <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+            <div className="space-y-1 flex-1">
               {insights.map((ins, idx) => (
-                <p key={idx}>• {ins}</p>
+                <p key={idx} className="leading-snug">• {ins}</p>
               ))}
             </div>
           </div>
@@ -258,19 +258,19 @@ export default function PersonalTimeBudgetWidget() {
               return (
                 <div
                   key={item.category.id}
-                  className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-4 space-y-3 hover:border-slate-700/80 transition-all shadow-sm"
+                  className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 space-y-3 hover:border-slate-300 dark:hover:border-slate-700/80 transition-all shadow-xs"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-4 h-4 rounded-full shrink-0 shadow-sm"
+                        className="w-4 h-4 rounded-full shrink-0 shadow-xs"
                         style={{ backgroundColor: item.category.color }}
                       />
                       <div>
-                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                           {item.category.name}
                         </h3>
-                        <span className="text-[11px] text-slate-400 font-mono">
+                        <span className="text-[11px] text-slate-600 dark:text-slate-400 font-mono">
                           {schedHoursStr} scheduled · {item.percentageOfTotalScheduled}% of total
                         </span>
                       </div>
@@ -278,14 +278,14 @@ export default function PersonalTimeBudgetWidget() {
 
                     <div className="flex items-center gap-3">
                       {viewMode === 'actual' && (
-                        <div className="text-xs font-semibold text-emerald-400 font-mono">
+                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                           Actual: {actualHoursStr || '0m'}
                         </div>
                       )}
 
                       <button
                         onClick={() => toggleCategoryExpand(item.category.id)}
-                        className="px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 transition-colors shadow-xs"
                       >
                         <span>{item.activities.length} activities</span>
                         {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -294,7 +294,7 @@ export default function PersonalTimeBudgetWidget() {
                   </div>
 
                   {/* Progress Bar */}
-                  <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden border border-slate-800/80">
+                  <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-900 overflow-hidden border border-slate-300/60 dark:border-slate-800/80">
                     <div
                       className="h-full rounded-full transition-all"
                       style={{
@@ -306,27 +306,27 @@ export default function PersonalTimeBudgetWidget() {
 
                   {/* Expandable Activity Breakdown List (Requirement 14 & 29) */}
                   {isExpanded && (
-                    <div className="pt-2 border-t border-slate-800/80 space-y-2 animate-fade-in">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 space-y-2 animate-fade-in">
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400 mb-2">
                         Activity Breakdown for {item.category.name}
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {item.activities.map((act) => (
                           <div
                             key={act.title}
-                            className="bg-slate-900/80 border border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between gap-2"
+                            className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between gap-2 shadow-xs"
                           >
                             <div className="min-w-0 flex-1">
-                              <span className="text-xs font-bold text-white block truncate">{act.title}</span>
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white block truncate">{act.title}</span>
+                              <span className="text-[10px] text-slate-600 dark:text-slate-400">
                                 {act.occurrenceCount} {act.occurrenceCount === 1 ? 'session' : 'sessions'}
                               </span>
                             </div>
                             <div className="text-right shrink-0">
-                              <span className="text-xs font-bold text-indigo-300 font-mono block">
+                              <span className="text-xs font-bold text-[#2563EB] dark:text-indigo-300 font-mono block">
                                 {formatDuration(act.scheduledMinutes)}
                               </span>
-                              <span className="text-[10px] text-slate-500 font-mono">
+                              <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono">
                                 {act.percentageOfCategory}% of {item.category.name}
                               </span>
                             </div>
@@ -341,19 +341,19 @@ export default function PersonalTimeBudgetWidget() {
 
           {/* Uncategorized Section (Requirement 17) */}
           {summary.uncategorizedMinutes > 0 && (
-            <div className="bg-slate-950/70 border border-amber-500/20 rounded-2xl p-4 space-y-3 shadow-sm">
+            <div className="bg-amber-50/90 dark:bg-slate-950/70 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-4 space-y-3 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shrink-0" />
-                  <h3 className="text-xs font-bold text-amber-300">Uncategorized Activities</h3>
+                  <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shrink-0 shadow-xs" />
+                  <h3 className="text-xs font-bold text-amber-900 dark:text-amber-300">Uncategorized Activities</h3>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-white font-mono">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white font-mono">
                     {formatDuration(summary.uncategorizedMinutes)}
                   </span>
                   <button
                     onClick={openBulkCategorizeModal}
-                    className="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold hover:bg-amber-500/30 transition-colors"
+                    className="px-3 py-1 rounded-xl bg-amber-600 hover:bg-amber-500 text-white dark:bg-amber-500/20 dark:hover:bg-amber-500/30 dark:text-amber-300 dark:border dark:border-amber-500/30 text-xs font-semibold transition-colors shadow-xs"
                   >
                     Categorize Activities
                   </button>

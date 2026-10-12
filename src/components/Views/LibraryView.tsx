@@ -16,8 +16,14 @@ import {
   Sparkles,
   HelpCircle,
 } from 'lucide-react';
+import { NavView } from '../Navigation/Sidebar';
+import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
 
-export const LibraryView: React.FC = () => {
+interface LibraryViewProps {
+  onNavigate?: (view: NavView) => void;
+}
+
+export const LibraryView: React.FC<LibraryViewProps> = ({ onNavigate }) => {
   const {
     libraryBlocks,
     customCategories,
@@ -86,6 +92,9 @@ export const LibraryView: React.FC = () => {
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-950 p-6 space-y-6 select-none scrollbar-thin">
+      {/* Global Breadcrumb */}
+      <PageBreadcrumb items={[{ label: 'Activity Library' }]} onNavigate={onNavigate} />
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>

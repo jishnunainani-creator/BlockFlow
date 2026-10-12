@@ -25,7 +25,6 @@ import {
   Check,
   ArrowLeft,
   ArrowRight,
-  Sparkle,
 } from 'lucide-react';
 
 interface BlockModalProps {
@@ -59,7 +58,7 @@ export const PRESET_COLORS = [
   '#F59E0B', // Amber
   '#10B981', // Emerald
   '#06B6D4', // Cyan
-  '#3B82F6', // Blue
+  '#3659C9', // BlockFlow Blue
   '#6366F1', // Indigo
   '#8B5CF6', // Purple
   '#EC4899', // Pink
@@ -80,7 +79,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<Priority>('high');
   const [categoryId, setCategoryId] = useState<string>('');
-  const [color, setColor] = useState('#EF4444');
+  const [color, setColor] = useState('#3659C9');
   const [defaultDuration, setDefaultDuration] = useState(60);
   const [icon, setIcon] = useState('code');
 
@@ -102,7 +101,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
         setDescription('');
         setPriority('high');
         setCategoryId('');
-        setColor('#EF4444');
+        setColor('#3659C9');
         setDefaultDuration(60);
         setIcon('code');
       }
@@ -193,26 +192,26 @@ export const BlockModal: React.FC<BlockModalProps> = ({
 
   if (!isOpen) return null;
 
-  const basePriorities: { key: string; label: string; badge: string }[] = [
-    { key: 'high', label: 'High Priority', badge: '🔴' },
-    { key: 'medium', label: 'Medium Priority', badge: '🟠' },
-    { key: 'low', label: 'Low Priority', badge: '🟢' },
-    { key: 'personal', label: 'Personal', badge: '🔵' },
-    { key: 'meetings', label: 'Meetings', badge: '🟣' },
+  const basePriorities: { key: string; label: string; dotColor: string }[] = [
+    { key: 'high', label: 'High Priority', dotColor: '#EF4444' },
+    { key: 'medium', label: 'Medium Priority', dotColor: '#F59E0B' },
+    { key: 'low', label: 'Low Priority', dotColor: '#10B981' },
+    { key: 'personal', label: 'Personal', dotColor: '#3659C9' },
+    { key: 'meetings', label: 'Meetings', dotColor: '#8B5CF6' },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in select-none">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative text-slate-100 flex flex-col min-h-[460px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in select-none">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-slate-100 flex flex-col min-h-[460px]">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <div className="p-2 rounded-lg bg-[#3659C9]/10 text-[#3659C9] border border-[#3659C9]/20">
               <PlusCircle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">
-                {editingBlock ? 'Edit Activity Block' : 'Create New Activity Block'}
+              <h3 className="text-base font-bold text-white">
+                {editingBlock ? 'Edit Activity Block' : 'Create Activity Block'}
               </h3>
               <p className="text-xs text-slate-400">Step {currentStep} of 3</p>
             </div>
@@ -231,26 +230,26 @@ export const BlockModal: React.FC<BlockModalProps> = ({
           <div
             onClick={() => setCurrentStep(1)}
             className={`flex-1 flex flex-col items-center gap-1 cursor-pointer transition-all ${
-              currentStep === 1 ? 'text-indigo-400 font-bold' : 'text-slate-500'
+              currentStep === 1 ? 'text-[#3659C9] font-bold' : 'text-slate-500'
             }`}
           >
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
                 currentStep === 1
-                  ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-500/20'
+                  ? 'bg-[#3659C9] text-white shadow'
                   : currentStep > 1
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'bg-slate-800 text-slate-400'
+                  ? 'bg-slate-800 text-slate-200'
+                  : 'bg-slate-800 text-slate-500'
               }`}
             >
-              {currentStep > 1 ? <Check className="w-4 h-4" /> : '1'}
+              {currentStep > 1 ? <Check className="w-3.5 h-3.5" /> : '1'}
             </div>
             <span className="text-[10px] uppercase tracking-wider">1. Details</span>
           </div>
 
           <div
             className={`h-0.5 flex-1 mx-2 transition-all ${
-              currentStep >= 2 ? 'bg-indigo-500' : 'bg-slate-800'
+              currentStep >= 2 ? 'bg-[#3659C9]' : 'bg-slate-800'
             }`}
           />
 
@@ -258,25 +257,25 @@ export const BlockModal: React.FC<BlockModalProps> = ({
             onClick={() => title.trim() && setCurrentStep(2)}
             className={`flex-1 flex flex-col items-center gap-1 transition-all ${
               title.trim() ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-            } ${currentStep === 2 ? 'text-indigo-400 font-bold' : 'text-slate-500'}`}
+            } ${currentStep === 2 ? 'text-[#3659C9] font-bold' : 'text-slate-500'}`}
           >
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
                 currentStep === 2
-                  ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-500/20'
+                  ? 'bg-[#3659C9] text-white shadow'
                   : currentStep > 2
-                  ? 'bg-emerald-500 text-slate-950'
-                  : 'bg-slate-800 text-slate-400'
+                  ? 'bg-slate-800 text-slate-200'
+                  : 'bg-slate-800 text-slate-500'
               }`}
             >
-              {currentStep > 2 ? <Check className="w-4 h-4" /> : '2'}
+              {currentStep > 2 ? <Check className="w-3.5 h-3.5" /> : '2'}
             </div>
             <span className="text-[10px] uppercase tracking-wider">2. Style</span>
           </div>
 
           <div
             className={`h-0.5 flex-1 mx-2 transition-all ${
-              currentStep === 3 ? 'bg-indigo-500' : 'bg-slate-800'
+              currentStep === 3 ? 'bg-[#3659C9]' : 'bg-slate-800'
             }`}
           />
 
@@ -284,13 +283,13 @@ export const BlockModal: React.FC<BlockModalProps> = ({
             onClick={() => title.trim() && setCurrentStep(3)}
             className={`flex-1 flex flex-col items-center gap-1 transition-all ${
               title.trim() ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-            } ${currentStep === 3 ? 'text-indigo-400 font-bold' : 'text-slate-500'}`}
+            } ${currentStep === 3 ? 'text-[#3659C9] font-bold' : 'text-slate-500'}`}
           >
             <div
-              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
                 currentStep === 3
-                  ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-500/20'
-                  : 'bg-slate-800 text-slate-400'
+                  ? 'bg-[#3659C9] text-white shadow'
+                  : 'bg-slate-800 text-slate-500'
               }`}
             >
               3
@@ -313,7 +312,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                   type="text"
                   required
                   autoFocus
-                  placeholder="e.g. DSA Practice, Internship, Gym, Reading"
+                  placeholder="e.g. Deep Work, Standup, Gym, Reading"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -322,20 +321,20 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                       handleNext();
                     }
                   }}
-                  className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner"
+                  className="w-full px-3.5 py-2.5 bg-slate-800/60 border border-slate-700/80 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-[#3659C9] transition-colors"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Description / Notes (4–6 lines visible for detailed notes)
+                  Description / Notes
                 </label>
                 <textarea
-                  rows={5}
-                  placeholder="e.g. Activity objectives, step-by-step goals, reference links, or meeting agenda notes..."
+                  rows={4}
+                  placeholder="Objectives, action steps, or reference notes..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none shadow-inner leading-relaxed"
+                  className="w-full px-3.5 py-2.5 bg-slate-800/60 border border-slate-700/80 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-[#3659C9] transition-colors resize-none leading-relaxed"
                 />
               </div>
             </div>
@@ -347,13 +346,13 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               {/* Personal Time Budget Category Dropdown */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center justify-between">
-                  <span>Time Category (Life Domain)</span>
-                  <span className="text-[10px] text-indigo-400 font-normal lowercase">Personal Time Budget Allocation</span>
+                  <span>Time Category</span>
+                  <span className="text-[10px] text-slate-500 font-normal">Personal Time Budget</span>
                 </label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-800/80 border border-slate-700 rounded-xl text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                  className="w-full px-3.5 py-2.5 bg-slate-800/60 border border-slate-700/80 rounded-lg text-white text-xs font-medium focus:outline-none focus:border-[#3659C9]"
                 >
                   <option value="">-- Select Time Category (e.g. Academics, Fitness) --</option>
                   {categories
@@ -376,28 +375,28 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsAddingCategory(true)}
-                      className="flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+                      className="flex items-center gap-1 text-xs font-medium text-[#3659C9] hover:underline transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      <span>+ Add Category</span>
+                      <span>Add Category</span>
                     </button>
                   )}
                 </div>
 
                 {isAddingCategory && (
-                  <div className="mb-3 p-2 bg-slate-800/90 border border-indigo-500/40 rounded-xl flex items-center gap-2">
+                  <div className="mb-3 p-2 bg-slate-800 border border-slate-700 rounded-lg flex items-center gap-2">
                     <input
                       type="text"
-                      placeholder="Category name (e.g. Gaming, Side Project)"
+                      placeholder="Category name"
                       value={newCatName}
                       onChange={(e) => setNewCatName(e.target.value)}
-                      className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                      className="flex-1 px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-md text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#3659C9]"
                       autoFocus
                     />
                     <button
                       type="button"
                       onClick={handleCreateCategory}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg shadow"
+                      className="px-3 py-1.5 bg-[#3659C9] hover:bg-[#2F4EB8] text-white font-semibold text-xs rounded-md transition-colors"
                     >
                       Save
                     </button>
@@ -419,13 +418,13 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                         key={item.key}
                         type="button"
                         onClick={() => handlePriorityChange(item.key)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                           active
-                            ? 'bg-slate-800 border-indigo-500 text-white shadow-lg ring-1 ring-indigo-500/50'
+                            ? 'bg-slate-800 border-[#3659C9] text-white'
                             : 'bg-slate-800/40 border-slate-700/60 text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
                         }`}
                       >
-                        <span>{item.badge}</span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.dotColor }} />
                         <span>{item.label}</span>
                       </button>
                     );
@@ -438,13 +437,13 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                         key={cat}
                         type="button"
                         onClick={() => handlePriorityChange(cat)}
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                           active
-                            ? 'bg-indigo-900/60 border-indigo-500 text-white shadow-lg ring-1 ring-indigo-500/50'
+                            ? 'bg-slate-800 border-[#3659C9] text-white'
                             : 'bg-slate-800/40 border-slate-700/60 text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
                         }`}
                       >
-                        <span>✨</span>
+                        <span className="w-2 h-2 rounded-full shrink-0 bg-[#3659C9]" />
                         <span>{cat}</span>
                       </button>
                     );
@@ -458,21 +457,21 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                   Select Accent Color
                 </label>
                 <div className="flex items-center gap-3">
-                  <div className="flex flex-wrap gap-2.5">
+                  <div className="flex flex-wrap gap-2">
                     {PRESET_COLORS.map((hex) => (
                       <button
                         key={hex}
                         type="button"
                         onClick={() => setColor(hex)}
                         style={{ backgroundColor: hex }}
-                        className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-transform ${
+                        className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all ${
                           color.toLowerCase() === hex.toLowerCase()
-                            ? 'scale-110 border-white ring-2 ring-white/50 shadow-md'
+                            ? 'scale-110 border-white ring-2 ring-white/40 shadow-sm'
                             : 'border-transparent hover:scale-105 opacity-80 hover:opacity-100'
                         }`}
                       >
                         {color.toLowerCase() === hex.toLowerCase() && (
-                          <Check className="w-4 h-4 text-white drop-shadow" />
+                          <Check className="w-3.5 h-3.5 text-white drop-shadow" />
                         )}
                       </button>
                     ))}
@@ -481,7 +480,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                     type="color"
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
-                    className="w-9 h-9 rounded-xl cursor-pointer bg-transparent border-0 shrink-0"
+                    className="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0 shrink-0"
                     title="Custom color picker"
                   />
                 </div>
@@ -503,9 +502,9 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                       key={iconId}
                       type="button"
                       onClick={() => setIcon(iconId)}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs transition-all ${
+                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-colors ${
                         icon === iconId
-                          ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300 ring-1 ring-indigo-500/50 shadow-sm'
+                          ? 'bg-[#3659C9]/15 border-[#3659C9] text-white'
                           : 'bg-slate-800/40 border-slate-700/60 text-slate-400 hover:bg-slate-800/80 hover:text-slate-200'
                       }`}
                     >
@@ -519,7 +518,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               {/* Default Scheduled Duration */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Default Scheduled Duration
+                  Default Duration
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {[15, 30, 45, 60, 90, 120, 180, 240].map((mins) => (
@@ -527,9 +526,9 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                       key={mins}
                       type="button"
                       onClick={() => setDefaultDuration(mins)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                         defaultDuration === mins
-                          ? 'bg-indigo-600 border-indigo-500 text-white shadow-md ring-1 ring-indigo-400/50'
+                          ? 'bg-[#3659C9] border-[#3659C9] text-white'
                           : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white'
                       }`}
                     >
@@ -547,7 +546,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               <button
                 type="button"
                 onClick={handleBack}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 rounded-xl transition-all border border-slate-700"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 rounded-lg transition-colors border border-slate-700"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Back</span>
@@ -556,7 +555,7 @@ export const BlockModal: React.FC<BlockModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white bg-slate-800/50 rounded-xl transition-colors"
+                className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white bg-slate-800/50 rounded-lg transition-colors"
               >
                 Cancel
               </button>
@@ -567,20 +566,20 @@ export const BlockModal: React.FC<BlockModalProps> = ({
                 type="button"
                 disabled={!title.trim()}
                 onClick={handleNext}
-                className={`flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-lg transition-all ${
+                className={`flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white rounded-lg transition-colors ${
                   title.trim()
-                    ? 'bg-indigo-600 hover:bg-indigo-500 active:scale-95'
+                    ? 'bg-[#3659C9] hover:bg-[#2F4EB8]'
                     : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                 }`}
               >
-                <span>Next Step</span>
+                <span>Next</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             ) : (
               <button
                 type="submit"
                 style={{ backgroundColor: color }}
-                className="flex items-center gap-1.5 px-6 py-2.5 text-xs font-bold text-white rounded-xl shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                className="flex items-center gap-1.5 px-5 py-2 text-xs font-semibold text-white rounded-lg hover:brightness-110 transition-all"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{editingBlock ? 'Save Changes' : 'Save Activity'}</span>

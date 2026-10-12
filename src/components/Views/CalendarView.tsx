@@ -1,23 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { AppHeader } from '../Header/AppHeader';
 import { BlockLibrary } from '../Library/BlockLibrary';
 import { TimetableGrid } from '../Timetable/TimetableGrid';
-import { LayoutGrid } from 'lucide-react';
 
 interface CalendarViewProps {
   onOpenAISchedule?: (tab: 'voice' | 'text' | 'import') => void;
   onOpenAICommandCenter?: () => void;
   userEmail?: string | null;
   onOpenAuth?: () => void;
+  onOpenMobileMenu?: () => void;
+  onOpenAddBlock?: () => void;
+  onOpenGuidedTour?: () => void;
+  onNavigateHome?: () => void;
 }
+
+const STORAGE_KEY_LIBRARY_OPEN = 'blockflow_activity_library_open';
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   onOpenAISchedule,
   onOpenAICommandCenter,
   userEmail,
   onOpenAuth,
+  onOpenMobileMenu,
+  onOpenAddBlock,
+  onOpenGuidedTour,
+  onNavigateHome,
 }) => {
-  const [showSideLibrary, setShowSideLibrary] = useState(true);
+  const [isLibraryOpen, setIsLibraryOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_LIBRARY_OPEN);
+      if (saved !== null) return saved === 'true';
+      return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleLibrary = useCallback(() => {
+    setIsLibraryOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(STORAGE_KEY_LIBRARY_OPEN, String(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 select-none">
@@ -27,32 +54,36 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         onOpenAICommandCenter={onOpenAICommandCenter}
         userEmail={userEmail}
         onOpenAuth={onOpenAuth}
+        onOpenMobileMenu={onOpenMobileMenu}
+        onNavigateHome={onNavigateHome}
       />
 
       {/* Main Grid Workspace + Collapsible Side Library */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Activity Library Sidebar (Desktop only) */}
-        <div
-          className={`hidden md:block h-full border-r border-slate-800 transition-all duration-200 shrink-0 z-20 ${
-            showSideLibrary ? 'w-80' : 'w-0 hidden'
-          }`}
-        >
-          <BlockLibrary />
-        </div>
+        {/* Activity Library Sidebar */}
+        {isLibraryOpen && (
+          <aside className="w-80 h-full shrink-0 fixed md:relative inset-y-0 md:inset-auto left-0 z-40 md:z-10 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden shadow-2xl md:shadow-none">
+            <BlockLibrary onClose={handleToggleLibrary} />
+          </aside>
+        )}
 
-        {/* Timetable Grid */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative">
-          {/* Side Library Toggle Floating Button */}
-          <button
-            onClick={() => setShowSideLibrary(!showSideLibrary)}
-            className="hidden sm:flex absolute top-3 right-4 z-20 p-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-xs font-semibold items-center gap-1 shadow-md backdrop-blur-md"
-            title={showSideLibrary ? 'Hide Side Library' : 'Show Side Library'}
-          >
-            <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{showSideLibrary ? 'Hide Library' : 'Show Library'}</span>
-          </button>
+        {/* Mobile backdrop overlay when drawer is open on small screens */}
+        {isLibraryOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-xs transition-opacity"
+            onClick={handleToggleLibrary}
+            aria-hidden="true"
+          />
+        )}
 
-          <TimetableGrid startHour={6} endHour={24} />
+        {/* Timetable Grid Workspace (occupies 100% of remaining horizontal space) */}
+        <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative min-w-0">
+          <TimetableGrid
+            startHour={6}
+            endHour={24}
+            isLibraryOpen={isLibraryOpen}
+            onToggleLibrary={handleToggleLibrary}
+          />
         </main>
       </div>
     </div>
