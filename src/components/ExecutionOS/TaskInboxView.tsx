@@ -40,15 +40,23 @@ import {
   ListTodo,
   ArrowRight,
   Filter,
+  Play,
 } from 'lucide-react';
 import { NavView } from '../Navigation/Sidebar';
 import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
 
 interface TaskInboxViewProps {
   onNavigate?: (view: NavView) => void;
+  onStartFocusMode?: (target?: {
+    title?: string;
+    blockId?: string;
+    taskId?: string;
+    goalId?: string;
+    plannedDurationMinutes?: number;
+  }) => void;
 }
 
-export const TaskInboxView: React.FC<TaskInboxViewProps> = ({ onNavigate }) => {
+export const TaskInboxView: React.FC<TaskInboxViewProps> = ({ onNavigate, onStartFocusMode }) => {
   const { currentWeekScheduledBlocks, addScheduledBlock, addToast } = useTimetable();
 
   // Active view tab: 'captures' (Universal Inbox) or 'tasks' (Organized Backlog)
@@ -584,6 +592,23 @@ export const TaskInboxView: React.FC<TaskInboxViewProps> = ({ onNavigate }) => {
 
                   <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
                     <span className="text-xs font-mono text-slate-500">{t.estimatedDuration}m</span>
+                    {onStartFocusMode && (
+                      <button
+                        onClick={() =>
+                          onStartFocusMode({
+                            title: t.title,
+                            taskId: t.id,
+                            plannedDurationMinutes: t.estimatedDuration,
+                            goalId: t.goalId,
+                          })
+                        }
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-lg transition-colors flex items-center gap-1.5"
+                        title="Start Focus Session on this task"
+                      >
+                        <Play size={12} className="fill-current text-indigo-400" />
+                        <span>Focus</span>
+                      </button>
+                    )}
                     {t.status !== 'scheduled' && (
                       <button
                         onClick={() => handleAIScheduleTask(t)}

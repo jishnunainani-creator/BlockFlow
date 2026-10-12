@@ -9,6 +9,7 @@ import {
   Calendar,
   Clock,
   ArrowUpRight,
+  Play,
 } from 'lucide-react';
 import { formatDuration } from '../../utils/timeUtils';
 
@@ -18,6 +19,7 @@ interface DailyTasksListProps {
   onToggleTaskComplete: (taskId: string) => void;
   onOpenAddTask: () => void;
   onNavigateToInbox?: () => void;
+  onStartFocus?: (task: TaskInboxItem) => void;
 }
 
 export const DailyTasksList: React.FC<DailyTasksListProps> = ({
@@ -26,6 +28,7 @@ export const DailyTasksList: React.FC<DailyTasksListProps> = ({
   onToggleTaskComplete,
   onOpenAddTask,
   onNavigateToInbox,
+  onStartFocus,
 }) => {
   const selectedYMD = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
@@ -146,6 +149,17 @@ export const DailyTasksList: React.FC<DailyTasksListProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {onStartFocus && (
+                    <button
+                      type="button"
+                      onClick={() => onStartFocus(task)}
+                      title="Start Focus Session on this task"
+                      className="p-1 rounded-md text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors shrink-0"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -209,6 +223,17 @@ export const DailyTasksList: React.FC<DailyTasksListProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {onStartFocus && (
+                    <button
+                      type="button"
+                      onClick={() => onStartFocus(task)}
+                      title="Start Focus Session on this task"
+                      className="p-1 rounded-md text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors shrink-0"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

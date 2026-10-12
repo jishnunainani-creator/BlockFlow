@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TimetableProvider, useTimetable } from './context/TimetableContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ExecutionProvider } from './context/ExecutionContext';
@@ -15,7 +15,7 @@ import { DashboardView } from './components/Views/DashboardView';
 import { CalendarView } from './components/Views/CalendarView';
 import { AdaptivePlannerView } from './components/Views/AdaptivePlannerView';
 import { GoalsView } from './components/Views/GoalsView';
-import EnhancedFocusMode from './components/Focus/EnhancedFocusMode';
+import EnhancedFocusMode, { FocusSessionTarget } from './components/Focus/EnhancedFocusMode';
 import AssignmentsView from './components/Views/AssignmentsView';
 import { AIScheduleModal } from './components/AI/AIScheduleModal';
 import { AICommandCenterModal } from './components/AI/AICommandCenterModal';
@@ -56,6 +56,13 @@ export function AppContent() {
 
   // Modals State
   const [isFocusModeOpen, setIsFocusModeOpen] = useState(false);
+  const [focusTarget, setFocusTarget] = useState<FocusSessionTarget | null>(null);
+
+  const handleStartFocusMode = useCallback((target?: FocusSessionTarget) => {
+    setFocusTarget(target || null);
+    setIsFocusModeOpen(true);
+  }, []);
+
   const [isAIScheduleOpen, setIsAIScheduleOpen] = useState(false);
   const [aiScheduleTab, setAiScheduleTab] = useState<'voice' | 'text' | 'import'>('voice');
   const [isAICommandCenterOpen, setIsAICommandCenterOpen] = useState(false);
@@ -168,7 +175,7 @@ export function AppContent() {
         if (key === 'g') handleNavigate('goals');
         if (key === 'u' || key === 'x') handleNavigate('task-inbox');
         if (key === 'q') setIsQuickCaptureOpen(true);
-        if (key === 'f') setIsFocusModeOpen(true);
+        if (key === 'f') handleStartFocusMode();
         if (key === 'v') openAISchedule('voice');
         if (key === 'l') handleNavigate('library');
         if (key === 't') handleNavigate('templates');
@@ -212,7 +219,7 @@ export function AppContent() {
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         userEmail={userEmail}
         onOpenAuth={() => setShowAuthPage(true)}
-        onOpenFocusMode={() => setIsFocusModeOpen(true)}
+        onOpenFocusMode={() => handleStartFocusMode()}
         onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
         isMobileOpen={isMobileNavOpen}
         onCloseMobile={() => setIsMobileNavOpen(false)}
@@ -223,14 +230,14 @@ export function AppContent() {
         {currentView === 'my-day' && (
           <MyDayView
             onNavigate={handleNavigate}
-            onStartFocusMode={() => setIsFocusModeOpen(true)}
+            onStartFocusMode={handleStartFocusMode}
           />
         )}
         {currentView === 'dashboard' && (
           <DashboardView
             onNavigate={handleNavigate}
             userEmail={userEmail}
-            onStartFocusMode={() => setIsFocusModeOpen(true)}
+            onStartFocusMode={() => handleStartFocusMode()}
           />
         )}
         {currentView === 'calendar' && (
@@ -247,7 +254,9 @@ export function AppContent() {
         )}
         {currentView === 'adaptive-planner' && <AdaptivePlannerView onNavigate={handleNavigate} />}
         {currentView === 'goals' && <GoalsView onNavigate={handleNavigate} />}
-        {currentView === 'task-inbox' && <TaskInboxView onNavigate={handleNavigate} />}
+        {currentView === 'task-inbox' && (
+          <TaskInboxView onNavigate={handleNavigate} onStartFocusMode={handleStartFocusMode} />
+        )}
         {currentView === 'assignments' && <AssignmentsView onNavigate={handleNavigate} />}
         {currentView === 'library' && <LibraryView onNavigate={handleNavigate} />}
         {currentView === 'resources' && <ResourcesView onNavigate={handleNavigate} />}
@@ -305,7 +314,14 @@ export function AppContent() {
       )}
 
       {/* Focus Mode Modal */}
-      <EnhancedFocusMode isOpen={isFocusModeOpen} onClose={() => setIsFocusModeOpen(false)} />
+      <EnhancedFocusMode
+        isOpen={isFocusModeOpen}
+        onClose={() => {
+          setIsFocusModeOpen(false);
+          setFocusTarget(null);
+        }}
+        initialTarget={focusTarget}
+      />
 
       {/* Three AI Scheduling Methods Modal */}
       <AIScheduleModal

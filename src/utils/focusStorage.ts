@@ -4,6 +4,7 @@ export interface ActiveFocusSession {
   id: string;
   taskTitle: string;
   blockId?: string;
+  taskId?: string;
   goalId?: string;
   startedAt: number; // Date.now() timestamp
   endsAt: number; // Date.now() timestamp when timer reaches 00:00
@@ -13,6 +14,10 @@ export interface ActiveFocusSession {
   mode: 'focus' | 'break';
   breakDurationSeconds?: number;
   completionTriggered?: boolean;
+  lastStartedAt?: number;
+  accumulatedFocusSeconds?: number;
+  plannedDurationMinutes?: number;
+  notes?: string;
 }
 
 export interface FocusSessionLog {
@@ -23,9 +28,11 @@ export interface FocusSessionLog {
   actualMinutes: number;
   taskTitle: string;
   blockId?: string;
+  taskId?: string;
   goalId?: string;
   status: 'completed' | 'cancelled' | 'early_exit';
   distractionReason?: string;
+  notes?: string;
 }
 
 const ACTIVE_SESSION_KEY_BASE = 'blockflow_active_focus_session';

@@ -1,8 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTimetable } from '../../context/TimetableContext';
 import { useExecution } from '../../context/ExecutionContext';
-import DistractionModal from './DistractionModal';
-import { loadDistractionLogs, saveDistractionLogs } from '../../utils/assignmentStorage';
 import {
   loadFocusAudioSettings,
   saveFocusAudioSettings,
@@ -19,6 +17,17 @@ import {
   ActiveFocusSession,
 } from '../../utils/focusStorage';
 import {
+  createActiveSession,
+  pauseActiveSession,
+  resumeActiveSession,
+  calculateElapsedSeconds,
+  calculateRemainingSeconds,
+  finalizeSession,
+} from '../../utils/focusSessionEngine';
+import { appendExecutionSession } from '../../utils/sessionStorage';
+import { loadTaskInbox, saveTaskInbox } from '../../utils/taskInboxStorage';
+import { TaskInboxItem } from '../../types/executionOS';
+import {
   Play,
   Pause,
   RotateCcw,
@@ -27,7 +36,6 @@ import {
   Target,
   Clock,
   X,
-  Sparkles,
   Zap,
   Volume2,
   VolumeX,
@@ -35,12 +43,24 @@ import {
   Coffee,
   Check,
   Settings,
+  ListTodo,
+  Star,
+  AlertTriangle,
 } from 'lucide-react';
+
+export interface FocusSessionTarget {
+  title?: string;
+  blockId?: string;
+  taskId?: string;
+  goalId?: string;
+  plannedDurationMinutes?: number;
+}
 
 interface EnhancedFocusModeProps {
   isOpen: boolean;
   onClose: () => void;
   onEarlyExit?: (sessionMinutes: number, taskTitle: string) => void;
+  initialTarget?: FocusSessionTarget | null;
 }
 
 type TimerPreset = '25_5' | '50_10' | '90_20' | 'custom';
@@ -49,7 +69,8 @@ type SessionMode = 'focus' | 'break';
 export default function EnhancedFocusMode({
   isOpen,
   onClose,
-  onEarlyExit = () => {},
+  onEarlyExit: _onEarlyExit = () => {},
+  initialTarget = null,
 }: EnhancedFocusModeProps) {
   const { currentWeekScheduledBlocks, updateBlockStatus, addToast } = useTimetable();
   const { todayScore } = useExecution();
@@ -61,6 +82,13 @@ export default function EnhancedFocusMode({
     typeof Notification !== 'undefined' ? Notification.permission : 'default'
   );
 
+  // Active Session and Target
+  const [activeSession, setActiveSession] = useState<ActiveFocusSession | null>(null);
+  const [sessionTitle, setSessionTitle] = useState('Deep Work Session');
+  const [linkedBlockId, setLinkedBlockId] = useState<string | undefined>(undefined);
+  const [linkedTaskId, setLinkedTaskId] = useState<string | undefined>(undefined);
+  const [plannedDurationMins, setPlannedDurationMins] = useState<number | undefined>(undefined);
+
   // Timer State
   const [preset, setPreset] = useState<TimerPreset>('25_5');
   const [customMins, setCustomMins] = useState(25);
@@ -70,68 +98,77 @@ export default function EnhancedFocusMode({
   const [isRunning, setIsRunning] = useState(false);
 
   // Modals & UI State
-  const [showDistractionModal, setShowDistractionModal] = useState(false);
   const [showPresetDropdown, setShowPresetDropdown] = useState(false);
+  const [showTaskPicker, setShowTaskPicker] = useState(false);
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [completedTaskTitle, setCompletedTaskTitle] = useState('');
 
-  // Refs for timestamp accuracy and preventing duplicate completion calls
-  const sessionEndsAtRef = useRef<number | null>(null);
-  const remainingOnPauseRef = useRef<number | null>(null);
-  const completionTriggeredRef = useRef(false);
-  const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'BlockFlow');
+  // Completion Form State
+  const [completionNotes, setCompletionNotes] = useState('');
+  const [markItemCompleted, setMarkItemCompleted] = useState(false);
+  const [sessionRating, setSessionRating] = useState(5);
+  const [finalActualMinutes, setFinalActualMinutes] = useState(25);
 
-  // Today's active task blocks (Memoized)
+  // Available Tasks & Blocks for selection
+  const [inboxTasks, setInboxTasks] = useState<TaskInboxItem[]>([]);
   const todayIndex = (new Date().getDay() + 6) % 7;
-  const todayBlocks = React.useMemo(() => {
+  const todayBlocks = useMemo(() => {
     return currentWeekScheduledBlocks
       .filter((b) => b.dayOfWeek === todayIndex)
       .sort((a, b) => a.startMinutes - b.startMinutes);
   }, [currentWeekScheduledBlocks, todayIndex]);
 
-  const activeTask = React.useMemo(() => {
-    return (
-      todayBlocks.find((b) => b.status === 'in_progress') ||
-      todayBlocks.find((b) => !b.status || b.status === 'not_started') ||
-      todayBlocks[0]
-    );
-  }, [todayBlocks]);
+  // Refs for audio and completion triggers
+  const completionTriggeredRef = useRef(false);
+  const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'BlockFlow');
 
-  const nextTask = React.useMemo(() => {
-    return todayBlocks.find(
-      (b) => b.id !== activeTask?.id && (!b.status || b.status === 'not_started')
-    );
-  }, [todayBlocks, activeTask]);
+  // Load pending inbox tasks
+  useEffect(() => {
+    if (isOpen) {
+      const allTasks = loadTaskInbox();
+      setInboxTasks(allTasks.filter((t) => t.status !== 'completed' && t.status !== 'archived'));
+    }
+  }, [isOpen]);
+
+  // Load initial target when opened
+  useEffect(() => {
+    if (isOpen && initialTarget) {
+      if (initialTarget.title) setSessionTitle(initialTarget.title);
+      if (initialTarget.blockId) setLinkedBlockId(initialTarget.blockId);
+      if (initialTarget.taskId) setLinkedTaskId(initialTarget.taskId);
+      if (initialTarget.plannedDurationMinutes) {
+        setPlannedDurationMins(initialTarget.plannedDurationMinutes);
+        setTotalTimerSeconds(initialTarget.plannedDurationMinutes * 60);
+        setSecondsRemaining(initialTarget.plannedDurationMinutes * 60);
+      }
+    }
+  }, [isOpen, initialTarget]);
 
   // Load persisted session on mount / refresh
   useEffect(() => {
     const saved = loadActiveFocusSession();
-    if (saved && saved.status === 'running') {
-      const now = Date.now();
+    if (saved) {
+      setActiveSession(saved);
+      setSessionTitle(saved.taskTitle || 'Deep Work Session');
+      setLinkedBlockId(saved.blockId);
+      setLinkedTaskId(saved.taskId);
       setMode(saved.mode || 'focus');
       setTotalTimerSeconds(saved.durationSeconds);
 
-      if (now < saved.endsAt) {
-        const remaining = Math.max(0, Math.ceil((saved.endsAt - now) / 1000));
-        setSecondsRemaining(remaining);
-        sessionEndsAtRef.current = saved.endsAt;
-        setIsRunning(true);
-        completionTriggeredRef.current = false;
-      } else {
-        // Time expired while page was closed / refreshed!
-        setSecondsRemaining(0);
-        setIsRunning(false);
-        if (!saved.completionTriggered) {
-          triggerSessionCompletion(saved.taskTitle || 'Focus Task', saved.mode || 'focus');
+      const now = Date.now();
+      const rem = calculateRemainingSeconds(saved, now);
+      setSecondsRemaining(rem);
+
+      if (saved.status === 'running') {
+        if (rem <= 0) {
+          setIsRunning(false);
+          triggerCompletionFlow(saved);
+        } else {
+          setIsRunning(true);
         }
+      } else {
+        setIsRunning(false);
       }
-    } else if (saved && saved.status === 'paused') {
-      setMode(saved.mode || 'focus');
-      setTotalTimerSeconds(saved.durationSeconds);
-      const remaining = saved.remainingSecondsOnPause || saved.durationSeconds;
-      setSecondsRemaining(remaining);
-      remainingOnPauseRef.current = remaining;
-      setIsRunning(false);
     }
   }, []);
 
@@ -154,234 +191,298 @@ export default function EnhancedFocusMode({
     }
   };
 
-  // ── Centralized Completion Trigger (Executes ONCE) ───────────────────────────
-  const triggerSessionCompletion = useCallback(
-    (taskName: string, sessionType: SessionMode) => {
-      if (completionTriggeredRef.current) return;
-      completionTriggeredRef.current = true;
-
-      setIsRunning(false);
-      sessionEndsAtRef.current = null;
-      clearActiveFocusSession();
-
-      setCompletedTaskTitle(taskName);
-      setShowCompletionModal(true);
-
-      // 1. Audio Alarm Playback
-      playFocusCompletionAlarm(audioSettings.sound, audioSettings.volume);
-
-      // 2. Tab Title Alert
-      if (typeof document !== 'undefined') {
-        originalTitleRef.current = document.title;
-        document.title = `⏰ Focus Complete — ${taskName}`;
-      }
-
-      // 3. Mobile Vibration
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        try {
-          navigator.vibrate([200, 100, 200, 100, 400]);
-        } catch {}
-      }
-
-      // 4. Browser Desktop Notification
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try {
-          new Notification('BlockFlow — Focus Session Complete 🌟', {
-            body: `${sessionType === 'focus' ? 'Focus Session Finished' : 'Break Finished'}: ${taskName}`,
-            icon: '/favicon.ico',
-          });
-        } catch {}
-      }
-
-      // 5. Append Real Focus History Log
-      appendFocusSessionLog({
-        id: `session-${Date.now()}`,
-        startedAt: Date.now() - totalTimerSeconds * 1000,
-        endedAt: Date.now(),
-        plannedMinutes: Math.round(totalTimerSeconds / 60),
-        actualMinutes: Math.round(totalTimerSeconds / 60),
-        taskTitle: taskName,
-        blockId: activeTask?.id,
-        goalId: activeTask?.goalId,
-        status: 'completed',
-      });
-    },
-    [activeTask, audioSettings, totalTimerSeconds]
-  );
-
-  // Restore original document title on cleanup / dismissal
+  // Restore original document title
   const restoreTabTitle = () => {
     if (typeof document !== 'undefined' && originalTitleRef.current) {
       document.title = originalTitleRef.current;
     }
   };
 
-  // ── Timestamp-Based Countdown Loop (250ms precision) ──────────────────────────
+  // ── Completion Trigger Helper ──
+  const triggerCompletionFlow = useCallback(
+    (sess: ActiveFocusSession) => {
+      if (completionTriggeredRef.current) return;
+      completionTriggeredRef.current = true;
+
+      setIsRunning(false);
+      const now = Date.now();
+      const elapsedSec = calculateElapsedSeconds(sess, now);
+      const actualMins = Math.max(1, Math.round(elapsedSec / 60));
+      setFinalActualMinutes(actualMins);
+      setShowCompletionModal(true);
+
+      // Play audio & desktop alerts
+      playFocusCompletionAlarm(audioSettings.sound, audioSettings.volume);
+
+      if (typeof document !== 'undefined') {
+        originalTitleRef.current = document.title;
+        document.title = `⏰ Focus Complete — ${sess.taskTitle}`;
+      }
+
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate([200, 100, 200, 100, 400]);
+        } catch {}
+      }
+
+      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+          new Notification('BlockFlow — Focus Session Complete 🌟', {
+            body: `${sess.mode === 'focus' ? 'Focus Session Finished' : 'Break Finished'}: ${sess.taskTitle}`,
+            icon: '/favicon.ico',
+          });
+        } catch {}
+      }
+    },
+    [audioSettings]
+  );
+
+  // ── High-Precision Loop Resilient to Backgrounding ──
   useEffect(() => {
-    let timerId: ReturnType<typeof setInterval> | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
-    if (isRunning && sessionEndsAtRef.current) {
-      timerId = setInterval(() => {
+    if (isRunning && activeSession && activeSession.status === 'running') {
+      intervalId = setInterval(() => {
         const now = Date.now();
-        const endsAt = sessionEndsAtRef.current;
+        const rem = calculateRemainingSeconds(activeSession, now);
 
-        if (endsAt) {
-          const diffSeconds = Math.ceil((endsAt - now) / 1000);
-
-          if (diffSeconds <= 0) {
-            setSecondsRemaining(0);
-            if (timerId) clearInterval(timerId);
-            triggerSessionCompletion(activeTask?.title || 'Focus Task', mode);
-          } else {
-            setSecondsRemaining((prev) => (prev === diffSeconds ? prev : diffSeconds));
-          }
+        if (rem <= 0) {
+          setSecondsRemaining(0);
+          if (intervalId) clearInterval(intervalId);
+          triggerCompletionFlow(activeSession);
+        } else {
+          setSecondsRemaining(rem);
         }
       }, 250);
     }
 
     return () => {
-      if (timerId) clearInterval(timerId);
+      if (intervalId) clearInterval(intervalId);
     };
-  }, [isRunning, activeTask, mode, triggerSessionCompletion]);
+  }, [isRunning, activeSession, triggerCompletionFlow]);
+
+  // Window focus listener to immediately re-sync timer after tab un-backgrounding
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      if (activeSession) {
+        const now = Date.now();
+        const rem = calculateRemainingSeconds(activeSession, now);
+        setSecondsRemaining(rem);
+        if (rem <= 0 && activeSession.status === 'running') {
+          triggerCompletionFlow(activeSession);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('visibilitychange', handleWindowFocus);
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('visibilitychange', handleWindowFocus);
+    };
+  }, [activeSession, triggerCompletionFlow]);
 
   if (!isOpen) return null;
 
-  // ── Start Focus Session ──
+  // ── Timer Control: Start ──
   const handleStart = () => {
     unlockAudioContext();
-
     const now = Date.now();
-    const duration = secondsRemaining > 0 ? secondsRemaining : totalTimerSeconds;
-    const endsAt = now + duration * 1000;
 
-    sessionEndsAtRef.current = endsAt;
-    remainingOnPauseRef.current = null;
-    completionTriggeredRef.current = false;
-    setIsRunning(true);
-
-    saveActiveFocusSession({
-      id: `session-${now}`,
-      taskTitle: activeTask?.title || 'Focus Task',
-      blockId: activeTask?.id,
-      goalId: activeTask?.goalId,
-      startedAt: now,
-      endsAt,
-      durationSeconds: totalTimerSeconds,
-      status: 'running',
-      mode,
-    });
-  };
-
-  // ── Pause Focus Session ──
-  const handlePause = () => {
-    setIsRunning(false);
-    sessionEndsAtRef.current = null;
-    remainingOnPauseRef.current = secondsRemaining;
-
-    saveActiveFocusSession({
-      id: `session-${Date.now()}`,
-      taskTitle: activeTask?.title || 'Focus Task',
-      blockId: activeTask?.id,
-      goalId: activeTask?.goalId,
-      startedAt: Date.now(),
-      endsAt: Date.now() + secondsRemaining * 1000,
-      durationSeconds: totalTimerSeconds,
-      remainingSecondsOnPause: secondsRemaining,
-      status: 'paused',
-      mode,
-    });
-  };
-
-  // ── Toggle Preset ──
-  const handleSelectPreset = (p: TimerPreset, minutesVal?: number) => {
-    setPreset(p);
-    setIsRunning(false);
-    sessionEndsAtRef.current = null;
-    clearActiveFocusSession();
-    setShowPresetDropdown(false);
-
-    let mins = 25;
-    let breakMins = 5;
-
-    if (p === '50_10') {
-      mins = 50;
-      breakMins = 10;
-    } else if (p === '90_20') {
-      mins = 90;
-      breakMins = 20;
-    } else if (p === 'custom') {
-      mins = minutesVal || customMins;
-      breakMins = 5;
-    }
-
-    setMode('focus');
-    setTotalTimerSeconds(mins * 60);
-    setSecondsRemaining(mins * 60);
-  };
-
-  // ── Reset Timer ──
-  const handleResetTimer = () => {
-    setIsRunning(false);
-    sessionEndsAtRef.current = null;
-    clearActiveFocusSession();
-    setSecondsRemaining(totalTimerSeconds);
-  };
-
-  // ── End / Cancel Session ──
-  const handleEndSession = () => {
-    const elapsedSeconds = totalTimerSeconds - secondsRemaining;
-    if (isRunning && elapsedSeconds > 60) {
-      setShowDistractionModal(true);
+    let newSession: ActiveFocusSession;
+    if (activeSession && activeSession.status === 'paused') {
+      newSession = resumeActiveSession(activeSession, now);
     } else {
-      setIsRunning(false);
-      sessionEndsAtRef.current = null;
-      clearActiveFocusSession();
-      restoreTabTitle();
-      onClose();
+      newSession = createActiveSession({
+        taskTitle: sessionTitle,
+        blockId: linkedBlockId,
+        taskId: linkedTaskId,
+        durationSeconds: secondsRemaining > 0 ? secondsRemaining : totalTimerSeconds,
+        plannedDurationMinutes: plannedDurationMins || Math.round(totalTimerSeconds / 60),
+        mode,
+        now,
+      });
+    }
+
+    completionTriggeredRef.current = false;
+    setActiveSession(newSession);
+    saveActiveFocusSession(newSession);
+    setIsRunning(true);
+  };
+
+  // ── Timer Control: Pause ──
+  const handlePause = () => {
+    if (!activeSession || activeSession.status !== 'running') return;
+    const now = Date.now();
+    const paused = pauseActiveSession(activeSession, now);
+    setActiveSession(paused);
+    saveActiveFocusSession(paused);
+    setIsRunning(false);
+    setSecondsRemaining(calculateRemainingSeconds(paused, now));
+  };
+
+  // ── Timer Control: Resume ──
+  const handleResume = () => {
+    handleStart();
+  };
+
+  // ── Timer Control: Reset ──
+  const handleReset = () => {
+    setIsRunning(false);
+    clearActiveFocusSession();
+    setActiveSession(null);
+    setSecondsRemaining(totalTimerSeconds);
+    completionTriggeredRef.current = false;
+  };
+
+  // ── Timer Control: Finish Early ──
+  const handleFinishEarly = () => {
+    const current =
+      activeSession ??
+      createActiveSession({
+        taskTitle: sessionTitle,
+        blockId: linkedBlockId,
+        taskId: linkedTaskId,
+        durationSeconds: totalTimerSeconds,
+        mode,
+      });
+
+    triggerCompletionFlow(current);
+  };
+
+  // ── Timer Control: Cancel ──
+  const handleRequestCancel = () => {
+    const current = activeSession;
+    const elapsedSec = current ? calculateElapsedSeconds(current, Date.now()) : 0;
+
+    if (elapsedSec > 60 || isRunning) {
+      setShowCancelConfirmation(true);
+    } else {
+      executeCancelSession();
     }
   };
 
-  const handleLogDistraction = (reason: string) => {
-    const elapsedMinutes = Math.round((totalTimerSeconds - secondsRemaining) / 60);
-    const logs = loadDistractionLogs();
-    saveDistractionLogs([
-      {
-        id: `dist-${Date.now()}`,
-        timestamp: Date.now(),
-        reason: reason as any,
-        taskTitle: activeTask?.title || 'Focus Task',
-        sessionMinutes: elapsedMinutes,
-      },
-      ...logs,
-    ]);
-    onEarlyExit(elapsedMinutes, activeTask?.title || 'Focus Task');
-    addToast('Distraction trigger logged for AI analysis', 'info');
+  const executeCancelSession = () => {
     setIsRunning(false);
-    sessionEndsAtRef.current = null;
     clearActiveFocusSession();
+    setActiveSession(null);
+    restoreTabTitle();
+    setShowCancelConfirmation(false);
+    onClose();
+  };
+
+  // ── Finalize & Save Session ──
+  const handleConfirmCompletion = () => {
+    const sessionToFinalize =
+      activeSession ??
+      createActiveSession({
+        taskTitle: sessionTitle,
+        blockId: linkedBlockId,
+        taskId: linkedTaskId,
+        durationSeconds: totalTimerSeconds,
+        mode,
+      });
+
+    const result = finalizeSession({
+      session: sessionToFinalize,
+      now: Date.now(),
+      userNotes: completionNotes,
+      status: 'completed',
+      rating: sessionRating,
+    });
+
+    // 1. Persist to canonical ExecutionSession and FocusSessionLog
+    appendExecutionSession(result.executionSession);
+    appendFocusSessionLog(result.focusSessionLog);
+
+    // 2. Conditionally mark linked item as completed
+    if (markItemCompleted) {
+      if (linkedBlockId) {
+        updateBlockStatus(linkedBlockId, 'completed');
+        addToast(`Marked timetable block as completed! 🎉`, 'success');
+      } else if (linkedTaskId) {
+        const all = loadTaskInbox();
+        const updated = all.map((t) =>
+          t.id === linkedTaskId ? { ...t, status: 'completed' as const, completedAt: Date.now() } : t
+        );
+        saveTaskInbox(updated);
+        addToast(`Marked task as completed in Inbox! 🎉`, 'success');
+      }
+    }
+
+    addToast(`Focus session recorded: ${result.actualDurationMinutes}m focus logged! ⏱️`, 'success');
+    clearActiveFocusSession();
+    setActiveSession(null);
+    setShowCompletionModal(false);
     restoreTabTitle();
     onClose();
   };
 
-  // ── Complete Activity Action ──
-  const handleMarkActivityComplete = () => {
-    if (activeTask) {
-      updateBlockStatus(activeTask.id, 'completed');
-      addToast(`Marked "${activeTask.title}" as Completed! 🎉`, 'success');
-    }
-    setShowCompletionModal(false);
-    restoreTabTitle();
-  };
-
-  // ── Start Break Timer Action ──
+  // ── Break Timer Transition ──
   const handleStartBreak = (breakMins: number = 5) => {
     setShowCompletionModal(false);
     restoreTabTitle();
     setMode('break');
     setTotalTimerSeconds(breakMins * 60);
     setSecondsRemaining(breakMins * 60);
-    completionTriggeredRef.current = false;
-    handleStart();
+    clearActiveFocusSession();
+
+    const now = Date.now();
+    const breakSess = createActiveSession({
+      taskTitle: `Rest & Recovery Break`,
+      durationSeconds: breakMins * 60,
+      mode: 'break',
+      now,
+    });
+    setActiveSession(breakSess);
+    saveActiveFocusSession(breakSess);
+    setIsRunning(true);
+  };
+
+  // ── Preset Selection ──
+  const handleSelectPreset = (p: TimerPreset, minutesVal?: number) => {
+    setPreset(p);
+    setIsRunning(false);
+    clearActiveFocusSession();
+    setActiveSession(null);
+    setShowPresetDropdown(false);
+
+    let mins = 25;
+    if (p === '50_10') mins = 50;
+    else if (p === '90_20') mins = 90;
+    else if (p === 'custom') mins = minutesVal || customMins;
+
+    setMode('focus');
+    setTotalTimerSeconds(mins * 60);
+    setSecondsRemaining(mins * 60);
+  };
+
+  // ── Linked Task Selection ──
+  const handleSelectBlock = (block: (typeof todayBlocks)[0]) => {
+    setSessionTitle(block.title);
+    setLinkedBlockId(block.id);
+    setLinkedTaskId(undefined);
+    setPlannedDurationMins(block.duration);
+    if (block.duration > 0) {
+      setTotalTimerSeconds(block.duration * 60);
+      setSecondsRemaining(block.duration * 60);
+    }
+    setShowTaskPicker(false);
+    addToast(`Linked focus session to "${block.title}"`, 'info');
+  };
+
+  const handleSelectTask = (task: TaskInboxItem) => {
+    setSessionTitle(task.title);
+    setLinkedTaskId(task.id);
+    setLinkedBlockId(undefined);
+    const duration = task.estimatedDuration ?? task.estimatedMinutes;
+    if (duration) {
+      setPlannedDurationMins(duration);
+      setTotalTimerSeconds(duration * 60);
+      setSecondsRemaining(duration * 60);
+    }
+    setShowTaskPicker(false);
+    addToast(`Linked focus session to "${task.title}"`, 'info');
   };
 
   const formatTime = (totalSecs: number) => {
@@ -390,12 +491,7 @@ export default function EnhancedFocusMode({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const presetLabels: Record<TimerPreset, string> = {
-    '25_5': 'Pomodoro (25/5)',
-    '50_10': 'Focus (50/10)',
-    '90_20': 'Deep Work (90/20)',
-    custom: `Custom (${Math.floor(totalTimerSeconds / 60)}m)`,
-  };
+  const elapsedSeconds = totalTimerSeconds - secondsRemaining;
 
   return (
     <>
@@ -403,7 +499,7 @@ export default function EnhancedFocusMode({
         {/* Glowing Background Accent */}
         <div
           className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-3xl pointer-events-none transition-colors duration-700 ${
-            mode === 'break' ? 'bg-emerald-600/10' : 'bg-indigo-600/10'
+            mode === 'break' ? 'bg-emerald-600/10' : isRunning ? 'bg-indigo-600/15' : 'bg-amber-600/10'
           }`}
         />
 
@@ -421,19 +517,25 @@ export default function EnhancedFocusMode({
             </div>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                BlockFlow Focus Mode
+                BlockFlow Focus Session
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                     mode === 'break'
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-indigo-500/20 text-indigo-300'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      : isRunning
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 animate-pulse'
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                   }`}
                 >
-                  {mode === 'break' ? 'BREAK' : 'LIVE'}
+                  {mode === 'break' ? 'BREAK' : isRunning ? 'RUNNING' : 'PAUSED'}
                 </span>
               </h1>
               <p className="text-xs text-slate-400">
-                {mode === 'break' ? 'Rest & recovery interval' : 'Distraction-free execution environment'}
+                {mode === 'break'
+                  ? 'Rest interval · Paused time does not count toward focus'
+                  : isRunning
+                  ? 'High-performance focus timer running'
+                  : 'Timer paused · Paused intervals are excluded'}
               </p>
             </div>
           </div>
@@ -448,13 +550,13 @@ export default function EnhancedFocusMode({
               <Settings size={18} />
             </button>
 
-            {/* End Session */}
+            {/* Cancel / End Session */}
             <button
-              onClick={handleEndSession}
+              onClick={handleRequestCancel}
               className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition-colors text-sm font-medium flex items-center gap-1.5"
             >
               <X size={16} />
-              End Session
+              Cancel Session
             </button>
           </div>
         </header>
@@ -524,7 +626,7 @@ export default function EnhancedFocusMode({
               🔊 Test Alarm Sound
             </button>
 
-            {/* Browser Notification Status */}
+            {/* Desktop Notification Status */}
             <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
               <span className="text-xs text-slate-400 font-medium">Desktop Notifications</span>
               {notificationPermission === 'granted' ? (
@@ -543,32 +645,53 @@ export default function EnhancedFocusMode({
           </div>
         )}
 
-        {/* Main Content */}
+        {/* Main Focus Stage */}
         <main className="flex-1 flex flex-col items-center justify-center p-6 relative z-10 max-w-4xl mx-auto w-full">
-          {/* Active Task Banner */}
-          <div className="text-center mb-8">
-            <p
-              className={`font-bold tracking-wider uppercase text-xs mb-2 flex items-center justify-center gap-1.5 ${
-                mode === 'break' ? 'text-emerald-400' : 'text-indigo-400'
-              }`}
-            >
-              <Zap size={14} className="fill-current" />
-              {mode === 'break' ? 'Rest & Recharge Break' : 'Active Focus Task'}
-            </p>
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-              {mode === 'break'
-                ? 'Take a Deep Breath & Relax'
-                : activeTask?.title || 'Deep Work & Study Session'}
+          {/* Active Target Title & Selector */}
+          <div className="text-center mb-6 max-w-2xl w-full">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span
+                className={`font-bold tracking-wider uppercase text-xs flex items-center gap-1.5 ${
+                  mode === 'break' ? 'text-emerald-400' : 'text-indigo-400'
+                }`}
+              >
+                <Zap size={14} className="fill-current" />
+                {mode === 'break' ? 'Rest & Recharge Break' : 'Focus Commitment'}
+              </span>
+
+              {mode === 'focus' && !isRunning && (
+                <button
+                  onClick={() => setShowTaskPicker(true)}
+                  className="px-2.5 py-0.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white text-[11px] font-medium flex items-center gap-1 transition-colors"
+                >
+                  <ListTodo size={12} />
+                  <span>Choose Task</span>
+                </button>
+              )}
+            </div>
+
+            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight truncate">
+              {mode === 'break' ? 'Take a Breath & Recharge' : sessionTitle}
             </h2>
+
+            {plannedDurationMins && mode === 'focus' && (
+              <p className="text-xs text-slate-400 mt-1">
+                Planned Duration: <span className="text-indigo-400 font-semibold">{plannedDurationMins}m</span>
+                {linkedBlockId && ' · Scheduled Block'}
+                {linkedTaskId && ' · Inbox Task'}
+              </p>
+            )}
           </div>
 
-          {/* Big Countdown Timer */}
-          <div className="relative mb-10 text-center">
+          {/* Big Countdown Display */}
+          <div className="relative mb-8 text-center">
             <div
-              className={`text-[120px] sm:text-[150px] leading-none font-black text-white tracking-tighter font-mono ${
+              className={`text-[110px] sm:text-[145px] leading-none font-black text-white tracking-tighter font-mono ${
                 mode === 'break'
                   ? 'drop-shadow-[0_0_40px_rgba(16,185,129,0.2)]'
-                  : 'drop-shadow-[0_0_40px_rgba(99,102,241,0.2)]'
+                  : isRunning
+                  ? 'drop-shadow-[0_0_40px_rgba(99,102,241,0.25)]'
+                  : 'drop-shadow-[0_0_40px_rgba(245,158,11,0.2)] text-amber-200/90'
               }`}
             >
               {formatTime(secondsRemaining)}
@@ -580,98 +703,108 @@ export default function EnhancedFocusMode({
                 className={`h-full transition-all duration-300 ${
                   mode === 'break'
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                    : 'bg-gradient-to-r from-indigo-500 to-purple-500'
+                    : isRunning
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500'
+                    : 'bg-amber-500'
                 }`}
                 style={{
-                  width: `${((totalTimerSeconds - secondsRemaining) / totalTimerSeconds) * 100}%`,
+                  width: `${Math.min(100, Math.max(0, (elapsedSeconds / totalTimerSeconds) * 100))}%`,
                 }}
               />
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-4 mb-12">
+          {/* Core Timer Controls */}
+          <div className="flex items-center gap-3 mb-10">
+            {/* Reset */}
             <button
-              onClick={handleResetTimer}
-              className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              onClick={handleReset}
+              className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors"
               title="Reset Timer"
             >
-              <RotateCcw size={20} />
+              <RotateCcw size={18} />
             </button>
 
-            <button
-              onClick={isRunning ? handlePause : handleStart}
-              className={`w-20 h-20 rounded-full flex items-center justify-center text-white transition-all transform hover:scale-105 active:scale-95 ${
-                mode === 'break'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)]'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)]'
-              }`}
-            >
-              {isRunning ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
-            </button>
-
-            {mode === 'focus' && (
+            {/* Start / Pause / Resume */}
+            {isRunning ? (
               <button
-                onClick={handleMarkActivityComplete}
-                className="px-5 py-4 bg-emerald-600 hover:bg-emerald-500 text-white dark:bg-emerald-600/20 dark:hover:bg-emerald-600/30 dark:text-emerald-300 dark:border dark:border-emerald-500/30 font-bold text-xs rounded-2xl flex items-center gap-1.5 transition-colors shadow-sm"
+                onClick={handlePause}
+                className="px-8 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-amber-600/20 transition-all active:scale-95"
               >
-                <CheckCircle2 size={18} />
-                Mark Complete
+                <Pause size={18} />
+                <span>Pause</span>
+              </button>
+            ) : (
+              <button
+                onClick={activeSession?.status === 'paused' ? handleResume : handleStart}
+                className="px-8 py-3.5 rounded-2xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-sm flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all active:scale-95"
+              >
+                <Play size={18} />
+                <span>{activeSession?.status === 'paused' ? 'Resume' : 'Start Focus'}</span>
               </button>
             )}
+
+            {/* Finish Session Early */}
+            <button
+              onClick={handleFinishEarly}
+              className="px-5 py-3.5 rounded-2xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 font-bold text-sm flex items-center gap-2 transition-all"
+              title="Finish Session"
+            >
+              <Check size={18} />
+              <span>Finish</span>
+            </button>
           </div>
 
-          {/* Stat Cards */}
-          <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Up Next Card */}
-            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-1 shadow-xs">
-              <p className="text-slate-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider">Up Next</p>
-              <p className="text-slate-900 dark:text-slate-200 font-bold truncate">
-                {nextTask?.title || 'No further tasks scheduled for today'}
-              </p>
-            </div>
-
-            {/* Timer Mode Selector Card */}
-            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 backdrop-blur-sm relative shadow-xs">
-              <p className="text-slate-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-1">
-                Timer Preset
-              </p>
+          {/* Preset Selector & Execution Score */}
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            {/* Presets */}
+            <div className="relative">
               <button
                 onClick={() => setShowPresetDropdown(!showPresetDropdown)}
-                className="text-slate-900 dark:text-slate-200 font-bold text-sm flex items-center justify-between w-full hover:text-[#2563EB] dark:hover:text-indigo-400 transition-colors"
+                className="px-4 py-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-2 transition-colors"
               >
-                <span>{presetLabels[preset]}</span>
-                <ChevronDown size={16} className="text-slate-500 dark:text-slate-400" />
+                <Clock size={14} className="text-indigo-400" />
+                <span>
+                  Preset:{' '}
+                  {preset === '25_5'
+                    ? 'Pomodoro (25/5)'
+                    : preset === '50_10'
+                    ? 'Focus (50/10)'
+                    : preset === '90_20'
+                    ? 'Deep Work (90/20)'
+                    : `Custom (${Math.round(totalTimerSeconds / 60)}m)`}
+                </span>
+                <ChevronDown size={14} />
               </button>
 
               {showPresetDropdown && (
-                <div className="absolute left-0 right-0 bottom-full mb-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-2xl z-20 space-y-1">
+                <div className="absolute bottom-full mb-2 left-0 w-64 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl space-y-1 z-30">
                   <button
                     onClick={() => handleSelectPreset('25_5')}
-                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-200 hover:bg-slate-800 transition-colors"
                   >
-                    Pomodoro (25m work / 5m break)
+                    Pomodoro (25m focus / 5m break)
                   </button>
                   <button
                     onClick={() => handleSelectPreset('50_10')}
-                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-200 hover:bg-slate-800 transition-colors"
                   >
-                    Focus (50m work / 10m break)
+                    Focus (50m focus / 10m break)
                   </button>
                   <button
                     onClick={() => handleSelectPreset('90_20')}
-                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="w-full text-left p-2 rounded-xl text-xs font-semibold text-slate-200 hover:bg-slate-800 transition-colors"
                   >
-                    Deep Work (90m work / 20m break)
+                    Deep Work (90m focus / 20m break)
                   </button>
-                  <div className="p-2 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                  <div className="p-2 border-t border-slate-800 flex items-center gap-2">
                     <input
                       type="number"
                       min="1"
                       max="180"
                       value={customMins}
                       onChange={(e) => setCustomMins(Number(e.target.value))}
-                      className="w-16 bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg p-1 text-xs text-slate-900 dark:text-white text-center"
+                      className="w-16 bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs text-white text-center"
                     />
                     <button
                       onClick={() => handleSelectPreset('custom', customMins)}
@@ -684,81 +817,239 @@ export default function EnhancedFocusMode({
               )}
             </div>
 
-            {/* Execution Score Card */}
-            <div className="bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 backdrop-blur-sm space-y-1 shadow-xs">
-              <p className="text-slate-600 dark:text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                Execution Score
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                  {todayScore?.overallScore || 88}%
-                </span>
-                <span className="text-emerald-700 dark:text-emerald-400/80 text-[10px] font-semibold">
-                  Today's Performance
-                </span>
-              </div>
+            {/* Daily Execution Score Preview */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl px-4 py-2 flex items-center gap-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Today's Score
+              </span>
+              <span className="text-base font-black text-emerald-400">
+                {todayScore?.overallScore || 88}%
+              </span>
             </div>
           </div>
         </main>
       </div>
 
-      {/* Distraction Modal */}
-      <DistractionModal
-        isOpen={showDistractionModal}
-        onClose={() => {
-          setShowDistractionModal(false);
-          onClose();
-        }}
-        onLogDistraction={handleLogDistraction}
-      />
-
-      {/* ── FOCUS SESSION COMPLETE OVERLAY MODAL ── */}
-      {showCompletionModal && (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 select-none animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-center space-y-5 shadow-2xl border-t-4 border-t-emerald-500">
-            <div className="w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/10 animate-bounce">
-              <CheckCircle2 className="w-10 h-10" />
+      {/* ── SELECT TASK / BLOCK MODAL ── */}
+      {showTaskPicker && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <ListTodo size={18} className="text-indigo-400" />
+                <span>Select Task or Schedule Block</span>
+              </h3>
+              <button
+                onClick={() => setShowTaskPicker(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
             </div>
 
-            <div className="space-y-1.5">
-              <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
-                🔔 FOCUS SESSION COMPLETE
+            {/* Custom Input */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Custom Activity Title
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={sessionTitle}
+                  onChange={(e) => {
+                    setSessionTitle(e.target.value);
+                    setLinkedBlockId(undefined);
+                    setLinkedTaskId(undefined);
+                  }}
+                  placeholder="Enter any task or topic..."
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+                <button
+                  onClick={() => setShowTaskPicker(false)}
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+
+            {/* Today's Schedule Blocks */}
+            <div className="space-y-1.5 pt-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Today's Schedule Blocks ({todayBlocks.length})
               </span>
-              <h3 className="text-2xl font-black text-white">{completedTaskTitle}</h3>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 scrollbar-thin">
+                {todayBlocks.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No scheduled blocks today.</p>
+                ) : (
+                  todayBlocks.map((b) => (
+                    <div
+                      key={b.id}
+                      onClick={() => handleSelectBlock(b)}
+                      className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between text-xs"
+                    >
+                      <span className="font-semibold text-slate-200 truncate">{b.title}</span>
+                      <span className="text-[10px] text-indigo-400 font-mono font-bold shrink-0">
+                        {b.duration}m
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Pending Inbox Tasks */}
+            <div className="space-y-1.5 pt-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Pending Inbox Tasks ({inboxTasks.length})
+              </span>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 scrollbar-thin">
+                {inboxTasks.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No pending tasks in Universal Inbox.</p>
+                ) : (
+                  inboxTasks.map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={() => handleSelectTask(t)}
+                      className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-purple-500/50 cursor-pointer transition-colors flex items-center justify-between text-xs"
+                    >
+                      <span className="font-semibold text-slate-200 truncate">{t.title}</span>
+                      <span className="text-[10px] text-purple-400 font-mono font-bold shrink-0">
+                        {t.estimatedDuration ? `${t.estimatedDuration}m` : 'Task'}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CANCEL CONFIRMATION DIALOG ── */}
+      {showCancelConfirmation && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white">Cancel Focus Session?</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                You have active recorded focus progress. Canceling will exit without logging this time.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowCancelConfirmation(false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700 transition-colors"
+              >
+                Keep Focusing
+              </button>
+              <button
+                onClick={executeCancelSession}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors shadow-sm"
+              >
+                Discard & Exit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SESSION COMPLETION & REVIEW MODAL ── */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 select-none animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl border-t-4 border-t-emerald-500">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/10">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                Focus Session Finished
+              </span>
+              <h3 className="text-xl font-bold text-white">{sessionTitle}</h3>
               <p className="text-xs text-slate-400">
-                {Math.round(totalTimerSeconds / 60)}-minute focus session finished successfully.
+                Recorded duration: <span className="font-bold text-white">{finalActualMinutes} minutes</span>
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-              <p className="text-[11px] font-semibold text-slate-400">Is this activity completed?</p>
+            {/* Explicit Completion Confirmation */}
+            <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 text-left flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="markCompleteCheck"
+                checked={markItemCompleted}
+                onChange={(e) => setMarkItemCompleted(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded text-emerald-600 accent-emerald-500 cursor-pointer"
+              />
+              <label htmlFor="markCompleteCheck" className="text-xs text-slate-300 cursor-pointer">
+                <span className="font-semibold block text-white">Mark linked item as completed</span>
+                <span className="text-[11px] text-slate-500">
+                  {linkedBlockId
+                    ? 'Updates timetable block to completed'
+                    : linkedTaskId
+                    ? 'Moves task to completed in Inbox'
+                    : 'Check to mark as fully accomplished'}
+                </span>
+              </label>
             </div>
 
-            <div className="space-y-2.5 pt-2">
+            {/* Optional Reflection / Notes */}
+            <div className="text-left space-y-1">
+              <label className="text-xs font-semibold text-slate-400 block">
+                Session Reflection & Notes (optional)
+              </label>
+              <textarea
+                value={completionNotes}
+                onChange={(e) => setCompletionNotes(e.target.value)}
+                placeholder="What did you get done? Any blockers or observations?"
+                rows={2}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 resize-none"
+              />
+            </div>
+
+            {/* Focus Rating */}
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="text-slate-400 font-semibold">Focus Quality:</span>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setSessionRating(star)}
+                    className="focus:outline-none"
+                  >
+                    <Star
+                      size={18}
+                      className={
+                        sessionRating >= star
+                          ? 'text-amber-400 fill-amber-400'
+                          : 'text-slate-700'
+                      }
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-2 pt-2">
               <button
-                onClick={handleMarkActivityComplete}
+                onClick={handleConfirmCompletion}
                 className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition-all"
               >
                 <Check className="w-4 h-4" />
-                Yes — Mark Activity Complete
+                Save & Record Focus Session
               </button>
 
               <button
-                onClick={() => handleStartBreak(preset === '50_10' ? 10 : preset === '90_20' ? 20 : 5)}
-                className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 transition-all"
+                onClick={() => handleStartBreak(5)}
+                className="w-full py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
               >
-                <Coffee className="w-4 h-4" />
-                Start Break ({preset === '50_10' ? '10m' : preset === '90_20' ? '20m' : '5m'})
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowCompletionModal(false);
-                  restoreTabTitle();
-                }}
-                className="w-full py-2.5 rounded-2xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
-              >
-                Keep Activity Open & Close
+                <Coffee className="w-4 h-4 text-emerald-400" />
+                Start 5m Break
               </button>
             </div>
           </div>

@@ -23,7 +23,13 @@ import { ConvertCaptureModal } from '../QuickCapture/ConvertCaptureModal';
 
 interface MyDayViewProps {
   onNavigate?: (view: NavView) => void;
-  onStartFocusMode?: () => void;
+  onStartFocusMode?: (target?: {
+    title?: string;
+    blockId?: string;
+    taskId?: string;
+    goalId?: string;
+    plannedDurationMinutes?: number;
+  }) => void;
 }
 
 export const MyDayView: React.FC<MyDayViewProps> = ({
@@ -213,7 +219,17 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
             selectedDate={selectedDate}
             onToggleStatus={handleToggleBlockStatus}
             onEditBlock={(block) => setEditingBlock(block)}
-            onStartFocus={onStartFocusMode ? () => onStartFocusMode() : undefined}
+            onStartFocus={
+              onStartFocusMode
+                ? (block) =>
+                    onStartFocusMode({
+                      title: block.title,
+                      blockId: block.id,
+                      plannedDurationMinutes: block.duration,
+                      goalId: block.goalId,
+                    })
+                : undefined
+            }
             onOpenAddBlock={() => setIsAddBlockOpen(true)}
             onNavigateToCalendar={
               onNavigate ? () => onNavigate('calendar') : undefined
@@ -231,6 +247,16 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
             onOpenAddTask={() => setIsAddTaskOpen(true)}
             onNavigateToInbox={
               onNavigate ? () => onNavigate('task-inbox') : undefined
+            }
+            onStartFocus={
+              onStartFocusMode
+                ? (task) =>
+                    onStartFocusMode({
+                      title: task.title,
+                      taskId: task.id,
+                      plannedDurationMinutes: task.estimatedDuration ?? task.estimatedMinutes,
+                    })
+                : undefined
             }
           />
 

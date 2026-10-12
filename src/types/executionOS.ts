@@ -96,6 +96,8 @@ export interface TaskInboxItem {
   title: string;
   description?: string;
   estimatedDuration: number; // in minutes
+  estimatedMinutes?: number; // alias for estimatedDuration
+  completedAt?: number; // timestamp when completed
   priority: Priority;
   deadline?: string;
   category: string;
