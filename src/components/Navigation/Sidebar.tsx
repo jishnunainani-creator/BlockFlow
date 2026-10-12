@@ -21,6 +21,7 @@ import {
   X,
   BookOpen,
   Sun,
+  Sliders,
 } from 'lucide-react';
 import { getUnprocessedCount } from '../../utils/quickCaptureStorage';
 
@@ -28,6 +29,7 @@ export type NavView =
   | 'my-day'
   | 'dashboard'
   | 'calendar'
+  | 'adaptive-planner'
   | 'task-inbox'
   | 'goals'
   | 'assignments'
@@ -112,6 +114,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'Plan & Organize',
       items: [
         { id: 'calendar', label: 'Calendar & Timetable', icon: Calendar },
+        { id: 'adaptive-planner', label: 'Adaptive Planner', icon: Sliders },
         {
           id: 'task-inbox',
           label: 'Universal Inbox',

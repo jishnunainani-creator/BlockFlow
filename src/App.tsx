@@ -13,6 +13,7 @@ import { AuthPage } from './components/Auth/AuthPage';
 import { MyDayView } from './components/Views/MyDayView';
 import { DashboardView } from './components/Views/DashboardView';
 import { CalendarView } from './components/Views/CalendarView';
+import { AdaptivePlannerView } from './components/Views/AdaptivePlannerView';
 import { GoalsView } from './components/Views/GoalsView';
 import EnhancedFocusMode from './components/Focus/EnhancedFocusMode';
 import AssignmentsView from './components/Views/AssignmentsView';
@@ -163,6 +164,7 @@ export function AppContent() {
         if (key === 'm') handleNavigate('my-day');
         if (key === 'd') handleNavigate('dashboard');
         if (key === 'c') handleNavigate('calendar');
+        if (key === 'p') handleNavigate('adaptive-planner');
         if (key === 'g') handleNavigate('goals');
         if (key === 'u' || key === 'x') handleNavigate('task-inbox');
         if (key === 'q') setIsQuickCaptureOpen(true);
@@ -243,6 +245,7 @@ export function AppContent() {
             onNavigateHome={() => handleNavigate('dashboard')}
           />
         )}
+        {currentView === 'adaptive-planner' && <AdaptivePlannerView onNavigate={handleNavigate} />}
         {currentView === 'goals' && <GoalsView onNavigate={handleNavigate} />}
         {currentView === 'task-inbox' && <TaskInboxView onNavigate={handleNavigate} />}
         {currentView === 'assignments' && <AssignmentsView onNavigate={handleNavigate} />}

@@ -30,6 +30,13 @@ export const ROUTES: Record<NavView, RouteMeta> = {
     section: 'Plan & Organize',
     breadcrumbLabel: 'Calendar & Timetable',
   },
+  'adaptive-planner': {
+    view: 'adaptive-planner',
+    path: '/planner',
+    title: 'Adaptive Planner · BlockFlow',
+    section: 'Plan & Organize',
+    breadcrumbLabel: 'Adaptive Planner',
+  },
   'task-inbox': {
     view: 'task-inbox',
     path: '/tasks',

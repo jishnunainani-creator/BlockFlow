@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   Sun,
   Zap,
+  Sliders,
 } from 'lucide-react';
 
 interface MobileBottomNavProps {
@@ -91,6 +92,20 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               <div>
                 <p className="text-xs font-semibold">My Day</p>
                 <p className="text-[10px] text-slate-400">Daily command centre, schedule & tasks</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setShowQuickActions(false); onSelectView('adaptive-planner'); }}
+              className="w-full flex items-center gap-3 p-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-white transition-colors text-left"
+            >
+              <div className="p-2 rounded-lg bg-[#3659C9] text-white">
+                <Sliders className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold">Adaptive Planner</p>
+                <p className="text-[10px] text-slate-400">Detect bottlenecks & recover schedule</p>
               </div>
             </button>
 
