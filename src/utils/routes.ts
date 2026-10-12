@@ -9,6 +9,13 @@ export interface RouteMeta {
 }
 
 export const ROUTES: Record<NavView, RouteMeta> = {
+  'my-day': {
+    view: 'my-day',
+    path: '/my-day',
+    title: 'My Day · BlockFlow',
+    section: 'Overview',
+    breadcrumbLabel: 'My Day',
+  },
   dashboard: {
     view: 'dashboard',
     path: '/dashboard',
@@ -112,6 +119,8 @@ export const ROUTES: Record<NavView, RouteMeta> = {
 export const PATH_TO_VIEW_MAP: Record<string, NavView> = {
   '/': 'dashboard',
   '/dashboard': 'dashboard',
+  '/my-day': 'my-day',
+  '/today': 'my-day',
   '/home': 'dashboard',
   '/calendar': 'calendar',
   '/timetable': 'calendar',

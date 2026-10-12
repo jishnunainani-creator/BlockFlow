@@ -20,9 +20,11 @@ import {
   Inbox,
   X,
   BookOpen,
+  Sun,
 } from 'lucide-react';
 
 export type NavView =
+  | 'my-day'
   | 'dashboard'
   | 'calendar'
   | 'task-inbox'
@@ -83,6 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'overview',
       title: 'Overview',
       items: [
+        { id: 'my-day', label: 'My Day', icon: Sun },
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       ],
     },

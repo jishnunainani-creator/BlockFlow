@@ -10,6 +10,7 @@ import { OnboardingModal } from './components/Onboarding/OnboardingModal';
 import { GuidedTour } from './components/Onboarding/GuidedTour';
 import { Sidebar, NavView } from './components/Navigation/Sidebar';
 import { AuthPage } from './components/Auth/AuthPage';
+import { MyDayView } from './components/Views/MyDayView';
 import { DashboardView } from './components/Views/DashboardView';
 import { CalendarView } from './components/Views/CalendarView';
 import { GoalsView } from './components/Views/GoalsView';
@@ -146,6 +147,7 @@ export function AppContent() {
         }, 1200);
       } else if (pendingG) {
         pendingG = false;
+        if (key === 'm') handleNavigate('my-day');
         if (key === 'd') handleNavigate('dashboard');
         if (key === 'c') handleNavigate('calendar');
         if (key === 'g') handleNavigate('goals');
@@ -200,6 +202,12 @@ export function AppContent() {
 
       {/* Main SaaS Module Views */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative pb-16 md:pb-0">
+        {currentView === 'my-day' && (
+          <MyDayView
+            onNavigate={handleNavigate}
+            onStartFocusMode={() => setIsFocusModeOpen(true)}
+          />
+        )}
         {currentView === 'dashboard' && (
           <DashboardView
             onNavigate={handleNavigate}
