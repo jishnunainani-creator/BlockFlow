@@ -1,6 +1,6 @@
 import { LibraryBlock, ScheduledBlock, Resolution, Goal } from '../types/timetable';
 import { getISOWeekString } from './timeUtils';
-import { getUserScopedKey } from './userScope';
+import { getUserScopedKey, getActiveUserId } from './userScope';
 
 const STORAGE_KEYS = {
   LIBRARY_BLOCKS: 'timetable_library_blocks_v1',
@@ -147,7 +147,10 @@ export function getDefaultScheduledBlocks(currentWeekId: string): ScheduledBlock
 export function loadLibraryBlocks(): LibraryBlock[] {
   try {
     const key = getUserScopedKey(STORAGE_KEYS.LIBRARY_BLOCKS);
-    const data = localStorage.getItem(key);
+    let data = localStorage.getItem(key);
+    if (!data && !getActiveUserId()) {
+      data = localStorage.getItem(STORAGE_KEYS.LIBRARY_BLOCKS);
+    }
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) return parsed;
@@ -167,10 +170,13 @@ export function saveLibraryBlocks(blocks: LibraryBlock[]): void {
   }
 }
 
-export function loadScheduledBlocks(currentWeekId: string): ScheduledBlock[] {
+export function loadScheduledBlocks(currentWeekId: string = 'current'): ScheduledBlock[] {
   try {
     const key = getUserScopedKey(STORAGE_KEYS.SCHEDULED_BLOCKS);
-    const data = localStorage.getItem(key);
+    let data = localStorage.getItem(key);
+    if (!data && !getActiveUserId()) {
+      data = localStorage.getItem(STORAGE_KEYS.SCHEDULED_BLOCKS);
+    }
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) {
@@ -302,7 +308,10 @@ export function normalizeGoal(g: any): Goal {
 export function loadGoals(): Goal[] {
   try {
     const key = getUserScopedKey(GOALS_STORAGE_KEY);
-    const data = localStorage.getItem(key);
+    let data = localStorage.getItem(key);
+    if (!data && !getActiveUserId()) {
+      data = localStorage.getItem(GOALS_STORAGE_KEY);
+    }
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed) && parsed.length > 0) {

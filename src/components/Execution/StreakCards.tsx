@@ -9,7 +9,7 @@ interface Props {
 export const StreakCards: React.FC<Props> = ({ streaks, compact = false }) => {
   if (!streaks.length) {
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+      <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center">
         <p className="text-slate-500 text-sm font-semibold">No active streaks. Start building them today!</p>
       </div>
     );
@@ -20,22 +20,22 @@ export const StreakCards: React.FC<Props> = ({ streaks, compact = false }) => {
       {streaks.map((streak) => (
         <div
           key={streak.type}
-          className={`bg-slate-900/80 rounded-xl border p-3 flex flex-col justify-between transition-all duration-300
-            ${streak.isActive ? 'border-orange-500/30 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'border-slate-800 opacity-60'}
+          className={`bg-slate-50/70 dark:bg-slate-900/80 rounded-xl border p-3 flex flex-col justify-between transition-all duration-300
+            ${streak.isActive ? 'border-orange-500/40 shadow-[0_0_15px_rgba(249,115,22,0.1)]' : 'border-slate-200 dark:border-slate-800 opacity-60'}
           `}
         >
           <div className="flex items-center gap-2 mb-2">
-            <div className={`p-1.5 rounded-lg ${streak.isActive ? 'bg-orange-500/10' : 'bg-slate-800'}`}>
+            <div className={`p-1.5 rounded-lg ${streak.isActive ? 'bg-orange-500/10' : 'bg-slate-200/70 dark:bg-slate-800'}`}>
               <span className="text-base">{streak.icon}</span>
             </div>
-            <span className="text-[10px] font-bold text-slate-300 uppercase truncate">
+            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase truncate">
               {streak.label}
             </span>
           </div>
           
           <div className="flex items-end justify-between mt-2">
             <div className="flex items-baseline gap-1">
-              <span className={`text-2xl font-black ${streak.isActive ? 'text-white' : 'text-slate-400'}`}>
+              <span className={`text-2xl font-black ${streak.isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400'}`}>
                 {streak.currentCount}
               </span>
               <span className="text-xs text-slate-500 font-semibold">days</span>
@@ -47,7 +47,7 @@ export const StreakCards: React.FC<Props> = ({ streaks, compact = false }) => {
           
           <div className="mt-2 text-[9px] font-bold text-slate-500 uppercase flex justify-between">
             <span>Longest: {streak.longestCount}</span>
-            {!streak.isActive && <span className="text-indigo-400">Restart</span>}
+            {!streak.isActive && <span className="text-indigo-600 dark:text-indigo-400">Restart</span>}
           </div>
         </div>
       ))}

@@ -1,5 +1,5 @@
 import { TaskInboxItem, PersonalRule } from '../types/executionOS';
-import { getUserScopedKey } from './userScope';
+import { getUserScopedKey, getActiveUserId } from './userScope';
 
 const TASK_INBOX_KEY = 'blockflow_task_inbox_v1';
 const PERSONAL_RULES_KEY = 'blockflow_personal_rules_v1';
@@ -37,7 +37,10 @@ export const DEFAULT_PERSONAL_RULES: PersonalRule[] = [
 export function loadTaskInbox(): TaskInboxItem[] {
   try {
     const key = getUserScopedKey(TASK_INBOX_KEY);
-    const data = localStorage.getItem(key);
+    let data = localStorage.getItem(key);
+    if (!data && !getActiveUserId()) {
+      data = localStorage.getItem(TASK_INBOX_KEY);
+    }
     if (data) {
       const parsed = JSON.parse(data);
       if (Array.isArray(parsed)) return parsed;

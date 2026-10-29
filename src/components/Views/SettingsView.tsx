@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { NavView } from '../Navigation/Sidebar';
 import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
+import { PrivacyAndDataSection } from '../Settings/PrivacyAndDataSection';
 
 interface SettingsViewProps {
   userEmail?: string | null;
@@ -189,34 +190,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
         </div>
       </div>
 
-      {/* ── 4. ACCOUNT & DATA BACKUP ── */}
-      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800/80 pb-3">
-          <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Account Data & Cloud Backup</span>
-        </h3>
+      {/* ── 4. PRIVACY, LOCAL STORAGE & CLOUD SYNC ── */}
+      <PrivacyAndDataSection
+        onExportJSON={exportJSONBackup}
+        userEmail={userEmail}
+      />
 
+      {/* ── 4b. LOCAL SCHEDULE & SESSION CONTROLS ── */}
+      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3 shadow-sm">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          Local Schedule & Session Controls
+        </h3>
         <div className="flex flex-wrap items-center gap-3">
           <button
-            onClick={exportJSONBackup}
-            className="px-4 py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition-colors"
-          >
-            <Download className="w-4 h-4 text-indigo-400" />
-            <span>Export Cloud Backup (JSON)</span>
-          </button>
-
-          <button
             onClick={clearCurrentWeek}
-            className="px-4 py-2.5 bg-slate-950 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/40 text-rose-300 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors"
+            className="px-4 py-2 bg-slate-950 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/40 text-rose-300 font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors"
           >
             <Trash2 className="w-4 h-4 text-rose-400" />
-            <span>Clear Current Week</span>
+            <span>Reset Current Week Timetable</span>
           </button>
 
           {userEmail && (
             <button
               onClick={handleSignOut}
-              className="px-4 py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-xs rounded-xl flex items-center gap-2 transition-colors ml-auto"
+              className="px-4 py-2 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold text-xs rounded-xl flex items-center gap-2 transition-colors ml-auto"
             >
               <LogOut className="w-4 h-4 text-slate-400" />
               <span>Sign Out Account</span>
@@ -245,7 +242,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
 
           <button
             onClick={startTour}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow transition-colors shrink-0"
+            className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold text-xs rounded-lg transition-colors shrink-0 shadow-sm"
           >
             Start Product Tour
           </button>

@@ -62,7 +62,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
       />
 
       {/* Main Grid Workspace + Collapsible Side Library */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative z-0">
         {/* Activity Library Sidebar */}
         {isLibraryOpen && (
           <aside className="w-80 h-full shrink-0 fixed md:relative inset-y-0 md:inset-auto left-0 z-40 md:z-10 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden shadow-2xl md:shadow-none">
@@ -80,7 +80,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         )}
 
         {/* Timetable Grid Workspace (occupies 100% of remaining horizontal space) */}
-        <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative min-w-0">
+        <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative min-w-0 z-0 isolate">
           <TimetableGrid
             startHour={6}
             endHour={24}

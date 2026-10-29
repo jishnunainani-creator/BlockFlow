@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark-theme, [data-theme="dark"]));
+@custom-variant dark (&:where(.dark, .dark *, .dark-theme, .dark-theme *, [data-theme="dark"], [data-theme="dark"] *));
 
 /* ═══════════════════════════════════════════════════════════ */
 /* BlockFlow Human-Centric Design Tokens                       */
@@ -274,13 +274,31 @@ html[data-theme="light"] .text-indigo-200:not(.auth-brand-panel, .auth-brand-pan
   color: #312E81 !important;
 }
 
+html.light-theme .text-blue-300:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme .text-blue-200:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-blue-300:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-blue-200:not(.auth-brand-panel, .auth-brand-panel *) {
+  color: #1D4ED8 !important;
+}
+
+html.light-theme .text-sky-300:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme .text-sky-200:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-sky-300:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-sky-200:not(.auth-brand-panel, .auth-brand-panel *) {
+  color: #0369A1 !important;
+}
+
 html.light-theme .text-emerald-300:not(.auth-brand-panel, .auth-brand-panel *),
-html[data-theme="light"] .text-emerald-300:not(.auth-brand-panel, .auth-brand-panel *) {
+html.light-theme .text-emerald-200:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-emerald-300:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-emerald-200:not(.auth-brand-panel, .auth-brand-panel *) {
   color: #065F46 !important;
 }
 
 html.light-theme .text-amber-300:not(.auth-brand-panel, .auth-brand-panel *),
-html[data-theme="light"] .text-amber-300:not(.auth-brand-panel, .auth-brand-panel *) {
+html.light-theme .text-amber-200:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-amber-300:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-amber-200:not(.auth-brand-panel, .auth-brand-panel *) {
   color: #92400E !important;
 }
 
@@ -291,17 +309,82 @@ html[data-theme="light"] .text-purple-200:not(.auth-brand-panel, .auth-brand-pan
   color: #581C87 !important;
 }
 
-/* Clean, crisp light mode banner mapping for dark indigo overlays */
-html.light-theme .bg-indigo-950:not(.auth-brand-panel, .auth-brand-panel *),
-html.light-theme .bg-indigo-950\/30:not(.auth-brand-panel, .auth-brand-panel *),
-html.light-theme .bg-indigo-950\/40:not(.auth-brand-panel, .auth-brand-panel *),
-html.light-theme .bg-indigo-950\/60:not(.auth-brand-panel, .auth-brand-panel *),
-html[data-theme="light"] .bg-indigo-950:not(.auth-brand-panel, .auth-brand-panel *),
-html[data-theme="light"] .bg-indigo-950\/30:not(.auth-brand-panel, .auth-brand-panel *),
-html[data-theme="light"] .bg-indigo-950\/40:not(.auth-brand-panel, .auth-brand-panel *),
-html[data-theme="light"] .bg-indigo-950\/60:not(.auth-brand-panel, .auth-brand-panel *) {
+html.light-theme .text-pink-300:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme .text-pink-200:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme .text-rose-300:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme .text-rose-200:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-pink-300:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-pink-200:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-rose-300:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .text-rose-200:not(.auth-brand-panel, .auth-brand-panel *) {
+  color: #9F1239 !important;
+}
+
+/* Clean, crisp light mode banner mapping for dark indigo/purple/blue overlays */
+html.light-theme .bg-indigo-950,
+html.light-theme .bg-indigo-950\/20,
+html.light-theme .bg-indigo-950\/30,
+html.light-theme .bg-indigo-950\/40,
+html.light-theme .bg-indigo-950\/60,
+html.light-theme .bg-indigo-950\/80,
+html.light-theme .bg-purple-950,
+html.light-theme .bg-purple-950\/20,
+html.light-theme .bg-purple-950\/30,
+html.light-theme .bg-purple-950\/40,
+html.light-theme .bg-blue-950,
+html.light-theme .bg-blue-950\/20,
+html.light-theme .bg-blue-950\/30,
+html.light-theme .bg-blue-950\/40,
+html[data-theme="light"] .bg-indigo-950,
+html[data-theme="light"] .bg-indigo-950\/20,
+html[data-theme="light"] .bg-indigo-950\/30,
+html[data-theme="light"] .bg-indigo-950\/40,
+html[data-theme="light"] .bg-indigo-950\/60,
+html[data-theme="light"] .bg-indigo-950\/80,
+html[data-theme="light"] .bg-purple-950,
+html[data-theme="light"] .bg-purple-950\/20,
+html[data-theme="light"] .bg-purple-950\/30,
+html[data-theme="light"] .bg-purple-950\/40,
+html[data-theme="light"] .bg-blue-950,
+html[data-theme="light"] .bg-blue-950\/20,
+html[data-theme="light"] .bg-blue-950\/30,
+html[data-theme="light"] .bg-blue-950\/40 {
   background-color: #EEF2FD !important;
   border-color: #C7D2FE !important;
+}
+
+/* In light mode, neutralize dark gradients that swallow text */
+html.light-theme [class*="bg-gradient-"]:where(
+  [class*="from-indigo-950"],
+  [class*="from-purple-950"],
+  [class*="from-blue-950"],
+  [class*="from-slate-900"],
+  [class*="from-slate-950"],
+  [class*="via-slate-900"],
+  [class*="to-indigo-950"],
+  [class*="to-purple-950"],
+  [class*="to-blue-950"]
+):not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] [class*="bg-gradient-"]:where(
+  [class*="from-indigo-950"],
+  [class*="from-purple-950"],
+  [class*="from-blue-950"],
+  [class*="from-slate-900"],
+  [class*="from-slate-950"],
+  [class*="via-slate-900"],
+  [class*="to-indigo-950"],
+  [class*="to-purple-950"],
+  [class*="to-blue-950"]
+):not(.auth-brand-panel, .auth-brand-panel *) {
+  background-image: linear-gradient(135deg, rgba(238, 242, 253, 0.95), rgba(245, 243, 255, 0.95)) !important;
+  background-color: #EEF2FD !important;
+  border-color: #C7D2FE !important;
+}
+
+/* Hide dark overlay washes inside cards in light mode */
+html.light-theme .absolute.inset-0:where([class*="from-indigo-950"], [class*="from-purple-950"], [class*="from-blue-950"]):not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] .absolute.inset-0:where([class*="from-indigo-950"], [class*="from-purple-950"], [class*="from-blue-950"]):not(.auth-brand-panel, .auth-brand-panel *) {
+  display: none !important;
 }
 
 /* Ensure hover states don't turn text invisible in light mode */
@@ -676,4 +759,188 @@ html.dark-theme .auth-warning-panel .auth-warning-icon,
 html[data-theme="light"] .auth-warning-panel .auth-warning-icon,
 html[data-theme="dark"] .auth-warning-panel .auth-warning-icon {
   color: var(--auth-warning-icon) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════ */
+/* BlockFlow High-Contrast Toast Notifications                 */
+/* ═══════════════════════════════════════════════════════════ */
+.blockflow-toast {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Success Toast - Light Theme */
+.blockflow-toast-success,
+html.light-theme .blockflow-toast-success,
+html[data-theme="light"] .blockflow-toast-success {
+  background-color: #ECFDF5 !important;
+  border-color: #6EE7B7 !important;
+  color: #064E3B !important;
+}
+.blockflow-toast-success .toast-text,
+html.light-theme .blockflow-toast-success .toast-text,
+html[data-theme="light"] .blockflow-toast-success .toast-text {
+  color: #064E3B !important;
+}
+.blockflow-toast-success .toast-icon,
+html.light-theme .blockflow-toast-success .toast-icon,
+html[data-theme="light"] .blockflow-toast-success .toast-icon {
+  color: #059669 !important;
+}
+.blockflow-toast-success .toast-close,
+html.light-theme .blockflow-toast-success .toast-close,
+html[data-theme="light"] .blockflow-toast-success .toast-close {
+  color: #047857 !important;
+}
+
+/* Success Toast - Dark Theme */
+html.dark-theme .blockflow-toast-success,
+html[data-theme="dark"] .blockflow-toast-success {
+  background-color: #022C22 !important;
+  border-color: #059669 !important;
+  color: #ECFDF5 !important;
+}
+html.dark-theme .blockflow-toast-success .toast-text,
+html[data-theme="dark"] .blockflow-toast-success .toast-text {
+  color: #ECFDF5 !important;
+}
+html.dark-theme .blockflow-toast-success .toast-icon,
+html[data-theme="dark"] .blockflow-toast-success .toast-icon {
+  color: #34D399 !important;
+}
+html.dark-theme .blockflow-toast-success .toast-close,
+html[data-theme="dark"] .blockflow-toast-success .toast-close {
+  color: #A7F3D0 !important;
+}
+
+/* Warning Toast - Light Theme */
+.blockflow-toast-warning,
+html.light-theme .blockflow-toast-warning,
+html[data-theme="light"] .blockflow-toast-warning {
+  background-color: #FFFBEB !important;
+  border-color: #FCD34D !important;
+  color: #78350F !important;
+}
+.blockflow-toast-warning .toast-text,
+html.light-theme .blockflow-toast-warning .toast-text,
+html[data-theme="light"] .blockflow-toast-warning .toast-text {
+  color: #78350F !important;
+}
+.blockflow-toast-warning .toast-icon,
+html.light-theme .blockflow-toast-warning .toast-icon,
+html[data-theme="light"] .blockflow-toast-warning .toast-icon {
+  color: #D97706 !important;
+}
+.blockflow-toast-warning .toast-close,
+html.light-theme .blockflow-toast-warning .toast-close,
+html[data-theme="light"] .blockflow-toast-warning .toast-close {
+  color: #B45309 !important;
+}
+
+/* Warning Toast - Dark Theme */
+html.dark-theme .blockflow-toast-warning,
+html[data-theme="dark"] .blockflow-toast-warning {
+  background-color: #451A03 !important;
+  border-color: #D97706 !important;
+  color: #FEF3C7 !important;
+}
+html.dark-theme .blockflow-toast-warning .toast-text,
+html[data-theme="dark"] .blockflow-toast-warning .toast-text {
+  color: #FEF3C7 !important;
+}
+html.dark-theme .blockflow-toast-warning .toast-icon,
+html[data-theme="dark"] .blockflow-toast-warning .toast-icon {
+  color: #FBBF24 !important;
+}
+html.dark-theme .blockflow-toast-warning .toast-close,
+html[data-theme="dark"] .blockflow-toast-warning .toast-close {
+  color: #FDE68A !important;
+}
+
+/* Error Toast - Light Theme */
+.blockflow-toast-error,
+html.light-theme .blockflow-toast-error,
+html[data-theme="light"] .blockflow-toast-error {
+  background-color: #FFF1F2 !important;
+  border-color: #FDA4AF !important;
+  color: #881337 !important;
+}
+.blockflow-toast-error .toast-text,
+html.light-theme .blockflow-toast-error .toast-text,
+html[data-theme="light"] .blockflow-toast-error .toast-text {
+  color: #881337 !important;
+}
+.blockflow-toast-error .toast-icon,
+html.light-theme .blockflow-toast-error .toast-icon,
+html[data-theme="light"] .blockflow-toast-error .toast-icon {
+  color: #E11D48 !important;
+}
+.blockflow-toast-error .toast-close,
+html.light-theme .blockflow-toast-error .toast-close,
+html[data-theme="light"] .blockflow-toast-error .toast-close {
+  color: #BE123C !important;
+}
+
+/* Error Toast - Dark Theme */
+html.dark-theme .blockflow-toast-error,
+html[data-theme="dark"] .blockflow-toast-error {
+  background-color: #4C0519 !important;
+  border-color: #E11D48 !important;
+  color: #FFE4E6 !important;
+}
+html.dark-theme .blockflow-toast-error .toast-text,
+html[data-theme="dark"] .blockflow-toast-error .toast-text {
+  color: #FFE4E6 !important;
+}
+html.dark-theme .blockflow-toast-error .toast-icon,
+html[data-theme="dark"] .blockflow-toast-error .toast-icon {
+  color: #FB7185 !important;
+}
+html.dark-theme .blockflow-toast-error .toast-close,
+html[data-theme="dark"] .blockflow-toast-error .toast-close {
+  color: #FECDD3 !important;
+}
+
+/* Info Toast - Light Theme */
+.blockflow-toast-info,
+html.light-theme .blockflow-toast-info,
+html[data-theme="light"] .blockflow-toast-info {
+  background-color: #F0F9FF !important;
+  border-color: #7DD3FC !important;
+  color: #0C4A6E !important;
+}
+.blockflow-toast-info .toast-text,
+html.light-theme .blockflow-toast-info .toast-text,
+html[data-theme="light"] .blockflow-toast-info .toast-text {
+  color: #0C4A6E !important;
+}
+.blockflow-toast-info .toast-icon,
+html.light-theme .blockflow-toast-info .toast-icon,
+html[data-theme="light"] .blockflow-toast-info .toast-icon {
+  color: #0284C7 !important;
+}
+.blockflow-toast-info .toast-close,
+html.light-theme .blockflow-toast-info .toast-close,
+html[data-theme="light"] .blockflow-toast-info .toast-close {
+  color: #0369A1 !important;
+}
+
+/* Info Toast - Dark Theme */
+html.dark-theme .blockflow-toast-info,
+html[data-theme="dark"] .blockflow-toast-info {
+  background-color: #0F172A !important;
+  border-color: #334155 !important;
+  color: #F8FAFC !important;
+}
+html.dark-theme .blockflow-toast-info .toast-text,
+html[data-theme="dark"] .blockflow-toast-info .toast-text {
+  color: #F8FAFC !important;
+}
+html.dark-theme .blockflow-toast-info .toast-icon,
+html[data-theme="dark"] .blockflow-toast-info .toast-icon {
+  color: #38BDF8 !important;
+}
+html.dark-theme .blockflow-toast-info .toast-close,
+html[data-theme="dark"] .blockflow-toast-info .toast-close {
+  color: #94A3B8 !important;
 }

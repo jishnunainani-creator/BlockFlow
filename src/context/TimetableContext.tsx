@@ -30,6 +30,8 @@ import {
 } from '../utils/notificationUtils';
 import { generateAISmartSchedule } from '../utils/aiProductivityEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { setActiveUserId } from '../utils/userScope';
+import { recordLocalTombstone } from '../lib/storageRepository';
 import { migrateBlockFlowJSON } from '../utils/migration/dataMigrator';
 
 export interface ToastMessage {
@@ -300,7 +302,10 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
+        setActiveUserId(session.user.id);
         console.log('Supabase session active:', session.user.email);
+      } else {
+        setActiveUserId(null);
       }
     });
 
@@ -673,6 +678,7 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [updateAppState, addToast]);
 
   const deleteScheduledBlock = useCallback((id: string) => {
+    recordLocalTombstone('timetable', id);
     if (selectedBlockId === id) {
       setSelectedBlockId(null);
     }

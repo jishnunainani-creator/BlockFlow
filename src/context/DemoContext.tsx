@@ -22,6 +22,7 @@ interface DemoContextType {
   startTour: () => void;
   nextTourStep: () => void;
   prevTourStep: () => void;
+  goToTourStep?: (index: number) => void;
   closeTour: () => void;
   skipOnboarding: () => void;
   completeOnboarding: (loadDemo?: boolean) => void;
@@ -194,6 +195,12 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [currentStepIndex]);
 
+  const goToTourStep = useCallback((index: number) => {
+    if (index >= 0 && index < TOUR_STEPS.length) {
+      setCurrentStepIndex(index);
+    }
+  }, []);
+
   const closeTour = useCallback(() => {
     setIsTourActive(false);
     setIsOnboardingOpen(false);
@@ -227,6 +234,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startTour,
     nextTourStep,
     prevTourStep,
+    goToTourStep,
     closeTour,
     skipOnboarding,
     completeOnboarding,
@@ -241,6 +249,7 @@ export const DemoProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     startTour,
     nextTourStep,
     prevTourStep,
+    goToTourStep,
     closeTour,
     skipOnboarding,
     completeOnboarding,

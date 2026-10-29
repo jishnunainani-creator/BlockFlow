@@ -43,15 +43,15 @@ export const SessionJournalTab: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Notice Banner distinguishing Session Journal from Daily Reflection */}
-      <div className="bg-blue-950/30 border border-blue-800/40 rounded-2xl p-4 flex items-start gap-3 text-xs text-blue-200">
-        <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/40 rounded-2xl p-4 flex items-start gap-3 text-xs text-blue-800 dark:text-blue-200">
+        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold text-white">SESSION JOURNAL vs DAILY REFLECTION:</span> This journal tracks your individual activity execution records (what was planned vs what actually happened). Daily Reflection tracks your overall daily score and end-of-day journal.
+          <span className="font-semibold text-blue-950 dark:text-white">SESSION JOURNAL vs DAILY REFLECTION:</span> This journal tracks your individual activity execution records (what was planned vs what actually happened). Daily Reflection tracks your overall daily score and end-of-day journal.
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
           <input
@@ -59,7 +59,7 @@ export const SessionJournalTab: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by activity, topic (e.g. Graphs, BFS), or notes..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
+            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
 
@@ -69,7 +69,7 @@ export const SessionJournalTab: React.FC = () => {
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-blue-500"
           />
           {selectedDate && (
             <button
@@ -98,9 +98,9 @@ export const SessionJournalTab: React.FC = () => {
 
       {/* Journal Feed */}
       {groupedSessions.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
-          <BookOpen className="w-12 h-12 text-slate-600 mx-auto" />
-          <h4 className="text-base font-semibold text-slate-300">No Session Logs Found</h4>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
+          <BookOpen className="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
+          <h4 className="text-base font-semibold text-slate-900 dark:text-slate-300">No Session Logs Found</h4>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             Complete a scheduled activity or log what you actually worked on to build your execution journal.
           </p>
@@ -109,10 +109,10 @@ export const SessionJournalTab: React.FC = () => {
         <div className="space-y-6">
           {groupedSessions.map(([dateStr, dateSessions]) => (
             <div key={dateStr} className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                <Calendar className="w-4 h-4 text-blue-400" />
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                <Calendar className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                 <span>{new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-medium ml-1">
+                <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full font-medium ml-1">
                   {dateSessions.length} {dateSessions.length === 1 ? 'entry' : 'entries'}
                 </span>
               </div>
@@ -124,7 +124,7 @@ export const SessionJournalTab: React.FC = () => {
                   return (
                     <div
                       key={session.id}
-                      className="bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-4 space-y-3 transition-all shadow-sm"
+                      className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700/80 rounded-2xl p-4 space-y-3 transition-all shadow-sm"
                     >
                       {/* Top Row: Status & Time */}
                       <div className="flex items-center justify-between gap-3">
@@ -134,28 +134,28 @@ export const SessionJournalTab: React.FC = () => {
                             <span>{statusConfig.label}</span>
                           </span>
                           {session.deviationReason && (
-                            <span className="text-[10px] bg-pink-500/10 text-pink-300 border border-pink-500/20 px-2 py-0.5 rounded-md font-medium">
+                            <span className="text-[10px] bg-pink-50 dark:bg-pink-500/10 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-500/20 px-2 py-0.5 rounded-md font-medium">
                               Reason: {session.deviationReason}
                             </span>
                           )}
                         </div>
 
                         {session.focusRating && (
-                          <div className="flex items-center gap-1 text-xs text-amber-400 font-semibold bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
-                            <Star className="w-3.5 h-3.5 fill-amber-400" />
+                          <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-2.5 py-1 rounded-lg">
+                            <Star className="w-3.5 h-3.5 fill-amber-500 dark:fill-amber-400" />
                             <span>{session.focusRating}/5</span>
                           </div>
                         )}
                       </div>
 
                       {/* Planned vs Actual Title */}
-                      <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div className="bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div>
                           <span className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider block mb-0.5">
                             Planned Activity
                           </span>
-                          <p className="font-semibold text-slate-200">{session.plannedTitle}</p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="font-semibold text-slate-800 dark:text-slate-200">{session.plannedTitle}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
                             {formatMinutesToTimeString(session.plannedStartMinutes)} – {formatMinutesToTimeString(session.plannedStartMinutes + session.plannedDuration)}
                           </p>
                         </div>
@@ -164,8 +164,8 @@ export const SessionJournalTab: React.FC = () => {
                           <span className="text-[10px] uppercase font-semibold text-slate-500 tracking-wider block mb-0.5">
                             Actually Logged
                           </span>
-                          <p className="font-semibold text-blue-300">{session.actualTitle}</p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="font-semibold text-blue-600 dark:text-blue-300">{session.actualTitle}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
                             {formatMinutesToTimeString(session.actualStartMinutes)} – {formatMinutesToTimeString(session.actualStartMinutes + session.actualDuration)}
                           </p>
                         </div>
@@ -175,9 +175,9 @@ export const SessionJournalTab: React.FC = () => {
                       {(session.topic || (session.subtopics && session.subtopics.length > 0)) && (
                         <div className="space-y-1.5 pt-1">
                           {session.topic && (
-                            <p className="text-xs text-slate-300 font-medium flex items-center gap-2">
-                              <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-                              <span>Topic: <strong className="text-white">{session.topic}</strong></span>
+                            <p className="text-xs text-slate-700 dark:text-slate-300 font-medium flex items-center gap-2">
+                              <BookOpen className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
+                              <span>Topic: <strong className="text-slate-900 dark:text-white">{session.topic}</strong></span>
                             </p>
                           )}
                           {session.subtopics && session.subtopics.length > 0 && (

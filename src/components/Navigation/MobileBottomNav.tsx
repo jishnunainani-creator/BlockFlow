@@ -47,19 +47,19 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       {/* ── QUICK ACTION FLOATING MENU ── */}
       {showQuickActions && (
         <div
-          className="md:hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end p-4 animate-fade-in"
+          className="md:hidden fixed inset-0 z-50 bg-black/60 dark:bg-slate-950/80 backdrop-blur-sm flex flex-col justify-end p-4 animate-fade-in"
           onClick={() => setShowQuickActions(false)}
         >
           <div
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2 shadow-xl animate-fade-in"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-2 shadow-xl animate-fade-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Quick Actions</span>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Quick Actions</span>
               <button
                 type="button"
                 onClick={() => setShowQuickActions(false)}
-                className="text-xs text-slate-500 hover:text-white"
+                className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
               >
                 Close
               </button>
@@ -217,7 +217,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       )}
 
       {/* ── FIXED BOTTOM NAVIGATION BAR (< 768px) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900 border-t border-slate-800 flex items-center justify-around h-16 px-1 select-none">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-around h-16 px-1 select-none">
         {/* 1. Dashboard */}
         <button
           type="button"
@@ -225,7 +225,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
             currentView === 'dashboard'
               ? 'text-[#3659C9] dark:text-[#4F73E3] font-semibold'
-              : 'text-slate-400 hover:text-slate-200'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
           title="Home Dashboard"
           aria-label="Home Dashboard"

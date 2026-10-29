@@ -1,30 +1,37 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Standard Vite environment variable resolution
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  ? String(import.meta.env.VITE_SUPABASE_URL).trim().replace(/^["']|["']$/g, '')
-  : '';
+// Standard Vite environment variable resolution:
+// Prefers VITE_SUPABASE_PUBLISHABLE_KEY, with fallback to legacy VITE_SUPABASE_ANON_KEY.
+const rawUrl = import.meta.env.VITE_SUPABASE_URL;
+const rawKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-  ? String(import.meta.env.VITE_SUPABASE_ANON_KEY).trim().replace(/^["']|["']$/g, '')
-  : '';
+const supabaseUrl = rawUrl ? String(rawUrl).trim().replace(/^["']|["']$/g, '') : '';
+const supabaseAnonKey = rawKey ? String(rawKey).trim().replace(/^["']|["']$/g, '') : '';
+
+// Security check: Reject secret/service-role keys in browser configuration
+export const isSecretKeyProvided = Boolean(
+  supabaseAnonKey && (
+    supabaseAnonKey.startsWith('sb_secret_') ||
+    supabaseAnonKey.includes('service_role')
+  )
+);
+
+if (isSecretKeyProvided) {
+  console.error(
+    '[BlockFlow Security Alert] A Supabase secret/service-role key was detected in browser environment configuration. Secret keys must NEVER be exposed in client code. Please replace with your public anon/publishable key.'
+  );
+}
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&
+  !isSecretKeyProvided &&
   supabaseUrl !== 'undefined' &&
   supabaseAnonKey !== 'undefined' &&
   supabaseUrl !== 'null' &&
   supabaseAnonKey !== 'null' &&
   supabaseUrl.startsWith('http')
 );
-
-console.log("=== SUPABASE ENV DEBUG ===");
-console.log("MODE:", import.meta.env.MODE);
-console.log("URL exists:", Boolean(import.meta.env.VITE_SUPABASE_URL));
-console.log("KEY exists:", Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY));
-console.log("URL:", import.meta.env.VITE_SUPABASE_URL);
-console.log("Configured:", isSupabaseConfigured);
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
@@ -58,6 +65,9 @@ export async function signInWithOAuth(provider: 'google' | 'github') {
 }
 
 export async function signOut() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('blockflow_active_user_id');
+  }
   if (!supabase) return;
   return await supabase.auth.signOut();
 }

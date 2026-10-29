@@ -37,15 +37,15 @@ export const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
   return (
     <nav
       aria-label="Breadcrumb navigation"
-      className={`flex items-center gap-1.5 text-xs text-slate-400 select-none pb-2 ${className}`}
+      className={`flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 select-none pb-2 ${className}`}
     >
       <button
         type="button"
         onClick={() => handleGo('dashboard')}
-        className="flex items-center gap-1 text-slate-400 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:underline"
+        className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:underline"
         title="Return to Dashboard"
       >
-        <Home className="w-3.5 h-3.5 text-slate-400" />
+        <Home className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
         <span className="font-medium">Dashboard</span>
       </button>
 
@@ -54,16 +54,16 @@ export const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
 
         return (
           <React.Fragment key={idx}>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-600 shrink-0" aria-hidden="true" />
+            <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 shrink-0" aria-hidden="true" />
             {isLast || !item.view ? (
-              <span className="text-slate-200 font-semibold truncate" aria-current="page">
+              <span className="text-slate-800 dark:text-slate-200 font-semibold truncate" aria-current="page">
                 {item.label}
               </span>
             ) : (
               <button
                 type="button"
                 onClick={() => item.view && handleGo(item.view)}
-                className="text-slate-400 hover:text-white transition-colors truncate focus:outline-none focus-visible:underline cursor-pointer"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors truncate focus:outline-none focus-visible:underline cursor-pointer"
               >
                 {item.label}
               </button>

@@ -101,3 +101,37 @@ export function suggestFreeTimeSlots(
 
   return suggestions;
 }
+
+export interface BlockCollisionResult {
+  hasConflict: boolean;
+  conflictingBlock?: ScheduledBlock;
+  message?: string;
+}
+
+export function checkBlockCollision(
+  weekId: string,
+  dayOfWeek: number,
+  startMinutes: number,
+  duration: number,
+  scheduledBlocks: ScheduledBlock[],
+  excludeBlockId?: string
+): BlockCollisionResult {
+  const candidateEnd = startMinutes + duration;
+  const dayBlocks = scheduledBlocks.filter(
+    (b) => b.weekId === weekId && b.dayOfWeek === dayOfWeek && b.id !== excludeBlockId
+  );
+
+  for (const b of dayBlocks) {
+    const bStart = b.startMinutes;
+    const bEnd = b.startMinutes + b.duration;
+    if (Math.max(startMinutes, bStart) < Math.min(candidateEnd, bEnd)) {
+      return {
+        hasConflict: true,
+        conflictingBlock: b,
+        message: `Overlaps with "${b.title}" (${minutesToTimeStr(bStart)} – ${minutesToTimeStr(bEnd)})`,
+      };
+    }
+  }
+
+  return { hasConflict: false };
+}

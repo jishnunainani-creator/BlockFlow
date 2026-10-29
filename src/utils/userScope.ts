@@ -1,5 +1,3 @@
-import { supabase } from '../lib/supabase';
-
 let currentUserId: string | null = null;
 
 export function setActiveUserId(id: string | null): void {

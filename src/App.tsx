@@ -11,6 +11,7 @@ import { GuidedTour } from './components/Onboarding/GuidedTour';
 import { Sidebar, NavView } from './components/Navigation/Sidebar';
 import { AuthPage } from './components/Auth/AuthPage';
 import { MyDayView } from './components/Views/MyDayView';
+import { MobileQuickCaptureView } from './components/Views/MobileQuickCaptureView';
 import { DashboardView } from './components/Views/DashboardView';
 import { CalendarView } from './components/Views/CalendarView';
 import { AdaptivePlannerView } from './components/Views/AdaptivePlannerView';
@@ -27,11 +28,14 @@ import { AnalyticsView } from './components/Views/AnalyticsView';
 import { AICoachView } from './components/Views/AICoachView';
 import { RemindersView } from './components/Views/RemindersView';
 import { SettingsView } from './components/Views/SettingsView';
+import { ThoughtSpaceView } from './components/Views/ThoughtSpaceView';
 import { ExecutionDashboardView } from './components/Views/ExecutionDashboardView';
 import { TaskInboxView } from './components/ExecutionOS/TaskInboxView';
 import { ToastContainer } from './components/UI/ToastContainer';
-import { getCurrentUser } from './lib/supabase';
-import { syncLocalStateToSupabase } from './lib/supabaseMigration';
+import { getCurrentUser, supabase } from './lib/supabase';
+import { loadSyncSettings } from './lib/storageRepository';
+import { performSelectiveSync } from './lib/selectiveSync';
+import { setActiveUserId } from './utils/userScope';
 import { QuickCaptureModal } from './components/QuickCapture/QuickCaptureModal';
 import { ConvertCaptureModal } from './components/QuickCapture/ConvertCaptureModal';
 import { QuickCaptureItem } from './types/quickCapture';
@@ -101,19 +105,41 @@ export function AppContent() {
     }
   }, []);
 
-  // Check Supabase Auth session & auto sync to PostgreSQL
+  // Check Supabase Auth session & subscribe to auth state changes.
+  // Triggers selective sync ONLY if explicit user consent and autoSync are active.
   useEffect(() => {
-    getCurrentUser().then((user) => {
-      if (user?.email) {
-        setUserEmail(user.email);
-        syncLocalStateToSupabase(user.id, libraryBlocks, { 'current': currentWeekScheduledBlocks }, templates).then((res) => {
-          if (res.success) {
-            console.log('Synced local state to Supabase PostgreSQL database');
-          }
-        });
+    if (!supabase) {
+      getCurrentUser().then((user) => {
+        if (user?.email) {
+          setUserEmail(user.email);
+          setActiveUserId(user.id);
+        } else {
+          setActiveUserId(null);
+        }
+      });
+      return;
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserEmail(session.user.email ?? null);
+        setActiveUserId(session.user.id);
+        const syncSettings = loadSyncSettings();
+        if (syncSettings.syncConsentGiven && syncSettings.autoSyncEnabled) {
+          performSelectiveSync(session.user.id).catch((err) => {
+            console.warn('Selective sync failed:', err);
+          });
+        }
+      } else {
+        setUserEmail(null);
+        setActiveUserId(null);
       }
     });
-  }, [libraryBlocks, currentWeekScheduledBlocks, templates]);
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const openAISchedule = (tab: 'voice' | 'text' | 'import') => {
     setAiScheduleTab(tab);
@@ -174,6 +200,7 @@ export function AppContent() {
         if (key === 'p') handleNavigate('adaptive-planner');
         if (key === 'g') handleNavigate('goals');
         if (key === 'u' || key === 'x') handleNavigate('task-inbox');
+        if (key === 'o' || key === 'n') handleNavigate('thought-space');
         if (key === 'q') setIsQuickCaptureOpen(true);
         if (key === 'f') handleStartFocusMode();
         if (key === 'v') openAISchedule('voice');
@@ -206,8 +233,22 @@ export function AppContent() {
     );
   }
 
+  if (currentView === 'quick-add') {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
+        <MobileQuickCaptureView
+          onNavigate={handleNavigate}
+          userEmail={userEmail}
+          onOpenAuth={() => setShowAuthPage(true)}
+        />
+        <ToastContainer />
+        <GuidedTour onNavigate={handleNavigate} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans">
       {/* Sidebar Navigation */}
       <Sidebar
         currentView={currentView}
@@ -226,7 +267,7 @@ export function AppContent() {
       />
 
       {/* Main SaaS Module Views */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative pb-16 md:pb-0">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950 relative pb-16 md:pb-0">
         {currentView === 'my-day' && (
           <MyDayView
             onNavigate={handleNavigate}
@@ -257,6 +298,7 @@ export function AppContent() {
         {currentView === 'task-inbox' && (
           <TaskInboxView onNavigate={handleNavigate} onStartFocusMode={handleStartFocusMode} />
         )}
+        {currentView === 'thought-space' && <ThoughtSpaceView onNavigate={handleNavigate} />}
         {currentView === 'assignments' && <AssignmentsView onNavigate={handleNavigate} />}
         {currentView === 'library' && <LibraryView onNavigate={handleNavigate} />}
         {currentView === 'resources' && <ResourcesView onNavigate={handleNavigate} />}

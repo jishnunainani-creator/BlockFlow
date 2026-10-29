@@ -146,12 +146,15 @@ export const SYSTEM_MILESTONE_DEFINITIONS: CustomMilestone[] = [
   },
 ];
 
-import { getUserScopedKey } from './userScope';
+import { getUserScopedKey, getActiveUserId } from './userScope';
 
 export function loadAssignments(): Assignment[] {
   try {
     const key = getUserScopedKey(ASSIGNMENTS_KEY);
-    const data = localStorage.getItem(key);
+    let data = localStorage.getItem(key);
+    if (!data && !getActiveUserId()) {
+      data = localStorage.getItem(ASSIGNMENTS_KEY);
+    }
     return data ? JSON.parse(data) : [];
   } catch (error) {
     console.error('Failed to load assignments', error);

@@ -11,6 +11,10 @@ export interface Assignment {
   progressPct: number;
   status: 'pending' | 'in_progress' | 'submitted' | 'graded';
   studyPlan?: { date: string; durationMinutes: number; title: string }[];
+  storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
+  createdAt?: number;
+  updatedAt?: number;
+  syncedAt?: number;
 }
 
 export interface TimeBudgetItem {
@@ -112,6 +116,9 @@ export interface TaskInboxItem {
   scheduledDayOfWeek?: number;
   scheduledStartMinutes?: number;
   createdAt: number;
+  storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
+  updatedAt?: number;
+  syncedAt?: number;
 }
 
 export type PersonalRuleType =

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "npx tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node -e \"import('vite').then(async ({ createServer }) => { const server = await createServer(); await server.ssrLoadModule('./src/utils/adaptivePlannerEngine.test.ts'); await server.ssrLoadModule('./src/utils/focusSessionEngine.test.ts'); await server.ssrLoadModule('./src/utils/weeklyReviewEngine.test.ts'); await server.close(); })\"",
+    "test": "node -e \"import('vite').then(async ({ createServer }) => { const server = await createServer(); await server.ssrLoadModule('./src/utils/adaptivePlannerEngine.test.ts'); await server.ssrLoadModule('./src/utils/focusSessionEngine.test.ts'); await server.ssrLoadModule('./src/utils/weeklyReviewEngine.test.ts'); await server.ssrLoadModule('./src/utils/quickCaptureEngine.test.ts'); await server.ssrLoadModule('./src/utils/pwaEngine.test.ts'); await server.ssrLoadModule('./src/lib/selectiveSync.test.ts'); await server.ssrLoadModule('./src/utils/thoughtSpaceEngine.test.ts'); await server.close(); })\"",
     "preview": "vite preview"
   },
   "dependencies": {

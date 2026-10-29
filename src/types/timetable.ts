@@ -51,6 +51,9 @@ export interface LibraryBlock {
   icon: string;
   lastUsedAt?: number;
   usageCount?: number;
+  storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
+  updatedAt?: number;
+  syncedAt?: number;
 }
 
 export interface ScheduledBlock {
@@ -77,6 +80,9 @@ export interface ScheduledBlock {
   goalComponentId?: string;
   isFixed?: boolean;
   taskId?: string;
+  storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
+  updatedAt?: number;
+  syncedAt?: number;
 }
 
 export interface WeekSchedule {
@@ -90,6 +96,9 @@ export interface TimetableTemplate {
   description?: string;
   createdAt: number;
   blocks: Omit<ScheduledBlock, 'id' | 'weekId'>[];
+  storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
+  updatedAt?: number;
+  syncedAt?: number;
 }
 
 export interface ConflictInfo {
@@ -200,6 +209,9 @@ export interface Goal {
   deadline?: string;
   targetHoursPerDay?: number;
   progressPct?: number;
+  storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
+  updatedAt?: number;
+  syncedAt?: number;
 }
 
 export interface DailyMissionItem {

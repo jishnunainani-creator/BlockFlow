@@ -19,24 +19,24 @@ export const PlanVsRealityTab: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Date Selector Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Target className="w-5 h-5 text-blue-400" />
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Target className="w-5 h-5 text-blue-500 dark:text-blue-400" />
             PLAN VS REALITY
           </h3>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Compare what you planned against what you actually executed.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-400 font-medium">Select Date:</label>
+          <label className="text-xs text-slate-500 dark:text-slate-400 font-medium">Select Date:</label>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+            className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-blue-500"
           />
         </div>
       </div>
@@ -44,66 +44,66 @@ export const PlanVsRealityTab: React.FC = () => {
       {/* Key Metric Comparison Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Plan Adherence Score */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Plan Adherence</span>
-            <Target className="w-4 h-4 text-blue-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Plan Adherence</span>
+            <Target className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           </div>
-          <p className="text-3xl font-black text-blue-400">{metrics.planAdherencePct}%</p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-3xl font-black text-blue-600 dark:text-blue-400">{metrics.planAdherencePct}%</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {metrics.completedAsPlannedCount} of {metrics.totalPlannedCount} activities executed as planned.
           </p>
         </div>
 
         {/* Execution Score */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Execution Score</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Execution Score</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
           </div>
-          <p className="text-3xl font-black text-emerald-400">{metrics.executionScore}%</p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{metrics.executionScore}%</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
             Measures total meaningful work completed regardless of schedule changes.
           </p>
         </div>
 
         {/* Rescheduled / Replaced */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Rescheduled / Replaced</span>
-            <ArrowRightLeft className="w-4 h-4 text-pink-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Rescheduled / Replaced</span>
+            <ArrowRightLeft className="w-4 h-4 text-pink-500 dark:text-pink-400" />
           </div>
-          <p className="text-3xl font-black text-pink-400">
+          <p className="text-3xl font-black text-pink-600 dark:text-pink-400">
             {metrics.rescheduledCount + metrics.completedDifferentlyCount}
           </p>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
             {metrics.completedDifferentlyCount} replaced • {metrics.rescheduledCount} rescheduled
           </p>
         </div>
 
         {/* Skipped */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-2 relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Skipped / Missed</span>
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Skipped / Missed</span>
+            <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400" />
           </div>
-          <p className="text-3xl font-black text-amber-400">{metrics.skippedCount}</p>
-          <p className="text-[11px] text-slate-400">Activities skipped or cancelled</p>
+          <p className="text-3xl font-black text-amber-600 dark:text-amber-400">{metrics.skippedCount}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">Activities skipped or cancelled</p>
         </div>
       </div>
 
       {/* Distinction Explanation Box */}
-      <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-slate-300">
-        <Info className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+      <div className="bg-blue-50 dark:bg-slate-900/60 border border-blue-200 dark:border-slate-800/80 rounded-2xl p-4 flex items-start gap-3 text-xs text-blue-900 dark:text-slate-300">
+        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold text-white">EXECUTION SCORE vs PLAN ADHERENCE:</span> Execution Score measures total work accomplished (e.g. 6 hours of fitness/reading/coding = high score). Plan Adherence measures how strictly you followed your initial timetable schedule.
+          <span className="font-semibold text-blue-950 dark:text-white">EXECUTION SCORE vs PLAN ADHERENCE:</span> Execution Score measures total work accomplished (e.g. 6 hours of fitness/reading/coding = high score). Plan Adherence measures how strictly you followed your initial timetable schedule.
         </div>
       </div>
 
       {/* Side by Side Plan vs Reality Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm">
-        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-blue-400" />
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4 shadow-sm">
+        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-blue-500 dark:text-blue-400" />
           Plan vs Reality Comparison — {selectedDate}
         </h4>
 
@@ -123,15 +123,15 @@ export const PlanVsRealityTab: React.FC = () => {
               return (
                 <div
                   key={idx}
-                  className="bg-slate-950 border border-slate-800 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs relative overflow-hidden"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs relative overflow-hidden"
                 >
                   {/* Left Column: PLANNED */}
-                  <div className="space-y-1 pr-0 md:pr-4 border-b md:border-b-0 md:border-r border-slate-800/80 pb-3 md:pb-0">
+                  <div className="space-y-1 pr-0 md:pr-4 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800/80 pb-3 md:pb-0">
                     <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
                       Planned Intention
                     </span>
-                    <p className="font-bold text-slate-200 text-sm">{item.plannedTitle}</p>
-                    <p className="text-slate-400">{item.plannedTimeStr}</p>
+                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm">{item.plannedTitle}</p>
+                    <p className="text-slate-500 dark:text-slate-400">{item.plannedTimeStr}</p>
                   </div>
 
                   {/* Right Column: ACTUAL */}
@@ -146,19 +146,19 @@ export const PlanVsRealityTab: React.FC = () => {
                       </span>
                     </div>
 
-                    <p className={`font-bold text-sm ${isMatch ? 'text-emerald-400' : 'text-blue-300'}`}>
+                    <p className={`font-bold text-sm ${isMatch ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-300'}`}>
                       {item.actualTitle}
                     </p>
-                    <p className="text-slate-400">{item.actualTimeStr}</p>
+                    <p className="text-slate-500 dark:text-slate-400">{item.actualTimeStr}</p>
 
                     {item.topic && (
-                      <p className="text-[11px] text-slate-300 pt-1 font-medium">
-                        Topic: <span className="text-white">{item.topic}</span>
+                      <p className="text-[11px] text-slate-700 dark:text-slate-300 pt-1 font-medium">
+                        Topic: <span className="text-slate-900 dark:text-white">{item.topic}</span>
                       </p>
                     )}
 
                     {item.deviationReason && (
-                      <p className="text-[10px] text-pink-400 bg-pink-500/10 border border-pink-500/20 px-2 py-0.5 rounded-md inline-block mt-1">
+                      <p className="text-[10px] text-pink-700 dark:text-pink-400 bg-pink-50 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-500/20 px-2 py-0.5 rounded-md inline-block mt-1">
                         Reason: {item.deviationReason}
                       </p>
                     )}
@@ -171,8 +171,8 @@ export const PlanVsRealityTab: React.FC = () => {
       </div>
 
       {/* Deviation Analytics Section */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4">
-        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-4">
+        <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
           <PieChart className="w-4 h-4 text-purple-400" />
           Deviation Analytics (Last 30 Days)
         </h4>

@@ -27,7 +27,7 @@ export const EmptyStateGuidance: React.FC<EmptyStateGuidanceProps> = ({ onOpenAd
         {onOpenAddBlock && (
           <button
             onClick={onOpenAddBlock}
-            className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
+            className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
           >
             <div className="p-2 rounded-lg bg-[#3659C9] text-white shrink-0">
               <Plus className="w-4 h-4" />
@@ -42,7 +42,7 @@ export const EmptyStateGuidance: React.FC<EmptyStateGuidanceProps> = ({ onOpenAd
         {onOpenAISchedule && (
           <button
             onClick={() => onOpenAISchedule('voice')}
-            className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
+            className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
           >
             <div className="p-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 shrink-0">
               <Bot className="w-4 h-4 text-[#3659C9]" />
@@ -57,7 +57,7 @@ export const EmptyStateGuidance: React.FC<EmptyStateGuidanceProps> = ({ onOpenAd
         {onOpenAISchedule && (
           <button
             onClick={() => onOpenAISchedule('import')}
-            className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
+            className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
           >
             <div className="p-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 shrink-0">
               <Upload className="w-4 h-4 text-emerald-400" />
@@ -71,7 +71,7 @@ export const EmptyStateGuidance: React.FC<EmptyStateGuidanceProps> = ({ onOpenAd
 
         <button
           onClick={() => loadDemoProfile('college_student')}
-          className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
+          className="p-3.5 rounded-xl bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 text-white flex items-center gap-3 transition-colors group"
         >
           <div className="p-2 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 shrink-0">
             <Rocket className="w-4 h-4 text-amber-400" />

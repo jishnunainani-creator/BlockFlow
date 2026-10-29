@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Assignment } from '../../types/executionOS';
 import { loadAssignments, saveAssignments } from '../../utils/assignmentStorage';
+import { recordLocalTombstone } from '../../lib/storageRepository';
 import { generateAssignmentStudyPlan } from '../../utils/scheduleOptimizerEngine';
 import { useTimetable } from '../../context/TimetableContext';
 import {
@@ -131,6 +132,7 @@ export default function AssignmentTracker() {
   };
 
   const handleDelete = (id: string) => {
+    recordLocalTombstone('assignments', id);
     persistAssignments(assignments.filter(a => a.id !== id));
     addToast('Assignment removed', 'info');
   };

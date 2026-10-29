@@ -60,11 +60,11 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({ isOpen, onClose 
         </div>
 
         {/* Sync Status Box */}
-        <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 mb-6 flex items-center gap-3">
-          <ShieldCheck className="w-6 h-6 text-emerald-400 shrink-0" />
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 mb-6 flex items-center gap-3">
+          <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <div>
-            <h4 className="text-xs font-bold text-emerald-200">Local Cloud Sync Active</h4>
-            <p className="text-[11px] text-emerald-400/80 mt-0.5">
+            <h4 className="text-xs font-bold text-emerald-950 dark:text-emerald-200">Local Cloud Sync Active</h4>
+            <p className="text-[11px] text-emerald-800 dark:text-emerald-400/80 mt-0.5">
               Every timetable interaction is automatically backed up & stored.
             </p>
           </div>

@@ -44,6 +44,13 @@ export const ROUTES: Record<NavView, RouteMeta> = {
     section: 'Plan & Organize',
     breadcrumbLabel: 'Task Inbox',
   },
+  'thought-space': {
+    view: 'thought-space',
+    path: '/thought-space',
+    title: 'Thought Space · BlockFlow',
+    section: 'Plan & Organize',
+    breadcrumbLabel: 'Thought Space',
+  },
   assignments: {
     view: 'assignments',
     path: '/assignments',
@@ -121,6 +128,13 @@ export const ROUTES: Record<NavView, RouteMeta> = {
     section: 'Utilities',
     breadcrumbLabel: 'Settings',
   },
+  'quick-add': {
+    view: 'quick-add',
+    path: '/quick-add',
+    title: 'Quick Capture · BlockFlow',
+    section: 'Utilities',
+    breadcrumbLabel: 'Quick Capture',
+  },
 };
 
 export const PATH_TO_VIEW_MAP: Record<string, NavView> = {
@@ -134,6 +148,9 @@ export const PATH_TO_VIEW_MAP: Record<string, NavView> = {
   '/tasks': 'task-inbox',
   '/task-inbox': 'task-inbox',
   '/inbox': 'task-inbox',
+  '/thought-space': 'thought-space',
+  '/thoughts': 'thought-space',
+  '/notes': 'thought-space',
   '/assignments': 'assignments',
   '/goals': 'goals',
   '/smart-goals': 'goals',
@@ -149,6 +166,10 @@ export const PATH_TO_VIEW_MAP: Record<string, NavView> = {
   '/coach': 'ai-insights',
   '/reminders': 'reminders',
   '/settings': 'settings',
+  '/quick-add': 'quick-add',
+  '/quick-capture': 'quick-add',
+  '/capture': 'quick-add',
+  '/add': 'quick-add',
 };
 
 /**

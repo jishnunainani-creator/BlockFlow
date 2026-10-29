@@ -54,7 +54,7 @@ export const OnboardingModal: React.FC = () => {
         <div className="space-y-3 pt-2">
           <button
             onClick={startTour}
-            className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:brightness-110 text-white font-bold text-xs rounded-2xl shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all group"
+            className="w-full py-3.5 px-4 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all group"
           >
             <Play className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
             <span>Start Interactive Tour</span>
@@ -64,7 +64,7 @@ export const OnboardingModal: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => completeOnboarding(true)}
-              className="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+              className="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
             >
               <Rocket size={14} />
               <span>Load Demo Workspace</span>

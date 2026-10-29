@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { TaskInboxItem } from '../../types/executionOS';
 import { Priority } from '../../types/timetable';
 import { loadTaskInbox, saveTaskInbox, loadPersonalRules } from '../../utils/taskInboxStorage';
+import { recordLocalTombstone } from '../../lib/storageRepository';
 import { calculateDeadlineRisk } from '../../utils/deadlineEngine';
 import { findCentralizedScheduleSlot } from '../../utils/centralPlanningEngine';
 import { useTimetable } from '../../context/TimetableContext';
@@ -256,6 +257,7 @@ export const TaskInboxView: React.FC<TaskInboxViewProps> = ({ onNavigate, onStar
   };
 
   const handleDeleteTask = (taskId: string) => {
+    recordLocalTombstone('tasks', taskId);
     const updated = tasks.filter((t) => t.id !== taskId);
     setTasks(updated);
     saveTaskInbox(updated);

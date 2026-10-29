@@ -163,7 +163,7 @@ export const FloatingCloudHelper: React.FC<FloatingCloudHelperProps> = ({
                 if (onOpenNewBlock) onOpenNewBlock();
                 else if (onOpenAISchedule) onOpenAISchedule('text');
               }}
-              className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-750 hover:border-slate-700 text-left transition-colors group"
+              className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-700 text-left transition-colors group"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-[#3659C9]/15 text-[#3659C9] dark:text-[#7394F7] flex items-center justify-center shrink-0">
@@ -185,7 +185,7 @@ export const FloatingCloudHelper: React.FC<FloatingCloudHelperProps> = ({
                 setIsOpen(false);
                 if (onOpenAISchedule) onOpenAISchedule('voice');
               }}
-              className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-750 hover:border-slate-700 text-left transition-colors group"
+              className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-700 text-left transition-colors group"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0">
@@ -202,7 +202,7 @@ export const FloatingCloudHelper: React.FC<FloatingCloudHelperProps> = ({
             </button>
 
             {/* Action 3: Find Free Slot */}
-            <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-750 text-left">
+            <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-700 text-left">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
@@ -223,15 +223,15 @@ export const FloatingCloudHelper: React.FC<FloatingCloudHelperProps> = ({
               </div>
 
               {freeSlotInfo && (
-                <div className="mt-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-[11px] font-medium text-emerald-300 animate-fade-in flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                <div className="mt-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 text-[11px] font-medium text-emerald-950 dark:text-emerald-300 animate-fade-in flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   <span className="truncate">{freeSlotInfo}</span>
                 </div>
               )}
             </div>
 
             {/* Action 4: Quick Resolution Selector */}
-            <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-750 text-left space-y-1.5">
+            <div className="p-2 rounded-xl bg-slate-800/60 border border-slate-700 text-left space-y-1.5">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-200">
                 <span className="flex items-center gap-1.5 text-slate-300">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -262,7 +262,7 @@ export const FloatingCloudHelper: React.FC<FloatingCloudHelperProps> = ({
             {/* Action 5: Guided Tour */}
             <button
               onClick={handleTourTrigger}
-              className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-750 hover:border-slate-700 text-left transition-colors group"
+              className="w-full flex items-center justify-between p-2 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700 hover:border-slate-700 text-left transition-colors group"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
@@ -310,7 +310,7 @@ export const FloatingCloudHelper: React.FC<FloatingCloudHelperProps> = ({
           onClick={() => setIsOpen(!isOpen)}
           aria-expanded={isOpen}
           aria-label="Open BlockFlow Assistant"
-          className="animate-float-soft flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-slate-900/95 hover:bg-slate-850 text-slate-200 hover:text-white border border-slate-750 hover:border-slate-600 shadow-xl shadow-black/25 backdrop-blur-md transition-all active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3659C9]"
+          className="animate-float-soft flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-slate-900/95 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 hover:border-slate-600 shadow-xl shadow-black/25 backdrop-blur-md transition-all active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#3659C9]"
         >
           <div className="relative flex items-center justify-center">
             <Cloud className="w-4 h-4 text-[#3659C9] dark:text-[#7394F7] fill-current/25" />

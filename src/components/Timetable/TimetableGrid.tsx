@@ -650,7 +650,7 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                       isSelected
                         ? 'bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/40 scale-105'
                         : d.isToday
-                        ? 'bg-emerald-950/60 text-emerald-400 font-semibold border border-emerald-500/30'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 font-semibold border border-emerald-300 dark:border-emerald-500/30'
                         : 'text-slate-400 hover:bg-slate-800/60'
                     }`}
                   >

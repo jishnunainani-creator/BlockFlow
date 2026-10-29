@@ -228,7 +228,7 @@ export const ReplaceActivityModal: React.FC<ReplaceActivityModalProps> = ({ isOp
                         className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs text-left transition-all ${
                           selectedSlot?.startMinutes === slot.startMinutes && selectedSlot?.dayOfWeek === slot.dayOfWeek
                             ? 'bg-blue-600/20 border-blue-500 text-blue-200 font-medium'
-                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-850'
+                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800'
                         }`}
                       >
                         <div>
