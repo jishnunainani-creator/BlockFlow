@@ -3,6 +3,11 @@ import { useTimetable } from '../../context/TimetableContext';
 import { PRIORITY_CONFIG, Priority } from '../../types/timetable';
 import { formatDuration, DAYS_OF_WEEK } from '../../utils/timeUtils';
 import {
+  selectCanonicalExecutionScore,
+  selectBlockCounts,
+  selectWeeklyPlannedDuration,
+} from '../../utils/dataSelectors';
+import {
   BarChart3,
   Clock,
   CheckCircle2,
@@ -40,30 +45,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigate }) => {
     dailyTotals,
     maxDailyMinutes,
   } = useMemo(() => {
-    const totalMins = currentWeekScheduledBlocks.reduce((acc, b) => acc + b.duration, 0);
+    const planned = selectWeeklyPlannedDuration(currentWeekScheduledBlocks);
+    const stats = selectBlockCounts(currentWeekScheduledBlocks);
+    const canonical = selectCanonicalExecutionScore({ blocks: currentWeekScheduledBlocks });
 
     const studyMins = currentWeekScheduledBlocks
       .filter((b) => b.priority === 'high' || b.priority === 'Study' || b.title.toLowerCase().includes('dsa') || b.title.toLowerCase().includes('study'))
-      .reduce((acc, b) => acc + b.duration, 0);
+      .reduce((acc, b) => acc + (b.duration || 0), 0);
 
     const workMins = currentWeekScheduledBlocks
       .filter((b) => b.priority === 'medium' || b.priority === 'Work' || b.title.toLowerCase().includes('work') || b.title.toLowerCase().includes('internship'))
-      .reduce((acc, b) => acc + b.duration, 0);
+      .reduce((acc, b) => acc + (b.duration || 0), 0);
 
     const completed = currentWeekScheduledBlocks.filter((b) => b.status === 'completed' || b.status === 'faster');
     const missed = currentWeekScheduledBlocks.filter((b) => b.status === 'missed');
-    
-    const rate = currentWeekScheduledBlocks.length > 0
-      ? Math.round((completed.length / currentWeekScheduledBlocks.length) * 100)
-      : 0;
-
-    const prodScore = Math.min(100, Math.round(rate * 0.8 + (studyMins > 300 ? 20 : 10)));
-    const focScore = Math.min(100, Math.round(85 + (completed.length > 3 ? 10 : 0) - missed.length * 5));
 
     const totals = DAYS_OF_WEEK.map((day) => {
       const minutes = currentWeekScheduledBlocks
         .filter((b) => b.dayOfWeek === day.index)
-        .reduce((acc, b) => acc + b.duration, 0);
+        .reduce((acc, b) => acc + (b.duration || 0), 0);
       return {
         day: day.short,
         minutes,
@@ -74,14 +74,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onNavigate }) => {
     const maxMins = Math.max(...totals.map((d) => d.minutes), 60);
 
     return {
-      totalMinutes: totalMins,
+      totalMinutes: planned.totalMinutes,
       studyMinutes: studyMins,
       workMinutes: workMins,
       completedBlocks: completed,
       missedBlocks: missed,
-      completionRate: rate,
-      productivityScore: prodScore,
-      focusScore: focScore,
+      completionRate: stats.completionRatePct,
+      productivityScore: canonical.overallScore,
+      focusScore: canonical.focusScore,
       dailyTotals: totals,
       maxDailyMinutes: maxMins,
     };

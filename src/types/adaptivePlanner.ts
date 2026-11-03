@@ -28,10 +28,12 @@ export interface PlanningIssue {
   id: string;
   type: PlanningIssueType;
   severity: PlanningIssueSeverity;
+  category?: 'conflict' | 'suggestion';
   title: string;
   whatHappened: string;
   whyItMatters: string;
   recommendedAction: string;
+  triggerReason?: string;
   target: PlanningIssueTarget;
   createdAt: number;
 }

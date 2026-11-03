@@ -21,15 +21,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {
       console.error('Failed to load theme mode', e);
     }
-    return 'dark';
+    return 'light';
   });
 
-  const [activeTheme, setActiveTheme] = useState<'dark' | 'light'>('dark');
+  const [activeTheme, setActiveTheme] = useState<'dark' | 'light'>('light');
 
   useEffect(() => {
     localStorage.setItem(THEME_KEY, theme);
 
-    let effectiveTheme: 'dark' | 'light' = 'dark';
+    let effectiveTheme: 'dark' | 'light' = 'light';
     if (theme === 'system') {
       const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       effectiveTheme = systemDark ? 'dark' : 'light';
@@ -45,6 +45,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       document.documentElement.classList.add('dark-theme', 'dark');
       document.documentElement.classList.remove('light-theme', 'light');
+    }
+
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', effectiveTheme === 'light' ? '#F7F7F4' : '#141513');
     }
   }, [theme]);
 

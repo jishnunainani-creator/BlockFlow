@@ -1,3 +1,6 @@
+export type InsightMethodology = 'statistical' | 'heuristic' | 'llm';
+export type InsightDataStatus = 'sufficient' | 'insufficient';
+
 export interface AIInsight {
   id: string;
   type: 'peak_performance' | 'timing_suggestion' | 'workload_warning' | 'positive_habit' | 'skipped_trend';
@@ -6,6 +9,11 @@ export interface AIInsight {
   icon: string;
   recommendation: string;
   confidence: number; // 0 to 100
+  methodology?: InsightMethodology;
+  dataStatus?: InsightDataStatus;
+  dataRequirement?: string;
+  sampleCount?: number;
+  minRequiredCount?: number;
 }
 
 export interface WeeklyAIReport {

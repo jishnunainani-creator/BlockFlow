@@ -1,6 +1,7 @@
 import React from 'react';
 import { Goal, ScheduledBlock } from '../../types/timetable';
 import { calculateGoalMetrics } from '../../utils/goalEngine';
+import { selectCanonicalGoalProgress } from '../../utils/dataSelectors';
 import { Target, ArrowUpRight, CheckCircle2, TrendingUp } from 'lucide-react';
 
 interface DailyGoalsListProps {
@@ -47,7 +48,7 @@ export const DailyGoalsList: React.FC<DailyGoalsListProps> = ({
         <div className="space-y-2.5">
           {activeGoals.slice(0, 3).map((goal) => {
             // Authentic progress calculated from underlying schedule blocks and goal properties
-            const metrics = calculateGoalMetrics(goal, scheduledBlocks);
+            const metrics = selectCanonicalGoalProgress(goal, scheduledBlocks);
 
             return (
               <div

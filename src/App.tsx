@@ -5,32 +5,26 @@ import { ExecutionProvider } from './context/ExecutionContext';
 import { SessionProvider } from './context/SessionContext';
 import { TimeBudgetProvider } from './context/TimeBudgetContext';
 import { SessionModalsContainer } from './components/Execution/SessionModalsContainer';
-import { DemoProvider } from './context/DemoContext';
+import { DemoProvider, useDemo } from './context/DemoContext';
 import { OnboardingModal } from './components/Onboarding/OnboardingModal';
-import { GuidedTour } from './components/Onboarding/GuidedTour';
+import { InteractiveTour } from './components/Tour/InteractiveTour';
 import { Sidebar, NavView } from './components/Navigation/Sidebar';
 import { AuthPage } from './components/Auth/AuthPage';
 import { MyDayView } from './components/Views/MyDayView';
 import { MobileQuickCaptureView } from './components/Views/MobileQuickCaptureView';
-import { DashboardView } from './components/Views/DashboardView';
 import { CalendarView } from './components/Views/CalendarView';
-import { AdaptivePlannerView } from './components/Views/AdaptivePlannerView';
 import { GoalsView } from './components/Views/GoalsView';
+import { FocusView } from './components/Views/FocusView';
+import { InsightsView } from './components/Views/InsightsView';
+import { InboxAndNotesView } from './components/Views/InboxAndNotesView';
+import { PlannerHubView } from './components/Views/PlannerHubView';
 import EnhancedFocusMode, { FocusSessionTarget } from './components/Focus/EnhancedFocusMode';
-import AssignmentsView from './components/Views/AssignmentsView';
 import { AIScheduleModal } from './components/AI/AIScheduleModal';
 import { AICommandCenterModal } from './components/AI/AICommandCenterModal';
 import { ImportWizardModal } from './components/Migration/ImportWizardModal';
-import { LibraryView } from './components/Views/LibraryView';
-import { ResourcesView } from './components/Views/ResourcesView';
-import { TemplatesView } from './components/Views/TemplatesView';
-import { AnalyticsView } from './components/Views/AnalyticsView';
-import { AICoachView } from './components/Views/AICoachView';
-import { RemindersView } from './components/Views/RemindersView';
 import { SettingsView } from './components/Views/SettingsView';
-import { ThoughtSpaceView } from './components/Views/ThoughtSpaceView';
-import { ExecutionDashboardView } from './components/Views/ExecutionDashboardView';
-import { TaskInboxView } from './components/ExecutionOS/TaskInboxView';
+import { PrivacyPolicyView } from './components/Legal/PrivacyPolicyView';
+import { TermsOfServiceView } from './components/Legal/TermsOfServiceView';
 import { ToastContainer } from './components/UI/ToastContainer';
 import { getCurrentUser, supabase } from './lib/supabase';
 import { loadSyncSettings } from './lib/storageRepository';
@@ -47,6 +41,7 @@ import { getInitialNavView, syncRouteUrl } from './utils/routes';
 
 export function AppContent() {
   const { libraryBlocks, currentWeekScheduledBlocks, templates, importJSONBackup, addLibraryBlock } = useTimetable();
+  const { isTourActive, closeTour } = useDemo();
 
   const [currentView, setCurrentView] = useState<NavView>(getInitialNavView);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -242,7 +237,11 @@ export function AppContent() {
           onOpenAuth={() => setShowAuthPage(true)}
         />
         <ToastContainer />
-        <GuidedTour onNavigate={handleNavigate} />
+        <InteractiveTour
+          isOpen={isTourActive}
+          onClose={closeTour}
+          onNavigate={handleNavigate}
+        />
       </div>
     );
   }
@@ -266,23 +265,29 @@ export function AppContent() {
         onCloseMobile={() => setIsMobileNavOpen(false)}
       />
 
-      {/* Main SaaS Module Views */}
+      {/* Main SaaS Module Views (Consolidated 8-Destination Architecture) */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950 relative pb-16 md:pb-0">
+        {/* 1. Today */}
         {currentView === 'my-day' && (
           <MyDayView
             onNavigate={handleNavigate}
             onStartFocusMode={handleStartFocusMode}
           />
         )}
-        {currentView === 'dashboard' && (
-          <DashboardView
-            onNavigate={handleNavigate}
-            userEmail={userEmail}
-            onStartFocusMode={() => handleStartFocusMode()}
-          />
-        )}
-        {currentView === 'calendar' && (
+
+        {/* 2. Timetable (Absorbs Activity Library, Templates & Resources) */}
+        {['calendar', 'library', 'templates', 'resources'].includes(currentView) && (
           <CalendarView
+            initialTab={
+              currentView === 'library'
+                ? 'library'
+                : currentView === 'templates'
+                ? 'templates'
+                : currentView === 'resources'
+                ? 'resources'
+                : 'grid'
+            }
+            onNavigate={handleNavigate}
             onOpenAISchedule={openAISchedule}
             onOpenAICommandCenter={() => setIsAICommandCenterOpen(true)}
             onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
@@ -290,26 +295,76 @@ export function AppContent() {
             onOpenAuth={() => setShowAuthPage(true)}
             onOpenMobileMenu={() => setIsMobileNavOpen(true)}
             onOpenAddBlock={() => setIsBlockModalOpen(true)}
-            onNavigateHome={() => handleNavigate('dashboard')}
+            onNavigateHome={() => handleNavigate('my-day')}
           />
         )}
-        {currentView === 'adaptive-planner' && <AdaptivePlannerView onNavigate={handleNavigate} />}
+
+        {/* 3. Planner (Absorbs Schedule Optimizer, Custom Planners & Assignments) */}
+        {['adaptive-planner', 'my-planners', 'assignments'].includes(currentView) && (
+          <PlannerHubView
+            initialTab={
+              currentView === 'my-planners'
+                ? 'custom-planners'
+                : currentView === 'assignments'
+                ? 'assignments'
+                : 'optimizer'
+            }
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* 4. Goals */}
         {currentView === 'goals' && <GoalsView onNavigate={handleNavigate} />}
-        {currentView === 'task-inbox' && (
-          <TaskInboxView onNavigate={handleNavigate} onStartFocusMode={handleStartFocusMode} />
+
+        {/* 5. Inbox & Notes (Absorbs Universal Task Inbox, Thought Space & Quick Capture) */}
+        {['task-inbox', 'thought-space'].includes(currentView) && (
+          <InboxAndNotesView
+            initialTab={currentView === 'thought-space' ? 'notes' : 'tasks'}
+            onNavigate={handleNavigate}
+            onStartFocusMode={handleStartFocusMode}
+            userEmail={userEmail}
+            onOpenAuth={() => setShowAuthPage(true)}
+          />
         )}
-        {currentView === 'thought-space' && <ThoughtSpaceView onNavigate={handleNavigate} />}
-        {currentView === 'assignments' && <AssignmentsView onNavigate={handleNavigate} />}
-        {currentView === 'library' && <LibraryView onNavigate={handleNavigate} />}
-        {currentView === 'resources' && <ResourcesView onNavigate={handleNavigate} />}
-        {currentView === 'templates' && <TemplatesView onNavigate={handleNavigate} />}
-        {currentView === 'analytics' && <AnalyticsView onNavigate={handleNavigate} />}
-        {currentView === 'execution' && <ExecutionDashboardView onNavigate={handleNavigate} />}
-        {currentView === 'ai-insights' && <AICoachView onNavigate={handleNavigate} />}
-        {currentView === 'reminders' && <RemindersView onNavigate={handleNavigate} />}
-        {currentView === 'settings' && (
-          <SettingsView userEmail={userEmail} onOpenAuth={() => setShowAuthPage(true)} onNavigate={handleNavigate} />
+
+        {/* 6. Focus (Dedicated Session Runner & Execution Timer) */}
+        {currentView === 'focus' && (
+          <FocusView
+            onNavigate={handleNavigate}
+            onStartFocusMode={handleStartFocusMode}
+          />
         )}
+
+        {/* 7. Insights (Consolidates Executive Dashboard, Analytics, Execution Intelligence & Smart Coach) */}
+        {['analytics', 'dashboard', 'execution', 'ai-insights'].includes(currentView) && (
+          <InsightsView
+            initialTab={
+              currentView === 'dashboard'
+                ? 'dashboard'
+                : currentView === 'execution'
+                ? 'execution'
+                : currentView === 'ai-insights'
+                ? 'coach'
+                : 'analytics'
+            }
+            onNavigate={handleNavigate}
+            userEmail={userEmail}
+            onStartFocusMode={() => handleStartFocusMode()}
+          />
+        )}
+
+        {/* 8. Settings (Settings, Preferences & Reminders) */}
+        {['settings', 'reminders'].includes(currentView) && (
+          <SettingsView
+            userEmail={userEmail}
+            onOpenAuth={() => setShowAuthPage(true)}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {/* Legal Disclosures */}
+        {currentView === 'privacy-policy' && <PrivacyPolicyView onNavigate={handleNavigate} />}
+        {currentView === 'terms' && <TermsOfServiceView onNavigate={handleNavigate} />}
       </main>
 
       {/* Mobile Bottom Navigation */}
@@ -399,8 +454,12 @@ export function AppContent() {
       {/* Interactive Onboarding Welcome Modal */}
       <OnboardingModal />
 
-      {/* Interactive Product Spotlight Tour */}
-      <GuidedTour onNavigate={setCurrentView} />
+      {/* Interactive Contextual Spotlight Tour */}
+      <InteractiveTour
+        isOpen={isTourActive}
+        onClose={closeTour}
+        onNavigate={handleNavigate}
+      />
 
       {/* Signature 2D Stickman Loading & Welcome Journey */}
       {showIntro && <BlockFlowIntro onComplete={handleIntroComplete} />}

@@ -5,7 +5,7 @@
  */
 
 const DB_NAME = 'BlockFlow_LocalDB_v1';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export const STORE_NAMES = [
   'tasks',
@@ -18,6 +18,8 @@ export const STORE_NAMES = [
   'reflections',
   'sync_settings',
   'thoughts',
+  'custom_planners',
+  'custom_planner_rows',
 ] as const;
 
 export type StoreName = (typeof STORE_NAMES)[number];

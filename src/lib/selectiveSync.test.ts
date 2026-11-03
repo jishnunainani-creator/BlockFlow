@@ -40,6 +40,7 @@ import {
 } from './selectiveSync.ts';
 import { syncLocalStateToSupabase } from './supabaseMigration.ts';
 import { idbPut, idbGet, idbDelete, idbGetAll } from './indexedDbStore.ts';
+import { formatAuthError } from './supabase.ts';
 import { loadTaskInbox, saveTaskInbox } from '../utils/taskInboxStorage.ts';
 import { loadAssignments, saveAssignments } from '../utils/assignmentStorage.ts';
 import { loadGoals, saveGoals, loadScheduledBlocks, saveScheduledBlocks } from '../utils/storage.ts';
@@ -339,6 +340,29 @@ describe('11. Supabase Environment Configuration & Secret Key Rejection', () => 
     const summary = await performSelectiveSync('mock-offline-user');
     assert.ok(summary);
     assert.strictEqual(summary.uploadedCount, 0);
+  });
+
+  test('formats Failed to fetch and network errors with actionable diagnostics', () => {
+    const error1 = new Error('Failed to fetch');
+    const formatted1 = formatAuthError(error1);
+    assert.ok(formatted1.includes('Unable to connect to Supabase Auth'));
+    assert.ok(formatted1.includes('ad-blocker'));
+    assert.ok(formatted1.includes('VITE_SUPABASE_URL'));
+
+    const error2 = { name: 'AuthRetryableFetchError', message: 'NetworkError when attempting to fetch resource.' };
+    const formatted2 = formatAuthError(error2);
+    assert.ok(formatted2.includes('Unable to connect to Supabase Auth'));
+  });
+
+  test('formats rate limits and common Supabase errors into human-friendly messages', () => {
+    const rateLimitErr = { code: 'over_email_send_rate_limit', message: 'email rate limit exceeded', status: 429 };
+    assert.ok(formatAuthError(rateLimitErr).includes('Email rate limit reached'));
+
+    const existsErr = { code: 'user_already_exists', message: 'User already registered' };
+    assert.ok(formatAuthError(existsErr).includes('already exists'));
+
+    const credsErr = { code: 'invalid_credentials', message: 'Invalid login credentials' };
+    assert.ok(formatAuthError(credsErr).includes('Incorrect email or password'));
   });
 });
 

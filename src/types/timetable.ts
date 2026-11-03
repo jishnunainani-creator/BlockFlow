@@ -52,6 +52,8 @@ export interface LibraryBlock {
   lastUsedAt?: number;
   usageCount?: number;
   storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
+  isFixed?: boolean;
+  isWorkload?: boolean;
   updatedAt?: number;
   syncedAt?: number;
 }
@@ -79,6 +81,7 @@ export interface ScheduledBlock {
   goalTitle?: string;
   goalComponentId?: string;
   isFixed?: boolean;
+  isWorkload?: boolean;
   taskId?: string;
   storageState?: 'local_only' | 'cloud_synced' | 'encrypted_cloud';
   updatedAt?: number;

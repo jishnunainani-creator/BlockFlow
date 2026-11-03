@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Goal, ScheduledBlock } from '../../types/timetable';
 import { calculateGoalMetrics } from '../../utils/goalEngine';
+import { selectCanonicalGoalProgress } from '../../utils/dataSelectors';
 import { useTimetable } from '../../context/TimetableContext';
 import { PlanGoalScheduleModal } from './PlanGoalScheduleModal';
 import { normalizeGoal } from '../../utils/storage';
@@ -36,8 +37,8 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   onUpdateGoal,
   onDeleteGoal,
 }) => {
-  const { currentWeekScheduledBlocks, scheduledBlocks, addToast } = useTimetable();
-  const allBlocks = currentWeekScheduledBlocks?.length > 0 ? currentWeekScheduledBlocks : scheduledBlocks || [];
+  const { scheduledBlocks, addToast } = useTimetable();
+  const allBlocks = scheduledBlocks || [];
 
   const [isPlanScheduleOpen, setIsPlanScheduleOpen] = useState(false);
   const [isEditingProgress, setIsEditingProgress] = useState(false);
@@ -48,7 +49,7 @@ export const GoalDetailModal: React.FC<GoalDetailModalProps> = ({
   if (!isOpen || !rawGoal) return null;
   const goal = normalizeGoal(rawGoal);
 
-  const metrics = calculateGoalMetrics(goal, allBlocks);
+  const metrics = selectCanonicalGoalProgress(goal, allBlocks);
   const linkedBlocks = allBlocks.filter((b) => b && b.goalId === goal.id);
 
   const handleUpdateCurrentValue = (newVal: number) => {

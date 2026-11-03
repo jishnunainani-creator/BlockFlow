@@ -5,6 +5,7 @@ import { playReminderChime } from '../../utils/notificationUtils';
 import { loadGoals, saveGoals, normalizeGoal } from '../../utils/storage';
 import { Goal } from '../../types/timetable';
 import { calculateGoalMetrics } from '../../utils/goalEngine';
+import { selectCanonicalGoalProgress } from '../../utils/dataSelectors';
 import {
   Bell,
   BellRing,
@@ -34,7 +35,7 @@ export const RemindersView: React.FC<RemindersViewProps> = ({ onNavigate }) => {
     addToast,
   } = useTimetable();
 
-  const allBlocks = currentWeekScheduledBlocks?.length > 0 ? currentWeekScheduledBlocks : scheduledBlocks || [];
+  const allBlocks = scheduledBlocks || [];
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [editingDeadlineGoalId, setEditingDeadlineGoalId] = useState<string | null>(null);
@@ -112,7 +113,7 @@ export const RemindersView: React.FC<RemindersViewProps> = ({ onNavigate }) => {
     .filter((g) => g.status === 'active')
     .map((g) => ({
       goal: g,
-      metrics: calculateGoalMetrics(g, allBlocks),
+      metrics: selectCanonicalGoalProgress(g, allBlocks),
     }));
 
   const overdueGoals = activeGoalsWithMetrics.filter((item) => item.metrics.isOverdue);

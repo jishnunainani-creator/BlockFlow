@@ -3,7 +3,7 @@ import { ScheduledBlock, CompletionStatus } from '../../types/timetable';
 import { useTimetable } from '../../context/TimetableContext';
 import { useTheme } from '../../context/ThemeContext';
 import { minutesToTimeStr, snapToResolution, formatDuration } from '../../utils/timeUtils';
-import { AlertTriangle, Check, Target } from 'lucide-react';
+import { AlertTriangle, Check, Target, Lock } from 'lucide-react';
 
 interface ScheduledBlockItemProps {
   block:        ScheduledBlock;
@@ -202,6 +202,7 @@ export const ScheduledBlockItemComponent: React.FC<ScheduledBlockItemProps> = ({
                   boxShadow: isDark ? `0 0 4px ${accentColor}80` : undefined,
                 }}
               />
+              {block.isFixed && <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />}
               {isConflicting && <AlertTriangle className="w-2.5 h-2.5 text-rose-500 shrink-0 animate-pulse" />}
               {isCompleted && <Check className="w-2.5 h-2.5 text-emerald-500 shrink-0" />}
               <span className={`${titleClass} text-[11px] truncate leading-none ${isCompleted ? 'line-through opacity-70' : ''}`}>
@@ -225,6 +226,7 @@ export const ScheduledBlockItemComponent: React.FC<ScheduledBlockItemProps> = ({
                 }}
               />
               {isSearchMatch && <span className="text-[10px] shrink-0 font-bold text-indigo-400">🔍</span>}
+              {block.isFixed && <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />}
               {isConflicting && <AlertTriangle className="w-2.5 h-2.5 text-rose-500 shrink-0 animate-pulse" />}
               {isCompleted && <Check className="w-2.5 h-2.5 text-emerald-500 shrink-0" />}
               <span className={`${titleClass} truncate flex-1 leading-tight ${isCompleted ? 'line-through opacity-70' : ''}`}>

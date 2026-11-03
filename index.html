@@ -1,18 +1,41 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light" class="light-theme light">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#090D16" />
+    <meta name="theme-color" content="#F7F7F4" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="BlockFlow" />
     <title>BlockFlow | Plan visually. Execute consistently. Improve intelligently.</title>
     <meta name="description" content="BlockFlow - Plan visually. Execute consistently. Improve intelligently. Reusable block timetable manager with AI productivity insights." />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('timetable_theme_mode_v2');
+          var mode = (saved && ['dark', 'light', 'system'].indexOf(saved) !== -1) ? saved : 'light';
+          var effective = mode;
+          if (mode === 'system') {
+            effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          document.documentElement.setAttribute('data-theme', effective);
+          if (effective === 'light') {
+            document.documentElement.classList.add('light-theme', 'light');
+            document.documentElement.classList.remove('dark-theme', 'dark');
+          } else {
+            document.documentElement.classList.add('dark-theme', 'dark');
+            document.documentElement.classList.remove('light-theme', 'light');
+          }
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+          document.documentElement.classList.add('light-theme', 'light');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

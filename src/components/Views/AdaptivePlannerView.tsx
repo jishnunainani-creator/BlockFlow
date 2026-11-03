@@ -717,8 +717,22 @@ export const AdaptivePlannerView: React.FC<AdaptivePlannerViewProps> = ({ onNavi
                               >
                                 {issue.severity}
                               </span>
+                              {issue.category === 'conflict' ? (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-rose-500/15 text-rose-300 border-rose-500/30">
+                                  🚨 Actual Conflict
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-blue-500/15 text-blue-300 border-blue-500/30">
+                                  💡 Optimization Suggestion
+                                </span>
+                              )}
                             </div>
                             <p className="text-xs text-slate-300 mt-1">{issue.whatHappened}</p>
+                            {issue.triggerReason && (
+                              <p className="text-[11px] text-slate-400 mt-1.5 font-mono bg-slate-950/60 px-2.5 py-1 rounded-md border border-slate-800/80">
+                                <span className="text-slate-500 font-semibold">Diagnostic Reason:</span> {issue.triggerReason}
+                              </p>
+                            )}
                           </div>
                         </div>
 
@@ -1221,16 +1235,18 @@ export const AdaptivePlannerView: React.FC<AdaptivePlannerViewProps> = ({ onNavi
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Max Daily Planned Workload (Hours)</label>
+                <label className="block text-slate-400 mb-1">
+                  Max Daily Planned Focus Workload (Hours) — Sleep & Meals Excluded
+                </label>
                 <input
                   type="number"
-                  min="4"
+                  min="2"
                   max="14"
                   value={config.maxDailyPlannedHours}
                   onChange={(e) =>
                     setConfig((prev) => ({
                       ...prev,
-                      maxDailyPlannedHours: Number(e.target.value) || 8,
+                      maxDailyPlannedHours: Number(e.target.value) || 6,
                     }))
                   }
                   className="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white"

@@ -62,15 +62,20 @@ export function generateAIInsights(
 ): AIInsight[] {
   const insights: AIInsight[] = [];
 
-  if (scheduledBlocks.length === 0) {
+  if (!scheduledBlocks || scheduledBlocks.length === 0) {
     insights.push({
       id: 'ins-empty',
       type: 'timing_suggestion',
       title: 'Schedule Your Week',
-      description: 'Your weekly timetable is currently empty. Drag activity blocks to build your routine.',
+      description: 'Your weekly timetable is currently empty. Add activity blocks to begin tracking productivity patterns.',
       icon: 'sparkles',
-      recommendation: 'Use "+ Create New Block" or "✨ AI Auto-Schedule" to build your week.',
-      confidence: 100,
+      recommendation: 'Use "+ Create New Block" or "Add Block" to populate your timetable.',
+      confidence: 0,
+      methodology: 'heuristic',
+      dataStatus: 'insufficient',
+      dataRequirement: 'Requires at least 3 scheduled blocks to generate productivity insights.',
+      sampleCount: 0,
+      minRequiredCount: 3,
     });
     return insights;
   }
@@ -85,38 +90,77 @@ export function generateAIInsights(
   const eveningSkipped = eveningBlocks.filter((b) => b.status === 'skipped' || b.status === 'missed').length;
   const eveningSkipRate = eveningBlocks.length > 0 ? Math.round((eveningSkipped / eveningBlocks.length) * 100) : 0;
 
-  if (morningBlocks.length > 0 && morningRate >= 70) {
+  if (morningBlocks.length < 3 && eveningBlocks.length < 3) {
     insights.push({
-      id: 'ins-morning-peak',
+      id: 'ins-circadian-gathering',
       type: 'peak_performance',
-      title: 'Morning Productivity Peak Identified',
-      description: `You achieve a ${morningRate}% completion rate for tasks scheduled before 12:00 PM.`,
-      icon: 'zap',
-      recommendation: 'Schedule your most demanding High-Priority tasks (e.g. DSA, Exams) between 8:00 AM and 11:30 AM.',
-      confidence: 94,
+      title: 'Analyzing Daily Energy Patterns',
+      description: `Gathering morning and evening history (${morningBlocks.length} morning, ${eveningBlocks.length} evening blocks recorded).`,
+      icon: 'clock',
+      recommendation: 'Schedule and complete at least 3 morning and 3 evening sessions to reveal your peak performance window.',
+      confidence: 0,
+      methodology: 'statistical',
+      dataStatus: 'insufficient',
+      dataRequirement: 'Requires at least 3 morning and 3 evening sessions.',
+      sampleCount: morningBlocks.length + eveningBlocks.length,
+      minRequiredCount: 6,
     });
+  } else {
+    if (morningBlocks.length >= 3 && morningRate >= 70) {
+      const confidence = Math.min(95, Math.round(65 + morningBlocks.length * 4));
+      insights.push({
+        id: 'ins-morning-peak',
+        type: 'peak_performance',
+        title: 'Morning Productivity Peak Identified',
+        description: `You achieved a ${morningRate}% completion rate across ${morningBlocks.length} morning sessions before 12:00 PM.`,
+        icon: 'zap',
+        recommendation: 'Schedule your most demanding High-Priority tasks (e.g. DSA, Exams) between 8:00 AM and 11:30 AM.',
+        confidence,
+        methodology: 'statistical',
+        dataStatus: 'sufficient',
+        sampleCount: morningBlocks.length,
+        minRequiredCount: 3,
+      });
+    }
+
+    if (eveningBlocks.length >= 3 && eveningSkipRate >= 40) {
+      const confidence = Math.min(92, Math.round(60 + eveningBlocks.length * 4));
+      insights.push({
+        id: 'ins-evening-skip',
+        type: 'skipped_trend',
+        title: 'Late Evening Activity Drop-off',
+        description: `Activities scheduled after 8:00 PM show a ${eveningSkipRate}% skip rate across ${eveningBlocks.length} evening sessions.`,
+        icon: 'alert-triangle',
+        recommendation: 'Shift workout or study sessions to late afternoon (04:00 PM – 06:00 PM) for better consistency.',
+        confidence,
+        methodology: 'statistical',
+        dataStatus: 'sufficient',
+        sampleCount: eveningBlocks.length,
+        minRequiredCount: 3,
+      });
+    }
   }
 
-  if (eveningBlocks.length > 0 && eveningSkipRate >= 40) {
-    insights.push({
-      id: 'ins-evening-skip',
-      type: 'skipped_trend',
-      title: 'Late Evening Activity Drop-off',
-      description: `Activities scheduled after 8:00 PM are skipped ${eveningSkipRate}% of the time due to fatigue.`,
-      icon: 'alert-triangle',
-      recommendation: 'Shift workout or study sessions to late afternoon (04:00 PM – 06:00 PM) for better consistency.',
-      confidence: 88,
-    });
-  }
-
-  // 2. High Priority Overload check (3+ consecutive high priority tasks without breaks)
-  let consecutiveHigh = 0;
+  // 2. High Priority Overload check (3+ consecutive high priority tasks without breaks on same day)
   let hasOverload = false;
-  scheduledBlocks.forEach((b) => {
-    if (b.priority === 'high') consecutiveHigh++;
-    else consecutiveHigh = 0;
-    if (consecutiveHigh >= 3) hasOverload = true;
-  });
+  for (let day = 0; day < 7; day++) {
+    const dayBlocks = scheduledBlocks
+      .filter((b) => b.dayOfWeek === day)
+      .sort((a, b) => a.startMinutes - b.startMinutes);
+    let consecutiveHigh = 0;
+    for (const b of dayBlocks) {
+      if (b.priority === 'high') {
+        consecutiveHigh++;
+        if (consecutiveHigh >= 3) {
+          hasOverload = true;
+          break;
+        }
+      } else {
+        consecutiveHigh = 0;
+      }
+    }
+    if (hasOverload) break;
+  }
 
   if (hasOverload) {
     insights.push({
@@ -126,22 +170,34 @@ export function generateAIInsights(
       description: 'You have 3 or more consecutive high-priority blocks scheduled without recovery breaks.',
       icon: 'shield-alert',
       recommendation: 'Insert 15-minute rest breaks or lower-intensity activities between high-focus blocks to prevent burnout.',
-      confidence: 91,
+      confidence: 90,
+      methodology: 'heuristic',
+      dataStatus: 'sufficient',
     });
   }
 
   // 3. Category Habit Insight
-  const fitnessBlocks = scheduledBlocks.filter((b) => b.title.toLowerCase().includes('gym') || b.title.toLowerCase().includes('workout'));
+  const fitnessBlocks = scheduledBlocks.filter(
+    (b) =>
+      b.title.toLowerCase().includes('gym') ||
+      b.title.toLowerCase().includes('workout') ||
+      b.title.toLowerCase().includes('fitness')
+  );
   const fitnessDone = fitnessBlocks.filter((b) => b.status === 'completed' || b.status === 'faster').length;
-  if (fitnessBlocks.length >= 2 && fitnessDone === fitnessBlocks.length) {
+  if (fitnessBlocks.length >= 3 && fitnessDone === fitnessBlocks.length) {
+    const confidence = Math.min(98, Math.round(75 + fitnessBlocks.length * 4));
     insights.push({
       id: 'ins-habit-fitness',
       type: 'positive_habit',
       title: 'Strong Fitness Habit Formation',
-      description: 'You have achieved a 100% completion rate for Gym & Workout sessions this week!',
+      description: `You achieved a 100% completion rate across ${fitnessBlocks.length} fitness sessions this week!`,
       icon: 'award',
       recommendation: 'Maintain your current workout timing slot to consolidate this habit.',
-      confidence: 98,
+      confidence,
+      methodology: 'statistical',
+      dataStatus: 'sufficient',
+      sampleCount: fitnessBlocks.length,
+      minRequiredCount: 3,
     });
   }
 
@@ -154,6 +210,31 @@ export function generateWeeklyAIReport(
 ): WeeklyAIReport {
   const metrics = calculateAdherenceMetrics(scheduledBlocks);
 
+  if (!scheduledBlocks || scheduledBlocks.length === 0) {
+    return {
+      weekId,
+      adherenceScore: 0,
+      adherenceGrade: 'D',
+      plannedHours: 0,
+      completedHours: 0,
+      completedTasksCount: 0,
+      totalTasksCount: 0,
+      skippedTasksCount: 0,
+      topPerformingDay: 'No activity recorded',
+      mostProductiveActivity: 'None recorded yet',
+      mostSkippedActivity: 'None recorded yet',
+      highlights: [
+        'Your timetable had no scheduled activities recorded for this week.',
+        'Schedule your study or work blocks to track weekly adherence and productivity patterns.',
+      ],
+      recommendations: [
+        'Add routine study or work blocks using the Timetable view.',
+        'Use Quick Capture to log sessions as they happen.',
+      ],
+      generatedAt: Date.now(),
+    };
+  }
+
   // Top day calculation
   const dayStats = DAYS_OF_WEEK.map((d) => {
     const dayBlocks = scheduledBlocks.filter((b) => b.dayOfWeek === d.index);
@@ -162,7 +243,7 @@ export function generateWeeklyAIReport(
   });
 
   const sortedDays = dayStats.sort((a, b) => b.done - a.done);
-  const topDay = sortedDays[0]?.name || 'Monday';
+  const topDay = sortedDays[0]?.done > 0 ? sortedDays[0].name : 'No completed days yet';
 
   // Most productive activity
   const activityCounts: Record<string, number> = {};
@@ -173,7 +254,8 @@ export function generateWeeklyAIReport(
   });
 
   const sortedActivities = Object.entries(activityCounts).sort((a, b) => b[1] - a[1]);
-  const mostProductiveActivity = sortedActivities[0]?.[0] || 'DSA Practice';
+  const mostProductiveActivity =
+    sortedActivities.length > 0 ? sortedActivities[0][0] : 'No sessions completed yet';
 
   // Most skipped
   const skippedCounts: Record<string, number> = {};
@@ -183,7 +265,34 @@ export function generateWeeklyAIReport(
     }
   });
   const sortedSkipped = Object.entries(skippedCounts).sort((a, b) => b[1] - a[1]);
-  const mostSkippedActivity = sortedSkipped[0]?.[0] || 'Late Night Reading';
+  const mostSkippedActivity =
+    sortedSkipped.length > 0 ? sortedSkipped[0][0] : 'Zero skipped sessions';
+
+  const highlights: string[] = [
+    `Achieved a ${metrics.adherenceScore}% schedule adherence grade (${metrics.grade}).`,
+    `Completed ${metrics.completedHours}h out of ${metrics.plannedHours}h planned workload.`,
+  ];
+  if (sortedDays[0]?.done > 0) {
+    highlights.push(`Peak productivity achieved on ${topDay}.`);
+  }
+  if (sortedSkipped.length === 0 && metrics.completedCount > 0) {
+    highlights.push('Zero sessions skipped: 100% adherence on scheduled sessions.');
+  }
+
+  const recommendations: string[] = [];
+  if (sortedActivities.length > 0) {
+    recommendations.push(
+      `Schedule your most demanding ${mostProductiveActivity} sessions between 08:00 AM and 11:30 AM.`
+    );
+  }
+  if (sortedSkipped.length > 0) {
+    recommendations.push(
+      `Consider moving ${mostSkippedActivity} to an earlier slot to improve completion rate.`
+    );
+  } else {
+    recommendations.push('Maintain regular 15-minute recovery intervals between high-priority sessions.');
+  }
+  recommendations.push('Keep reviewing your execution metrics weekly to refine time allocations.');
 
   return {
     weekId,
@@ -197,16 +306,8 @@ export function generateWeeklyAIReport(
     topPerformingDay: topDay,
     mostProductiveActivity,
     mostSkippedActivity,
-    highlights: [
-      `Achieved a ${metrics.adherenceScore}% schedule adherence grade (${metrics.grade}).`,
-      `Completed ${metrics.completedHours}h out of ${metrics.plannedHours}h planned workload.`,
-      `Peak productivity achieved on ${topDay}.`,
-    ],
-    recommendations: [
-      `Schedule your most demanding ${mostProductiveActivity} sessions between 08:00 AM and 11:30 AM.`,
-      `Consider moving ${mostSkippedActivity} to an earlier afternoon slot to improve completion rate.`,
-      `Maintain regular 15-minute recovery intervals between high-priority sessions.`,
-    ],
+    highlights,
+    recommendations,
     generatedAt: Date.now(),
   };
 }
@@ -338,7 +439,7 @@ export function getProductivityDNA(params?: {
   const daysTracked = Object.keys(params?.dailyScores || {}).length;
 
   // 1. Peak Focus Window
-  let peakFocusWindow = 'Insufficient data (3+ completed blocks required)';
+  let peakFocusWindow = `Gathering data: needs 3+ completed sessions (currently ${completedCount}/3)`;
   if (completedCount >= 3) {
     let morning = 0;
     let afternoon = 0;
@@ -355,7 +456,7 @@ export function getProductivityDNA(params?: {
   }
 
   // 2. Preferred Session Duration
-  let preferredSessionMinutes = 'Insufficient data';
+  let preferredSessionMinutes = `Needs 3+ completed sessions (currently ${completedCount}/3)`;
   if (completedCount >= 3) {
     const avgDuration = Math.round(
       completedBlocks.reduce((sum, b) => sum + (b.duration || 60), 0) / completedCount
@@ -364,8 +465,8 @@ export function getProductivityDNA(params?: {
   }
 
   // 3. Most Productive Day
-  let mostProductiveDay = 'Gathering history (7+ days required)';
-  if (daysTracked >= 7 || completedCount >= 10) {
+  let mostProductiveDay = `Needs 5+ completed sessions (currently ${completedCount}/5)`;
+  if (completedCount >= 5) {
     const dayCounts = [0, 0, 0, 0, 0, 0, 0];
     completedBlocks.forEach((b) => {
       if (typeof b.dayOfWeek === 'number' && b.dayOfWeek >= 0 && b.dayOfWeek <= 6) {
@@ -386,14 +487,14 @@ export function getProductivityDNA(params?: {
   }
 
   // 4. Least Productive Time / Fatigue Drop-off
-  let leastProductiveTime = 'Gathering history';
+  let leastProductiveTime = `Needs 5+ blocks (currently ${allBlocks.length}/5)`;
   if (allBlocks.length >= 5) {
     const eveningBlocks = allBlocks.filter((b) => b.startMinutes >= 1200);
     const eveningSkipped = eveningBlocks.filter((b) => b.status === 'skipped' || b.status === 'missed').length;
-    if (eveningBlocks.length > 0 && eveningSkipped / eveningBlocks.length >= 0.4) {
+    if (eveningBlocks.length >= 3 && eveningSkipped / eveningBlocks.length >= 0.4) {
       leastProductiveTime = 'After 8:00 PM (Fatigue drop-off)';
     } else {
-      leastProductiveTime = 'No distinct drop-off';
+      leastProductiveTime = 'No distinct drop-off detected';
     }
   }
 

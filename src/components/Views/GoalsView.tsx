@@ -3,6 +3,7 @@ import { useTimetable } from '../../context/TimetableContext';
 import { Goal } from '../../types/timetable';
 import { loadGoals, saveGoals, normalizeGoal, isSmartOnboardingSeen } from '../../utils/storage';
 import { calculateGoalMetrics } from '../../utils/goalEngine';
+import { selectCanonicalGoalProgress } from '../../utils/dataSelectors';
 import { GoalWizardModal } from '../Goals/GoalWizardModal';
 import { GoalDetailModal } from '../Goals/GoalDetailModal';
 import { PlanGoalScheduleModal } from '../Goals/PlanGoalScheduleModal';
@@ -33,8 +34,8 @@ interface GoalsViewProps {
 }
 
 export const GoalsView: React.FC<GoalsViewProps> = ({ onNavigate }) => {
-  const { currentWeekScheduledBlocks, scheduledBlocks, addToast } = useTimetable();
-  const allBlocks = currentWeekScheduledBlocks?.length > 0 ? currentWeekScheduledBlocks : scheduledBlocks || [];
+  const { scheduledBlocks, addToast } = useTimetable();
+  const allBlocks = scheduledBlocks || [];
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [activeTab, setActiveTab] = useState<TabFilter>('active');
@@ -107,7 +108,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onNavigate }) => {
   const goalsWithMetrics = React.useMemo(() => {
     return goals.map((g) => ({
       goal: g,
-      metrics: calculateGoalMetrics(g, allBlocks),
+      metrics: selectCanonicalGoalProgress(g, allBlocks),
     }));
   }, [goals, allBlocks]);
 

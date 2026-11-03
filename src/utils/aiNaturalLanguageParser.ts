@@ -18,7 +18,7 @@ export function parseNaturalLanguageSchedule(
   input: string,
   existingBlocks: ScheduledBlock[] = []
 ): ParsedScheduleResult {
-  const clean = input.trim();
+  const clean = (input || '').trim();
   const lower = clean.toLowerCase();
 
   // 1. Detect Day of Week
@@ -54,7 +54,7 @@ export function parseNaturalLanguageSchedule(
     startMinutes = 540; // 09:00 AM
   }
 
-  // Time matching regex like "9 to 10:30", "from 6 to 7 PM", "9:00 - 10:30"
+  // Time matching regex like "9 to 10:30", "from 6 to 7 PM", "9:00 - 10:30", "11pm to 1am"
   const timeRangeMatch = clean.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\s*(?:to|-|until)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
   if (timeRangeMatch) {
     let startH = parseInt(timeRangeMatch[1], 10);
@@ -66,15 +66,23 @@ export function parseNaturalLanguageSchedule(
     const endAmPm = (timeRangeMatch[6] || '').toLowerCase();
 
     if (startAmPm === 'pm' && startH < 12) startH += 12;
+    if (startAmPm === 'am' && startH === 12) startH = 0;
     if (endAmPm === 'pm' && endH < 12) endH += 12;
+    if (endAmPm === 'am' && endH === 12) endH = 0;
 
-    // Handle relative 6 to 7 PM where PM only specified at end
+    // Handle relative "6 to 7 PM" where PM only specified at end
     if (endAmPm === 'pm' && !startAmPm && startH < 12) {
       startH += 12;
     }
 
     startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
+    let endMinutes = endH * 60 + endM;
+
+    // Midnight crossover handling: e.g. 11 PM (1380m) to 1 AM (60m)
+    if (endMinutes < startMinutes) {
+      endMinutes += 1440;
+    }
+
     if (endMinutes > startMinutes) {
       duration = endMinutes - startMinutes;
     }
@@ -91,6 +99,10 @@ export function parseNaturalLanguageSchedule(
       duration = val;
     }
   }
+
+  // Safety clamps
+  duration = Math.min(720, Math.max(15, duration));
+  startMinutes = Math.min(1439, Math.max(0, startMinutes));
 
   // 3. Detect Priority & Category
   let priority: Priority = 'medium';
@@ -154,7 +166,7 @@ export function parseNaturalLanguageSchedule(
     duration,
     priority,
     category,
-    description: `AI Scheduled from natural input: "${input}"`,
+    description: `Deterministic Schedule Parser: "${clean || 'Default'}"`,
     hasConflict,
     conflictMessage,
     suggestedStartMinutes,

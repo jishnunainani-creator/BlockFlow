@@ -38,6 +38,8 @@ export function migrateBlockFlowJSON(rawJson: string | object): MigrationResult 
     icon: b.icon || 'sparkles',
     usageCount: b.usageCount || 0,
     lastUsedAt: b.lastUsedAt || Date.now(),
+    isFixed: b.isFixed !== undefined ? b.isFixed : undefined,
+    isWorkload: b.isWorkload !== undefined ? b.isWorkload : undefined,
   }));
 
   // 2. Extract Scheduled Blocks across ALL Historical Weeks
@@ -72,6 +74,8 @@ export function migrateBlockFlowJSON(rawJson: string | object): MigrationResult 
             status: b.status || 'not_started',
             actualDuration: b.actualDuration,
             completedAt: b.completedAt,
+            isFixed: b.isFixed !== undefined ? b.isFixed : undefined,
+            isWorkload: b.isWorkload !== undefined ? b.isWorkload : undefined,
           };
         });
 

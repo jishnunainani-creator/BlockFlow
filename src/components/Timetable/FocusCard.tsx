@@ -276,6 +276,28 @@ export const FocusCard: React.FC<FocusCardProps> = ({ block, cardRect, onClose }
                 <span>{statusCfg.label}</span>
               </button>
 
+              {/* Fixed vs Flexible Commitment Toggle */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextFixed = !block.isFixed;
+                  updateScheduledBlock(block.id, { isFixed: nextFixed });
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                  block.isFixed
+                    ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                    : 'bg-slate-800 text-slate-300 border-slate-700/60 hover:text-white'
+                }`}
+                title={
+                  block.isFixed
+                    ? 'Fixed Commitment (Immovable: class, lecture, exam, shift)'
+                    : 'Flexible Activity (Reschedulable: self-study, task, project)'
+                }
+              >
+                <span>{block.isFixed ? '🔒 Fixed Commitment' : '🔄 Flexible Activity'}</span>
+              </button>
+
               {/* Log Session Reality & Replace Activity Actions */}
               <div className="w-full grid grid-cols-2 gap-2 pt-1">
                 <button

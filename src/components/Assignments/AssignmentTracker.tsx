@@ -297,12 +297,12 @@ export default function AssignmentTracker() {
                   <select
                     value={asgn.status}
                     onChange={(e) => handleStatusChange(asgn.id, e.target.value as any)}
-                    className="bg-slate-950 border border-slate-800 text-xs font-semibold rounded-lg px-2 py-1 text-slate-300 focus:outline-none focus:border-indigo-500"
+                    className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold rounded-lg px-2 py-1 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors"
                   >
-                    <option value="pending">Pending</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="submitted">Submitted</option>
-                    <option value="graded">Graded</option>
+                    <option value="pending" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Pending</option>
+                    <option value="in_progress" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">In Progress</option>
+                    <option value="submitted" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Submitted</option>
+                    <option value="graded" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Graded</option>
                   </select>
                 </div>
               </div>
@@ -377,94 +377,94 @@ export default function AssignmentTracker() {
       {/* Add / Edit Assignment Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 {editingId ? 'Edit Assignment' : 'New Assignment'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
                 <X size={18} />
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Subject / Course</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Subject / Course</label>
                 <input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
                   placeholder="e.g. CS 401 — Operating Systems"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Assignment Title</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Assignment Title</label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
                   placeholder="e.g. Database Design Project"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Due Date</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Due Date</label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Estimated Hours</label>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Estimated Hours</label>
                   <input
                     type="number"
                     min="1"
                     max="50"
                     value={estimatedHours}
                     onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Priority</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors"
                 >
-                  <option value="high">High Priority</option>
-                  <option value="medium">Medium Priority</option>
-                  <option value="low">Low Priority</option>
+                  <option value="high" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">High Priority</option>
+                  <option value="medium" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Medium Priority</option>
+                  <option value="low" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">Low Priority</option>
                 </select>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Description (Optional)</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase block mb-1">Description (Optional)</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-white h-20 resize-none focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-slate-900 dark:text-white placeholder-slate-400 h-20 resize-none focus:outline-none focus:border-indigo-500 transition-colors"
                   placeholder="Deliverables, requirements, links..."
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 text-slate-300 font-semibold rounded-xl text-xs"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveAssignment}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition-colors shadow-sm"
               >
                 Save &amp; Generate AI Plan
               </button>

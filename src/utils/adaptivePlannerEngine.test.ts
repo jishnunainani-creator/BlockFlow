@@ -537,4 +537,308 @@ describe('Adaptive Planner Engine - 15 Scenario Test Suite', () => {
     const conflicts = issues.filter((i) => i.type === 'schedule_conflict');
     assert.strictEqual(conflicts.length, 0);
   });
+
+  // ═════════════════════════════════════════════════════════════════════
+  // PHASE 4 SPECIFIC WORKLOAD, OVERLOAD & FIXED COMMITMENT TESTS
+  // ═════════════════════════════════════════════════════════════════════
+
+  test('Phase 4.1: Sleep and meals only — completely excluded from workload calculation', () => {
+    // 12 hours of sleep, meals, and rest on Monday (dayOfWeek: 0)
+    const restorativeBlocks: ScheduledBlock[] = [
+      {
+        id: 'b-sleep',
+        blockId: 'sleep',
+        title: 'Sleep (Restorative)',
+        color: '#64748B',
+        priority: 'personal',
+        icon: 'moon',
+        dayOfWeek: 0,
+        startMinutes: 0,
+        duration: 480, // 8 hours
+        weekId: currentWeekId,
+      },
+      {
+        id: 'b-breakfast',
+        blockId: 'breakfast',
+        title: 'Breakfast & Morning Routine',
+        color: '#64748B',
+        priority: 'personal',
+        icon: 'coffee',
+        dayOfWeek: 0,
+        startMinutes: 480,
+        duration: 60, // 1 hour
+        weekId: currentWeekId,
+      },
+      {
+        id: 'b-lunch',
+        blockId: 'lunch',
+        title: 'Lunch Break & Walk',
+        color: '#64748B',
+        priority: 'personal',
+        icon: 'coffee',
+        dayOfWeek: 0,
+        startMinutes: 720,
+        duration: 60, // 1 hour
+        weekId: currentWeekId,
+      },
+      {
+        id: 'b-dinner',
+        blockId: 'dinner',
+        title: 'Dinner with Family',
+        color: '#64748B',
+        priority: 'personal',
+        icon: 'utensils',
+        dayOfWeek: 0,
+        startMinutes: 1140,
+        duration: 60, // 1 hour
+        weekId: currentWeekId,
+      },
+      {
+        id: 'b-downtime',
+        blockId: 'downtime',
+        title: 'Evening Downtime & Rest',
+        color: '#64748B',
+        priority: 'personal',
+        icon: 'heart',
+        dayOfWeek: 0,
+        startMinutes: 1260,
+        duration: 60, // 1 hour
+        weekId: currentWeekId,
+      },
+    ];
+
+    const issues = detectPlanningIssues({
+      tasks: [],
+      scheduledBlocks: restorativeBlocks,
+      referenceDate: refDate,
+      currentWeekId,
+      config: { maxDailyPlannedHours: 6 },
+    });
+
+    const overloadIssues = issues.filter((i) => i.type === 'overloaded_day');
+    // 12 hours scheduled, but 0 hours workload: MUST NOT trigger overloaded_day!
+    assert.strictEqual(overloadIssues.length, 0);
+  });
+
+  test('Phase 4.2: Fixed classes only — 4h classes + 8h sleep remains below 6h threshold', () => {
+    const fixedClassesBlocks: ScheduledBlock[] = [
+      {
+        id: 'b-sleep-2',
+        blockId: 'sleep',
+        title: 'Sleep',
+        color: '#64748B',
+        priority: 'personal',
+        icon: 'moon',
+        dayOfWeek: 0,
+        startMinutes: 0,
+        duration: 480, // 8h
+        weekId: currentWeekId,
+      },
+      {
+        id: 'b-class-1',
+        blockId: 'cse213',
+        title: 'CSE 213 SEC-1 Algorithms Lecture',
+        color: '#06B6D4',
+        priority: 'high',
+        icon: 'code',
+        dayOfWeek: 0,
+        startMinutes: 540,
+        duration: 120, // 2h
+        weekId: currentWeekId,
+        isFixed: true,
+      },
+      {
+        id: 'b-class-2',
+        blockId: 'enr211',
+        title: 'ENR 211 SEC-2 Engineering Math',
+        color: '#10B981',
+        priority: 'high',
+        icon: 'brain',
+        dayOfWeek: 0,
+        startMinutes: 720,
+        duration: 120, // 2h
+        weekId: currentWeekId,
+        isFixed: true,
+      },
+    ];
+
+    const issues = detectPlanningIssues({
+      tasks: [],
+      scheduledBlocks: fixedClassesBlocks,
+      referenceDate: refDate,
+      currentWeekId,
+      config: { maxDailyPlannedHours: 6 },
+    });
+
+    const overloadIssues = issues.filter((i) => i.type === 'overloaded_day');
+    // 4 hours workload is below the 6-hour limit
+    assert.strictEqual(overloadIssues.length, 0);
+  });
+
+  test('Phase 4.3: Flexible work only — 3h self-study is below 6h threshold', () => {
+    const flexibleBlocks: ScheduledBlock[] = [
+      {
+        id: 'b-study',
+        blockId: 'study',
+        title: 'Independent Research & Reading',
+        color: '#8B5CF6',
+        priority: 'medium',
+        icon: 'book',
+        dayOfWeek: 0,
+        startMinutes: 600,
+        duration: 180, // 3h
+        weekId: currentWeekId,
+        isFixed: false,
+      },
+    ];
+
+    const issues = detectPlanningIssues({
+      tasks: [],
+      scheduledBlocks: flexibleBlocks,
+      referenceDate: refDate,
+      currentWeekId,
+      config: { maxDailyPlannedHours: 6 },
+    });
+
+    const overloadIssues = issues.filter((i) => i.type === 'overloaded_day');
+    assert.strictEqual(overloadIssues.length, 0);
+  });
+
+  test('Phase 4.4: No tasks — executes safely and produces zero false task moves', () => {
+    const issues = detectPlanningIssues({
+      tasks: [],
+      scheduledBlocks: [],
+      referenceDate: refDate,
+      currentWeekId,
+    });
+
+    assert.strictEqual(issues.length, 0);
+  });
+
+  test('Phase 4.5: Mixed fixed and flexible work exceeding 6h threshold — proposal ONLY redistributes flexible work', () => {
+    const mixedBlocks: ScheduledBlock[] = [
+      {
+        id: 'b-sleep-mix',
+        blockId: 'sleep',
+        title: 'Sleep',
+        color: '#64748B',
+        priority: 'personal',
+        icon: 'moon',
+        dayOfWeek: 0,
+        startMinutes: 0,
+        duration: 480, // 8h
+        weekId: currentWeekId,
+      },
+      {
+        id: 'b-fixed-lecture',
+        blockId: 'lecture',
+        title: 'Computer Architecture Lecture (SEC-1)',
+        color: '#06B6D4',
+        priority: 'high',
+        icon: 'cpu',
+        dayOfWeek: 0,
+        startMinutes: 540,
+        duration: 240, // 4 hours fixed
+        weekId: currentWeekId,
+        isFixed: true,
+      },
+      {
+        id: 'b-flex-dsa',
+        blockId: 'dsa',
+        title: 'LeetCode Practice Session',
+        color: '#EC4899',
+        priority: 'medium',
+        icon: 'code',
+        dayOfWeek: 0,
+        startMinutes: 840,
+        duration: 210, // 3.5 hours flexible (total workload = 7.5h > 6h threshold)
+        weekId: currentWeekId,
+        isFixed: false,
+      },
+    ];
+
+    const issues = detectPlanningIssues({
+      tasks: [],
+      scheduledBlocks: mixedBlocks,
+      referenceDate: refDate,
+      currentWeekId,
+      config: { maxDailyPlannedHours: 6 },
+    });
+
+    const overloadIssues = issues.filter((i) => i.type === 'overloaded_day');
+    assert.strictEqual(overloadIssues.length, 1);
+    assert.strictEqual(overloadIssues[0].category, 'suggestion');
+    assert.ok(overloadIssues[0].whatHappened.includes('7.5h'));
+    assert.ok(overloadIssues[0].whatHappened.includes('8.0h of sleep'));
+    assert.ok(overloadIssues[0].recommendedAction.includes('LeetCode Practice Session'));
+
+    // When generating proposal for this overload, it MUST target the flexible block 'b-flex-dsa', NEVER the fixed lecture!
+    const proposal = generateProposalForIssue({
+      issue: overloadIssues[0],
+      scheduledBlocks: mixedBlocks,
+      referenceDate: refDate,
+      currentWeekId,
+      config: { maxDailyPlannedHours: 6 },
+    });
+
+    assert.notStrictEqual(proposal, null);
+    assert.strictEqual(proposal?.entityId, 'b-flex-dsa');
+    assert.notStrictEqual(proposal?.entityId, 'b-fixed-lecture');
+  });
+
+  test('Phase 4.6: More than configured threshold with ONLY fixed commitments — does NOT recommend moving nonexistent flexible tasks', () => {
+    // 7 hours of fixed lectures on Monday
+    const allFixedBlocks: ScheduledBlock[] = [
+      {
+        id: 'b-fixed-lab',
+        blockId: 'lab',
+        title: 'Operating Systems Operating Lab (SEC-1)',
+        color: '#06B6D4',
+        priority: 'high',
+        icon: 'terminal',
+        dayOfWeek: 0,
+        startMinutes: 540,
+        duration: 240, // 4h fixed
+        weekId: currentWeekId,
+        isFixed: true,
+      },
+      {
+        id: 'b-fixed-exam',
+        blockId: 'exam',
+        title: 'Midterm Examination (Immovable)',
+        color: '#EF4444',
+        priority: 'high',
+        icon: 'file-text',
+        dayOfWeek: 0,
+        startMinutes: 840,
+        duration: 180, // 3h fixed (total = 7h > 6h threshold)
+        weekId: currentWeekId,
+        isFixed: true,
+      },
+    ];
+
+    const issues = detectPlanningIssues({
+      tasks: [],
+      scheduledBlocks: allFixedBlocks,
+      referenceDate: refDate,
+      currentWeekId,
+      config: { maxDailyPlannedHours: 6 },
+    });
+
+    const overloadIssues = issues.filter((i) => i.type === 'overloaded_day');
+    assert.strictEqual(overloadIssues.length, 1);
+    // Explicitly states all activities are Fixed commitments!
+    assert.ok(overloadIssues[0].recommendedAction.includes('All scheduled activities on Monday are designated as Fixed commitments'));
+
+    // Engine refuses to auto-redistribute fixed commitments
+    const proposal = generateProposalForIssue({
+      issue: overloadIssues[0],
+      scheduledBlocks: allFixedBlocks,
+      referenceDate: refDate,
+      currentWeekId,
+      config: { maxDailyPlannedHours: 6 },
+    });
+
+    assert.strictEqual(proposal, null);
+  });
 });

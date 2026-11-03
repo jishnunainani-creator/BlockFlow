@@ -2,6 +2,7 @@ import React from 'react';
 import { useTimetable } from '../../context/TimetableContext';
 import { PRIORITY_CONFIG, Priority } from '../../types/timetable';
 import { formatDuration, DAYS_OF_WEEK } from '../../utils/timeUtils';
+import { selectCanonicalExecutionScore, selectBlockCounts } from '../../utils/dataSelectors';
 import {
   X,
   PieChart,
@@ -47,13 +48,13 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({ isOpen, onClose 
   );
   const missedBlocks = currentWeekScheduledBlocks.filter((b) => b.status === 'missed');
   
-  const completionRate = currentWeekScheduledBlocks.length > 0
-    ? Math.round((completedBlocks.length / currentWeekScheduledBlocks.length) * 100)
-    : 0;
+  const stats = selectBlockCounts(currentWeekScheduledBlocks);
+  const completionRate = stats.completionRatePct;
 
-  // Productivity & Focus Scores
-  const productivityScore = Math.min(100, Math.round(completionRate * 0.8 + (studyMinutes > 300 ? 20 : 10)));
-  const focusScore = Math.min(100, Math.round(85 + (completedBlocks.length > 3 ? 10 : 0) - missedBlocks.length * 5));
+  // Canonical Productivity & Focus Scores derived from unified selectors
+  const canonicalMetrics = selectCanonicalExecutionScore({ blocks: currentWeekScheduledBlocks });
+  const productivityScore = canonicalMetrics.overallScore;
+  const focusScore = canonicalMetrics.focusScore;
 
   // Daily distribution
   const dailyTotals = DAYS_OF_WEEK.map((day) => {

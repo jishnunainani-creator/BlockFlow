@@ -8,6 +8,7 @@ import { loadTaskInbox, saveTaskInbox } from '../../utils/taskInboxStorage';
 import { loadAssignments } from '../../utils/assignmentStorage';
 import { loadGoals } from '../../utils/storage';
 import { getISOWeekString } from '../../utils/timeUtils';
+import { selectTodayBlocks, selectBlockCounts } from '../../utils/dataSelectors';
 
 import { MyDayHeader } from '../MyDay/MyDayHeader';
 import { DailyScheduleList } from '../MyDay/DailyScheduleList';
@@ -68,25 +69,18 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
     setGoals(loadGoals());
   }, []);
 
-  // Filter scheduled blocks for the selected date
+  // Filter scheduled blocks for the selected date using canonical selector
   const selectedDateBlocks = useMemo(() => {
-    const weekId = getISOWeekString(selectedDate);
-    const dayOfWeek = (selectedDate.getDay() + 6) % 7;
-    return (scheduledBlocks || []).filter(
-      (b) => b && b.weekId === weekId && b.dayOfWeek === dayOfWeek
-    );
+    return selectTodayBlocks(scheduledBlocks, selectedDate);
   }, [scheduledBlocks, selectedDate]);
 
-  // Workload summary calculations
-  const totalScheduledMinutes = useMemo(() => {
-    return selectedDateBlocks.reduce((acc, b) => acc + (b.duration || 0), 0);
+  // Workload summary calculations using canonical selector
+  const blockStats = useMemo(() => {
+    return selectBlockCounts(selectedDateBlocks);
   }, [selectedDateBlocks]);
 
-  const completedBlocksCount = useMemo(() => {
-    return selectedDateBlocks.filter(
-      (b) => b.status === 'completed' || b.status === 'faster'
-    ).length;
-  }, [selectedDateBlocks]);
+  const totalScheduledMinutes = blockStats.totalPlannedMinutes;
+  const completedBlocksCount = blockStats.completed;
 
   // Tasks due on selected date or overdue
   const selectedYMD = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;

@@ -176,7 +176,7 @@ html[data-theme="light"] .text-slate-100:not(.auth-brand-panel, .auth-brand-pane
   color: var(--text-primary) !important;
 }
 
-/* Fix text-white on headings, labels and inputs in light mode */
+/* Fix text-white on headings, labels, inputs, textareas and selects in light mode */
 html.light-theme h1.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html.light-theme h2.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html.light-theme h3.text-white:not(.auth-brand-panel, .auth-brand-panel *),
@@ -185,6 +185,10 @@ html.light-theme h5.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html.light-theme h6.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html.light-theme p.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html.light-theme input.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme textarea.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme select.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme textarea:not(.auth-brand-panel, .auth-brand-panel *),
+html.light-theme select:not(.auth-brand-panel, .auth-brand-panel *),
 html[data-theme="light"] h1.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html[data-theme="light"] h2.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html[data-theme="light"] h3.text-white:not(.auth-brand-panel, .auth-brand-panel *),
@@ -192,8 +196,49 @@ html[data-theme="light"] h4.text-white:not(.auth-brand-panel, .auth-brand-panel 
 html[data-theme="light"] h5.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html[data-theme="light"] h6.text-white:not(.auth-brand-panel, .auth-brand-panel *),
 html[data-theme="light"] p.text-white:not(.auth-brand-panel, .auth-brand-panel *),
-html[data-theme="light"] input.text-white:not(.auth-brand-panel, .auth-brand-panel *) {
+html[data-theme="light"] input.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] textarea.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] select.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] textarea:not(.auth-brand-panel, .auth-brand-panel *),
+html[data-theme="light"] select:not(.auth-brand-panel, .auth-brand-panel *),
+html.light h1.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light h2.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light h3.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light h4.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light h5.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light h6.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light p.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light input.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light textarea.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light select.text-white:not(.auth-brand-panel, .auth-brand-panel *),
+html.light textarea:not(.auth-brand-panel, .auth-brand-panel *),
+html.light select:not(.auth-brand-panel, .auth-brand-panel *) {
   color: var(--text-primary) !important;
+}
+
+/* Ensure select option dropdown elements have crisp high-contrast background and text in all themes */
+html.light-theme option,
+html[data-theme="light"] option,
+html.light option {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark-theme option,
+html[data-theme="dark"] option,
+html.dark option {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Ensure placeholder text is legible on light surfaces */
+html.light-theme input::placeholder,
+html.light-theme textarea::placeholder,
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder,
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: var(--text-muted) !important;
 }
 
 html.light-theme span.text-white:not(

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isSupabaseConfigured, signInWithEmail, signUpWithEmail, signInWithOAuth } from '../../lib/supabase';
+import { isSupabaseConfigured, signInWithEmail, signUpWithEmail, signInWithOAuth, formatAuthError } from '../../lib/supabase';
 import { X, Mail, Lock, LogIn, UserPlus, AlertCircle, CheckCircle2, ShieldCheck, HardDrive } from 'lucide-react';
 
 interface AuthModalProps {
@@ -42,7 +42,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         setTimeout(onClose, 1000);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
+      setErrorMsg(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       const { error } = await signInWithOAuth(provider);
       if (error) throw error;
     } catch (err: any) {
-      setErrorMsg(err.message || `Failed to sign in with ${provider}.`);
+      setErrorMsg(formatAuthError(err));
     }
   };
 
@@ -106,8 +106,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
         {/* Alert Error / Success */}
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2 whitespace-pre-line">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -207,6 +207,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
               </button>
             </span>
           )}
+        </div>
+
+        {/* Legal & Privacy Disclosure Notice */}
+        <div className="text-center text-[10px] text-slate-500 pt-2 border-t border-slate-800/80">
+          By signing in or creating an account, you acknowledge our{' '}
+          <a
+            href="/privacy"
+            onClick={(e) => {
+              e.preventDefault();
+              onClose();
+              window.history.pushState({}, '', '/privacy');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            className="text-slate-400 hover:text-slate-300 underline"
+          >
+            Privacy Policy
+          </a>{' '}
+          and{' '}
+          <a
+            href="/terms"
+            onClick={(e) => {
+              e.preventDefault();
+              onClose();
+              window.history.pushState({}, '', '/terms');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+            className="text-slate-400 hover:text-slate-300 underline"
+          >
+            Terms of Service
+          </a>
+          .
         </div>
       </div>
     </div>

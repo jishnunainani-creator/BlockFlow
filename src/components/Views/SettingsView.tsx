@@ -24,6 +24,7 @@ import {
   Rocket,
   RotateCcw,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import { NavView } from '../Navigation/Sidebar';
 import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
@@ -95,6 +96,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
             {userEmail ? 'Switch / Manage Account' : 'Sign In to Sync Cloud'}
           </button>
         </div>
+
+        {!userEmail && (
+          <div className="mt-2 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200/90 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-amber-300">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>Guest Mode — Browser Storage Notice</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-amber-200/80">
+              Your timetable, tasks, goals, and notes live strictly inside this browser on this device. Clearing browser cache, cookies, or using private browsing will permanently remove your data. It does not automatically follow you across devices. We recommend exporting periodic JSON backups.
+            </p>
+            <div className="pt-1 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={exportJSONBackup}
+                className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 rounded-lg text-[11px] font-semibold transition-colors flex items-center gap-1.5"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Local Backup (.json)</span>
+              </button>
+              <button
+                type="button"
+                onClick={onOpenAuth}
+                className="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/30 rounded-lg text-[11px] font-semibold transition-colors"
+              >
+                Sign In to Enable Cloud Sync
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── 2. APPEARANCE & THEME SECTION ── */}
@@ -314,6 +344,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── 7. LEGAL & PRIVACY TRANSPARENCY ── */}
+      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800/80 pb-3">
+          <Shield className="w-4 h-4 text-emerald-400" />
+          <span>Legal Policies & Data Transparency</span>
+        </h3>
+        <p className="text-xs text-slate-400">
+          BlockFlow is built with a local-first privacy architecture. Inspect our verified data governance disclosures and terms.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          {onNavigate && (
+            <>
+              <button
+                type="button"
+                onClick={() => onNavigate('privacy-policy')}
+                className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-semibold rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <span>📜</span>
+                <span>Privacy Policy (Draft)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('terms')}
+                className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-semibold rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+              >
+                <span>⚖️</span>
+                <span>Terms of Service (Draft)</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

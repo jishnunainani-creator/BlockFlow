@@ -21,10 +21,83 @@ export const DEFAULT_CONSTRAINT_CONFIG: ScheduleConstraintConfig = {
   availabilityStartMinutes: 420, // 07:00 AM
   availabilityEndMinutes: 1320, // 10:00 PM
   minBreakBetweenBlocksMinutes: 15,
-  maxDailyPlannedHours: 8,
+  maxDailyPlannedHours: 6, // 6 hours initial default (was 8)
   horizonDays: 7,
   preferredWindow: 'morning',
 };
+
+// ═════════════════════════════════════════════════════════════════════
+// 0. WORKLOAD & COMMITMENT CLASSIFICATION UTILITIES
+// ═════════════════════════════════════════════════════════════════════
+
+/**
+ * Determines whether an activity is a non-work, restorative, or personal routine block
+ * (such as sleep, meals, commute, personal grooming) that should be excluded from daily workload.
+ */
+export function isNonWorkActivity(block: {
+  title?: string;
+  categoryId?: string;
+  isWorkload?: boolean;
+}): boolean {
+  if (block.isWorkload !== undefined) {
+    return !block.isWorkload;
+  }
+  const title = (block.title || '').trim().toLowerCase();
+  const category = (block.categoryId || '').trim().toLowerCase();
+
+  // Explicit non-work keywords in activity title
+  const nonWorkRegex =
+    /\b(sleep|wake up|bed|nap|rest|lunch|dinner|breakfast|snack|meal|eating|commute|transit|travel|shower|grooming|brush|break|downtime|free time)\b/i;
+  if (nonWorkRegex.test(title)) return true;
+
+  // Non-work categories
+  const nonWorkCategories = [
+    'sleep',
+    'meal',
+    'meals',
+    'food',
+    'routine',
+    'personal',
+    'rest',
+    'break',
+    'commute',
+    'wellness',
+  ];
+  if (nonWorkCategories.includes(category)) return true;
+
+  return false;
+}
+
+/**
+ * Returns true if an activity represents genuine focus or workload time.
+ */
+export function isWorkloadBlock(block: {
+  title?: string;
+  categoryId?: string;
+  isWorkload?: boolean;
+}): boolean {
+  return !isNonWorkActivity(block);
+}
+
+/**
+ * Determines whether an activity is an immovable Fixed Commitment (e.g. classes, lectures, exams, appointments).
+ * Flexible activities (self-study, tasks, workouts) can be adapted or rescheduled.
+ */
+export function isFixedCommitment(block: {
+  title?: string;
+  isFixed?: boolean;
+  categoryId?: string;
+  priority?: Priority;
+}): boolean {
+  if (block.isFixed !== undefined) {
+    return !!block.isFixed;
+  }
+  const title = (block.title || '').trim().toLowerCase();
+  // Heuristic for fixed university commitments or appointments
+  const fixedRegex =
+    /\b(class|lecture|sec-\d|exam|test|quiz|lab|office hours|dentist|doctor|appointment|meeting|shift)\b/i;
+  return fixedRegex.test(title);
+}
 
 // ═════════════════════════════════════════════════════════════════════
 // 1. DATE & TIME HELPER UTILITIES
@@ -108,11 +181,13 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
       issues.push({
         id: `issue-overdue-${task.id}`,
         type: 'overdue_task',
+        category: 'conflict',
         severity: 'critical',
         title: `Overdue Task: "${task.title}"`,
         whatHappened: `The deadline passed ${daysOverdue > 0 ? `${daysOverdue} day(s) ago` : 'earlier today'} on ${new Date(task.deadline).toLocaleDateString()}, but the task remains incomplete.`,
         whyItMatters: `Unresolved overdue commitments create cognitive debt and risk cascading delays on downstream coursework or sprint goals.`,
         recommendedAction: `Schedule an immediate catch-up session in the next available free time slot.`,
+        triggerReason: `Task deadline ${task.deadline} passed ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'earlier today'} with incomplete status.`,
         target: {
           entityType: 'task',
           entityId: task.id,
@@ -133,14 +208,17 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
 
     const diffHours = getHoursDifference(assignment.dueDate, referenceDate);
     if (diffHours < 0) {
+      const daysOverdue = Math.abs(Math.floor(diffHours / 24));
       issues.push({
         id: `issue-overdue-assignment-${assignment.id}`,
         type: 'overdue_task',
+        category: 'conflict',
         severity: 'critical',
         title: `Overdue Assignment: "${assignment.title}"`,
         whatHappened: `Assignment due date was ${new Date(assignment.dueDate).toLocaleDateString()}, but progress is currently at ${assignment.progressPct}%.`,
         whyItMatters: `Late submissions negatively impact academic evaluations and create immediate scheduling bottlenecks.`,
         recommendedAction: `Allocate emergency focus blocks today to finalize and submit.`,
+        triggerReason: `Assignment due date ${assignment.dueDate} passed ${daysOverdue > 0 ? `${daysOverdue} days ago` : 'earlier today'} with incomplete progress (${assignment.progressPct}%).`,
         target: {
           entityType: 'assignment',
           entityId: assignment.id,
@@ -166,6 +244,7 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
       issues.push({
         id: `issue-deadline-${task.id}`,
         type: 'impending_deadline',
+        category: 'suggestion',
         severity: diffHours <= 24 ? 'critical' : 'high',
         title: `Impending Deadline: "${task.title}"`,
         whatHappened: `Due in ${hoursLeft} hours (${new Date(task.deadline).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}). ${isScheduled ? 'Currently scheduled, but deadline is imminent.' : 'Has not yet been scheduled into your timetable.'}`,
@@ -173,6 +252,7 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
         recommendedAction: isScheduled
           ? `Verify you have enough uninterrupted time to finish before the cutoff.`
           : `Secure a dedicated calendar block before the deadline passes.`,
+        triggerReason: `Deadline is approaching within ${hoursLeft} hours (${diffHours <= 24 ? 'urgent' : 'warning'}).`,
         target: {
           entityType: 'task',
           entityId: task.id,
@@ -221,28 +301,44 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
           const overlapMinutes = Math.min(aEnd, bEnd) - Math.max(aStart, bStart);
 
           // Identify if one is fixed and the other flexible
-          const isAFixed = !!a.isFixed;
-          const isBFixed = !!b.isFixed;
+          const isAFixed = isFixedCommitment(a);
+          const isBFixed = isFixedCommitment(b);
+
+          let targetBlock = a;
+          let recAction = `Reschedule one of the conflicting blocks to the nearest available opening.`;
+
+          if (isAFixed && isBFixed) {
+            recAction = `Both overlapping activities are designated as Fixed Commitments (e.g. classes, lectures or appointments). Manual review required: neither should be rescheduled automatically.`;
+            targetBlock = a;
+          } else if (isAFixed && !isBFixed) {
+            recAction = `Move flexible activity "${b.title}" to a free slot, preserving fixed commitment "${a.title}".`;
+            targetBlock = b;
+          } else if (!isAFixed && isBFixed) {
+            recAction = `Move flexible activity "${a.title}" to a free slot, preserving fixed commitment "${b.title}".`;
+            targetBlock = a;
+          } else {
+            // Both flexible: prefer moving the shorter one or the later scheduled one
+            targetBlock = a.duration <= b.duration ? a : b;
+            recAction = `Move flexible activity "${targetBlock.title}" to an open slot to eliminate the ${overlapMinutes}m overlap.`;
+          }
 
           issues.push({
             id: `issue-conflict-${a.id}-${b.id}`,
             type: 'schedule_conflict',
+            category: 'conflict',
             severity: isAFixed && isBFixed ? 'critical' : 'high',
             title: `Schedule Conflict: "${a.title}" vs "${b.title}"`,
             whatHappened: `Both activities overlap on ${dayName} by ${overlapMinutes} minutes (${minutesToTimeStr(Math.max(aStart, bStart))} – ${minutesToTimeStr(Math.min(aEnd, bEnd))}).`,
             whyItMatters: `You cannot be in two places at once. Double-booked slots cause missed attendance or compromised focus.`,
-            recommendedAction: isAFixed && !isBFixed
-              ? `Move flexible activity "${b.title}" to a free slot without touching fixed block "${a.title}".`
-              : !isAFixed && isBFixed
-                ? `Move flexible activity "${a.title}" to a free slot without touching fixed block "${b.title}".`
-                : `Reschedule one of the conflicting blocks to the nearest available opening.`,
+            recommendedAction: recAction,
+            triggerReason: `Overlap of ${overlapMinutes}m between ${minutesToTimeStr(Math.max(aStart, bStart))} and ${minutesToTimeStr(Math.min(aEnd, bEnd))}. A fixed: ${isAFixed}, B fixed: ${isBFixed}.`,
             target: {
               entityType: 'block',
-              entityId: !isAFixed ? a.id : b.id,
-              title: !isAFixed ? a.title : b.title,
+              entityId: targetBlock.id,
+              title: targetBlock.title,
               dayOfWeek,
-              startMinutes: !isAFixed ? a.startMinutes : b.startMinutes,
-              duration: !isAFixed ? a.duration : b.duration,
+              startMinutes: targetBlock.startMinutes,
+              duration: targetBlock.duration,
               weekId: a.weekId || currentWeekId,
               conflictingBlockIds: [a.id, b.id],
             },
@@ -264,11 +360,13 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
       issues.push({
         id: `issue-missed-${block.id}`,
         type: 'missed_session',
+        category: 'suggestion',
         severity: 'medium',
         title: `Missed Planned Session: "${block.title}"`,
         whatHappened: `This scheduled session on ${DAYS_OF_WEEK[block.dayOfWeek]?.full || 'your calendar'} was marked as missed.`,
         whyItMatters: `Dropping planned work without rescheduling leads to accumulated backlog and disrupted learning streaks.`,
         recommendedAction: `Find an open recovery slot to complete this session without disrupting other commitments.`,
+        triggerReason: `Block status was explicitly updated to 'missed'.`,
         target: {
           entityType: 'block',
           entityId: block.id,
@@ -301,11 +399,13 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
         issues.push({
           id: `issue-unfinished-${block.id}`,
           type: 'missed_session',
+          category: 'suggestion',
           severity: 'medium',
           title: `Unfinished Session: "${block.title}"`,
           whatHappened: `Scheduled for ${DAYS_OF_WEEK[block.dayOfWeek]?.full} at ${minutesToTimeStr(block.startMinutes)}, but no completion was recorded.`,
           whyItMatters: `Unrecorded sessions leave progress uncertain and may mask unfinished syllabus topics.`,
           recommendedAction: `Confirm whether you completed this session or reschedule it to an upcoming free slot.`,
+          triggerReason: `Session scheduled for ${DAYS_OF_WEEK[block.dayOfWeek]?.full} elapsed without recorded completion.`,
           target: {
             entityType: 'block',
             entityId: block.id,
@@ -340,11 +440,13 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
       issues.push({
         id: `issue-unfittable-${task.id}`,
         type: 'unfittable_task',
+        category: 'conflict',
         severity: 'critical',
         title: `Capacity Deficit: "${task.title}"`,
         whatHappened: `Requires ${task.estimatedDuration}m of focus, but only ${remainingAvailableMins}m of free time remains before the deadline on ${new Date(task.deadline).toLocaleDateString()}.`,
         whyItMatters: `Even if you utilize every available minute, this task cannot be completed without schedule adjustments or scope reduction.`,
         recommendedAction: `Shorten the session duration, split into smaller milestones, or adjust the deadline manually.`,
+        triggerReason: `Estimated duration ${task.estimatedDuration}m exceeds available free capacity of ${remainingAvailableMins}m before deadline.`,
         target: {
           entityType: 'task',
           entityId: task.id,
@@ -358,13 +460,26 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
     }
   });
 
-  // ── F. Overloaded Days (Exceeds Max Daily Hours) ──────────────
-  const dailyDurationMinutes: Record<number, number> = {};
-  for (let i = 0; i < 7; i++) dailyDurationMinutes[i] = 0;
+  // ── F. Overloaded Days (Excludes Sleep, Meals & Non-Work Activities)
+  const dailyWorkloadMinutes: Record<number, number> = {};
+  const dailyExcludedNonWorkMinutes: Record<number, number> = {};
+  const dailyWorkloadBlocks: Record<number, ScheduledBlock[]> = {};
+
+  for (let i = 0; i < 7; i++) {
+    dailyWorkloadMinutes[i] = 0;
+    dailyExcludedNonWorkMinutes[i] = 0;
+    dailyWorkloadBlocks[i] = [];
+  }
 
   scheduledBlocks.forEach((b) => {
     if ((b.weekId || currentWeekId) === currentWeekId && b.dayOfWeek >= 0 && b.dayOfWeek < 7) {
-      dailyDurationMinutes[b.dayOfWeek] += b.duration || 60;
+      const duration = b.duration || 60;
+      if (isWorkloadBlock(b)) {
+        dailyWorkloadMinutes[b.dayOfWeek] += duration;
+        dailyWorkloadBlocks[b.dayOfWeek].push(b);
+      } else {
+        dailyExcludedNonWorkMinutes[b.dayOfWeek] += duration;
+      }
     }
   });
 
@@ -375,26 +490,39 @@ export function detectPlanningIssues(params: DetectIssuesParams): PlanningIssue[
   const maxAllowedHours = maxHoursRule?.hoursValue || cfg.maxDailyPlannedHours;
   const maxAllowedMins = maxAllowedHours * 60;
 
-  Object.entries(dailyDurationMinutes).forEach(([dayStr, totalMins]) => {
+  Object.entries(dailyWorkloadMinutes).forEach(([dayStr, workloadMins]) => {
     const day = parseInt(dayStr, 10);
-    if (totalMins > maxAllowedMins) {
-      const plannedHours = (totalMins / 60).toFixed(1);
+    if (workloadMins > maxAllowedMins) {
+      const plannedWorkHours = (workloadMins / 60).toFixed(1);
+      const excludedHours = (dailyExcludedNonWorkMinutes[day] / 60).toFixed(1);
       const dayName = DAYS_OF_WEEK[day]?.full || `Day ${day + 1}`;
+
+      const dayBlocks = dailyWorkloadBlocks[day];
+      const flexibleBlocks = dayBlocks.filter((b) => !isFixedCommitment(b));
+      const hasFlexibleBlocks = flexibleBlocks.length > 0;
+
+      const whatHappened = `${dayName} contains ${plannedWorkHours}h of planned focus/workload commitments, exceeding your daily limit of ${maxAllowedHours}h (${excludedHours}h of sleep, meals and personal routines were excluded from this calculation).`;
+
+      const recommendedAction = hasFlexibleBlocks
+        ? `Consider redistributing flexible activities (${flexibleBlocks.map((b) => `"${b.title}"`).join(', ')}) to days with lighter schedules.`
+        : `All scheduled activities on ${dayName} are designated as Fixed commitments. Consider raising your daily workload threshold in Planner Settings if this schedule is intentional.`;
 
       issues.push({
         id: `issue-overloaded-day-${day}`,
         type: 'overloaded_day',
-        severity: totalMins > maxAllowedMins + 120 ? 'high' : 'medium',
-        title: `Overloaded Day: ${dayName} (${plannedHours}h planned)`,
-        whatHappened: `${dayName} contains ${plannedHours} hours of planned activities, exceeding the recommended limit of ${maxAllowedHours} hours.`,
-        whyItMatters: `High daily load increases fatigue, elevates distraction risk, and causes schedule abandonment.`,
-        recommendedAction: `Redistribute flexible tasks to days with lighter schedules.`,
+        category: 'suggestion',
+        severity: workloadMins > maxAllowedMins + 120 ? 'high' : 'medium',
+        title: `Overloaded Day: ${dayName} (${plannedWorkHours}h focus load)`,
+        whatHappened,
+        whyItMatters: `Sustained high daily workload elevates cognitive fatigue, increases distraction risk, and compromises retention.`,
+        recommendedAction,
+        triggerReason: `Daily threshold: ${maxAllowedHours}h. Workload: ${plannedWorkHours}h (${excludedHours}h sleep/meals excluded).`,
         target: {
           entityType: 'day',
           entityId: `day-${day}`,
           title: dayName,
           dayOfWeek: day,
-          duration: totalMins,
+          duration: workloadMins,
         },
         createdAt: Date.now(),
       });
@@ -823,6 +951,64 @@ export function generateProposalForIssue(params: GenerateProposalParams): Propos
     currentWeekId = getISOWeekString(),
     config,
   } = params;
+
+  // 1. Guard against moving Fixed Commitments
+  if (issue.target.entityType === 'block') {
+    const targetBlock = scheduledBlocks.find((b) => b.id === issue.target.entityId);
+    if (targetBlock && isFixedCommitment(targetBlock)) {
+      // Never propose auto-redistributing an immovable fixed commitment
+      return null;
+    }
+  }
+
+  // 2. Conflict Guard: if both conflicting blocks are fixed, require manual adjustment
+  if (issue.type === 'schedule_conflict' && issue.target.conflictingBlockIds) {
+    const [idA, idB] = issue.target.conflictingBlockIds;
+    const blockA = scheduledBlocks.find((b) => b.id === idA);
+    const blockB = scheduledBlocks.find((b) => b.id === idB);
+    if (blockA && blockB && isFixedCommitment(blockA) && isFixedCommitment(blockB)) {
+      return null;
+    }
+  }
+
+  // 3. Overloaded Day Handler: redistribute the highest-impact flexible activity
+  if (issue.type === 'overloaded_day') {
+    const day = issue.target.dayOfWeek ?? 0;
+    const flexibleBlocks = scheduledBlocks.filter(
+      (b) =>
+        (b.weekId || currentWeekId) === currentWeekId &&
+        b.dayOfWeek === day &&
+        !isFixedCommitment(b) &&
+        isWorkloadBlock(b)
+    );
+
+    // If no flexible blocks exist on this day, do NOT propose moving non-existent tasks
+    if (flexibleBlocks.length === 0) {
+      return null;
+    }
+
+    // Sort to pick the longest flexible block to relieve the overload
+    const blockToMove = [...flexibleBlocks].sort(
+      (a, b) => (b.duration || 60) - (a.duration || 60)
+    )[0];
+
+    return generateProposalForIssue({
+      ...params,
+      issue: {
+        ...issue,
+        type: 'schedule_conflict',
+        target: {
+          entityType: 'block',
+          entityId: blockToMove.id,
+          title: blockToMove.title,
+          dayOfWeek: blockToMove.dayOfWeek,
+          startMinutes: blockToMove.startMinutes,
+          duration: blockToMove.duration,
+          weekId: blockToMove.weekId || currentWeekId,
+        },
+      },
+    });
+  }
 
   const target = issue.target;
   let duration = target.duration || 60;

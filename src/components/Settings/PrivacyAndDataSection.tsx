@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldCheck,
   HardDrive,
   Cloud,
   Download,
+  Upload,
   Trash2,
   RefreshCw,
   Info,
@@ -20,6 +21,8 @@ import {
   purgeAllCloudCopiesPreserveLocal,
 } from '../../lib/selectiveSync';
 import { SyncConsentModal } from '../Sync/SyncConsentModal';
+import { RestoreBackupModal } from '../Sync/RestoreBackupModal';
+import { BackupInspectionReport } from '../../utils/backupEngine';
 import { useTimetable } from '../../context/TimetableContext';
 import { getCurrentUser } from '../../lib/supabase';
 
@@ -32,13 +35,46 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
   onExportJSON,
   userEmail,
 }) => {
-  const { addToast } = useTimetable();
+  const { addToast, inspectJSONBackup, applyRestoredBackup } = useTimetable();
   const [audit, setAudit] = useState<StorageAuditSummary>(() => getStorageAuditSummary());
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPurgingCloud, setIsPurgingCloud] = useState(false);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [inspectionReport, setInspectionReport] = useState<BackupInspectionReport | null>(null);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const restoreFileRef = useRef<HTMLInputElement>(null);
+
+  const handleRestoreFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        const report = inspectJSONBackup(content);
+        if (!report.isValid) {
+          addToast(report.error || 'Failed to inspect backup file', 'error');
+        } else {
+          setInspectionReport(report);
+          setIsRestoreModalOpen(true);
+        }
+      }
+      if (restoreFileRef.current) restoreFileRef.current.value = '';
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmRestore = (mode: 'replace' | 'merge') => {
+    if (inspectionReport?.normalizedBundle) {
+      applyRestoredBackup(inspectionReport.normalizedBundle, mode);
+      setIsRestoreModalOpen(false);
+      setInspectionReport(null);
+      refreshAudit();
+    }
+  };
 
   const refreshAudit = () => {
     setAudit(getStorageAuditSummary());
@@ -275,16 +311,35 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons: Export & Purge */}
+      {/* Action Buttons: Export, Restore & Purge */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <button
-          type="button"
-          onClick={onExportJSON}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
-        >
-          <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-          <span>Export Local JSON Backup</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onExportJSON}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>Export Local JSON Backup</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => restoreFileRef.current?.click()}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
+          >
+            <Upload className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span>Restore Backup File</span>
+          </button>
+
+          <input
+            type="file"
+            ref={restoreFileRef}
+            onChange={handleRestoreFileUpload}
+            accept=".json"
+            className="hidden"
+          />
+        </div>
 
         {userEmail && (
           <div className="flex items-center gap-2">
@@ -331,6 +386,17 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
           refreshAudit();
         }}
         userId={currentUserId}
+      />
+
+      {/* Interactive Restore Modal */}
+      <RestoreBackupModal
+        isOpen={isRestoreModalOpen}
+        onClose={() => {
+          setIsRestoreModalOpen(false);
+          setInspectionReport(null);
+        }}
+        report={inspectionReport}
+        onConfirmRestore={handleConfirmRestore}
       />
     </div>
   );

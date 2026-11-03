@@ -15,6 +15,7 @@ import { detectHabitCorrelations } from '../utils/habitCorrelationEngine';
 import { initializeStreaks, updateStreaks, checkStreakQualifiers } from '../utils/streakEngine';
 import { checkAchievements } from '../utils/achievementEngine';
 import { ScheduledBlock } from '../types/timetable';
+import { selectTodayBlocks } from '../utils/dataSelectors';
 
 interface ExecutionContextType {
   todayScore: DailyExecutionScore | null;
@@ -49,7 +50,7 @@ interface ExecutionContextType {
 const ExecutionContext = createContext<ExecutionContextType | undefined>(undefined);
 
 export const ExecutionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentWeekScheduledBlocks } = useTimetable();
+  const { currentWeekScheduledBlocks, scheduledBlocks } = useTimetable();
   const todayStr = getTodayDateString();
 
   const [dailyScores, setDailyScores] = useState<Record<string, DailyExecutionScore>>({});
@@ -88,9 +89,8 @@ export const ExecutionProvider: React.FC<{ children: ReactNode }> = ({ children 
   }, []);
 
   const getTodayBlocks = useCallback((): ScheduledBlock[] => {
-    const todayIndex = (new Date().getDay() + 6) % 7;
-    return currentWeekScheduledBlocks.filter(b => b.dayOfWeek === todayIndex);
-  }, [currentWeekScheduledBlocks]);
+    return selectTodayBlocks(scheduledBlocks);
+  }, [scheduledBlocks]);
 
   const lastScoreHashRef = React.useRef<string>('');
 

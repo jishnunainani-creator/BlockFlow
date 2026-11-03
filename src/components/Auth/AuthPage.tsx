@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isSupabaseConfigured, signInWithEmail, signUpWithEmail, signInWithOAuth } from '../../lib/supabase';
+import { isSupabaseConfigured, signInWithEmail, signUpWithEmail, signInWithOAuth, formatAuthError } from '../../lib/supabase';
 import { BlockFlowLogo } from '../Brand/BlockFlowLogo';
 import {
   Mail,
@@ -54,7 +54,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onContinueAsGuest, onSuccess
         setTimeout(() => onSuccess(email), 500);
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check credentials.');
+      setErrorMsg(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onContinueAsGuest, onSuccess
       const { error } = await signInWithOAuth(provider);
       if (error) throw error;
     } catch (err: any) {
-      setErrorMsg(err.message || `Failed to sign in with ${provider}.`);
+      setErrorMsg(formatAuthError(err));
     }
   };
 
@@ -192,9 +192,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onContinueAsGuest, onSuccess
           {errorMsg && (
             <div
               role="alert"
-              className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2.5 shadow-xs"
+              className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2.5 shadow-xs whitespace-pre-line"
             >
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" aria-hidden="true" />
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" aria-hidden="true" />
               <span className="font-medium">{errorMsg}</span>
             </div>
           )}
@@ -324,6 +324,35 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onContinueAsGuest, onSuccess
                 </button>
               </span>
             )}
+          </div>
+
+          {/* Legal & Privacy Disclosure Notice */}
+          <div className="text-center text-[11px] text-slate-400 pt-3 border-t border-slate-200 dark:border-slate-800">
+            By signing in or registering, you agree to our{' '}
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/privacy');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Privacy Policy
+            </a>{' '}
+            and{' '}
+            <a
+              href="/terms"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState({}, '', '/terms');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              className="text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Terms of Service
+            </a>
+            .
           </div>
         </div>
       </div>

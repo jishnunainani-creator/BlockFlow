@@ -3,9 +3,13 @@ import { useTimetable } from '../../context/TimetableContext';
 import { NavView } from '../Navigation/Sidebar';
 import { loadGoals } from '../../utils/storage';
 import { Goal } from '../../types/timetable';
-import { calculateGoalMetrics } from '../../utils/goalEngine';
 import {
-  calculateExecutionScore,
+  selectTodayBlocks,
+  selectCanonicalExecutionScore,
+  selectCanonicalGoalProgress,
+  selectAggregateGoalProgress,
+} from '../../utils/dataSelectors';
+import {
   calculateCompletionProbability,
   getProductivityDNA,
 } from '../../utils/aiProductivityEngine';
@@ -43,24 +47,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   userEmail,
   onStartFocusMode,
 }) => {
-  const { currentWeekScheduledBlocks, addToast } = useTimetable();
+  const { scheduledBlocks, currentWeekScheduledBlocks, addToast } = useTimetable();
   const { dailyScores } = useExecution();
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
 
   const userName = userEmail ? userEmail.split('@')[0] : 'Guest';
 
-  // Today's index & blocks
-  const todayIndex = (new Date().getDay() + 6) % 7;
+  // Canonical Today's Blocks (resolved against all scheduled blocks)
   const todayBlocks = React.useMemo(() => {
-    return currentWeekScheduledBlocks
-      .filter((b) => b.dayOfWeek === todayIndex)
-      .sort((a, b) => a.startMinutes - b.startMinutes);
-  }, [currentWeekScheduledBlocks, todayIndex]);
+    return selectTodayBlocks(scheduledBlocks);
+  }, [scheduledBlocks]);
 
-  // Execution Score & DNA (Memoized)
-  const execScore = React.useMemo(
-    () => calculateExecutionScore(currentWeekScheduledBlocks),
-    [currentWeekScheduledBlocks]
+  // Canonical Execution Score derived from single source of truth selector
+  const canonicalExecScore = React.useMemo(
+    () => selectCanonicalExecutionScore({ blocks: todayBlocks }),
+    [todayBlocks]
   );
 
   const dna = React.useMemo(
@@ -71,8 +72,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     [currentWeekScheduledBlocks, dailyScores]
   );
 
-  // Load goals once
+  // Load goals once and compute canonical aggregate progress
   const goals = React.useMemo(() => loadGoals(), []);
+  const aggregateGoalMetrics = React.useMemo(
+    () => selectAggregateGoalProgress(goals, scheduledBlocks),
+    [goals, scheduledBlocks]
+  );
 
   // Dynamic Daily Mission derived from real todayBlocks
   const [completedMissionIds, setCompletedMissionIds] = useState<Set<string>>(new Set());
@@ -191,11 +196,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <Target className="w-4 h-4 text-[#3659C9] dark:text-[#4F73E3]" />
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-slate-900 dark:text-white">{execScore.score}</span>
+            <span className="text-2xl font-bold text-slate-900 dark:text-white">{canonicalExecScore.overallScore}</span>
             <span className="text-xs text-slate-600 dark:text-slate-400">/ 100</span>
           </div>
           <p className="text-[11px] text-slate-600 dark:text-slate-400">
-            {execScore.consistencyRating} · Tap for details →
+            {canonicalExecScore.consistencyRating} · Tap for details →
           </p>
         </div>
 
@@ -208,7 +213,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
             <Clock className="w-4 h-4 text-slate-600 dark:text-slate-400" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">{execScore.timeAccuracyPct}%</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">{canonicalExecScore.timeAccuracyPct}%</div>
           <p className="text-[11px] text-slate-600 dark:text-slate-400">Schedule duration precision</p>
         </div>
 
@@ -218,7 +223,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-400">Goal Progress</span>
             <Award className="w-4 h-4 text-slate-600 dark:text-slate-400" />
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white">{execScore.goalProgressPct}%</div>
+          <div className="text-2xl font-bold text-slate-900 dark:text-white">{aggregateGoalMetrics.avgProgressPct}%</div>
           <p className="text-[11px] text-slate-600 dark:text-slate-400">Milestone accomplishment</p>
         </div>
 
@@ -320,7 +325,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="space-y-2.5">
             {goals.length > 0 ? (
               goals.slice(0, 3).map((goal: Goal) => {
-                const metrics = calculateGoalMetrics(goal, currentWeekScheduledBlocks);
+                const metrics = selectCanonicalGoalProgress(goal, scheduledBlocks);
                 return (
                   <div key={goal.id} className="p-3.5 rounded-xl bg-slate-800/40 border border-slate-700/60 space-y-2.5">
                     <div className="flex items-center justify-between gap-2 text-xs">

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Goal, ScheduledBlock } from '../../types/timetable';
 import { useTimetable } from '../../context/TimetableContext';
 import { calculateGoalMetrics, proposeSmartGoalScheduleSlots, ProposedGoalSession } from '../../utils/goalEngine';
+import { selectCanonicalGoalProgress } from '../../utils/dataSelectors';
 import { DAYS_OF_WEEK, minutesToTimeStr } from '../../utils/timeUtils';
 import {
   Calendar,
@@ -28,7 +29,7 @@ export const PlanGoalScheduleModal: React.FC<PlanGoalScheduleModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { currentWeekScheduledBlocks, addScheduledBlock, addToast } = useTimetable();
+  const { currentWeekScheduledBlocks, scheduledBlocks, addScheduledBlock, addToast } = useTimetable();
 
   // Configuration options
   const [selectedDays, setSelectedDays] = useState<number[]>(() => goal?.smart?.preferredDays || [0, 2, 4]);
@@ -43,11 +44,11 @@ export const PlanGoalScheduleModal: React.FC<PlanGoalScheduleModalProps> = ({
   // Proposed sessions state with user acceptance toggles
   const [acceptedSessionIds, setAcceptedSessionIds] = useState<Set<string>>(new Set());
 
-  // Calculate metrics
+  // Calculate metrics using canonical selector over all blocks
   const metrics = useMemo(() => {
     if (!goal) return null;
-    return calculateGoalMetrics(goal, currentWeekScheduledBlocks);
-  }, [goal, currentWeekScheduledBlocks]);
+    return selectCanonicalGoalProgress(goal, scheduledBlocks || []);
+  }, [goal, scheduledBlocks]);
 
   // Generate proposed sessions whenever configuration changes
   const proposedSessions = useMemo(() => {

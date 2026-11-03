@@ -15,9 +15,6 @@ import {
   loadResolution,
   saveResolution,
   INITIAL_LIBRARY_BLOCKS,
-  loadGoals,
-  saveGoals,
-  normalizeGoal,
 } from '../utils/storage';
 import { getISOWeekString, snapToResolution } from '../utils/timeUtils';
 import { useUndoRedo } from '../hooks/useUndoRedo';
@@ -32,7 +29,15 @@ import { generateAISmartSchedule } from '../utils/aiProductivityEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { setActiveUserId } from '../utils/userScope';
 import { recordLocalTombstone } from '../lib/storageRepository';
-import { migrateBlockFlowJSON } from '../utils/migration/dataMigrator';
+import {
+  createUnifiedBackup,
+  downloadBackupFile,
+  validateAndInspectBackup,
+  applyUnifiedBackup,
+  UnifiedBackupBundle,
+  BackupInspectionReport,
+  BackupRestoreResult,
+} from '../utils/backupEngine';
 
 export interface ToastMessage {
   id: string;
@@ -202,9 +207,11 @@ interface TimetableContextType {
   enableNotifications: () => Promise<void>;
   notificationsEnabled: boolean;
 
-  // Backup Import/Export
+  // Backup Import/Export & Inspection
   exportJSONBackup: () => void;
-  importJSONBackup: (jsonStr: string) => boolean;
+  importJSONBackup: (jsonStr: string, mode?: 'replace' | 'merge') => boolean;
+  inspectJSONBackup: (jsonStr: string) => BackupInspectionReport;
+  applyRestoredBackup: (bundle: UnifiedBackupBundle, mode: 'replace' | 'merge') => BackupRestoreResult;
 
   // History & Toast
   undo: () => void;
@@ -894,63 +901,42 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [appState, updateAppState, currentWeekId, addToast]);
 
   const exportJSONBackup = useCallback(() => {
-    const backupData = {
-      version: '3.0',
-      exportedAt: new Date().toISOString(),
-      libraryBlocks: appState.libraryBlocks,
-      scheduledBlocks: appState.scheduledBlocks,
-      templates: appState.templates,
-      customCategories: appState.customCategories,
-      goals: loadGoals(),
-      resolution,
-    };
-    const jsonStr = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.download = `Timetable_Backup_${new Date().toISOString().slice(0, 10)}.json`;
-    a.href = url;
-    a.click();
-    URL.revokeObjectURL(url);
-    addToast('Exported Cloud JSON Backup file!', 'success');
+    const bundle = createUnifiedBackup(appState, resolution);
+    downloadBackupFile(bundle);
+    addToast('Exported complete BlockFlow workspace backup (.json)', 'success');
   }, [appState, resolution, addToast]);
 
-  const importJSONBackup = useCallback((jsonStr: string) => {
-    try {
-      // Check if goals exist in the JSON payload
-      try {
-        const parsed = JSON.parse(jsonStr);
-        if (parsed.goals && Array.isArray(parsed.goals)) {
-          const normalizedGoals = parsed.goals.map((g: any) => normalizeGoal(g));
-          saveGoals(normalizedGoals);
-        }
-      } catch {
-        // continue with migration
+  const inspectJSONBackup = useCallback((jsonStr: string) => {
+    return validateAndInspectBackup(jsonStr);
+  }, []);
+
+  const applyRestoredBackup = useCallback(
+    (bundle: UnifiedBackupBundle, mode: 'replace' | 'merge') => {
+      const result = applyUnifiedBackup(bundle, mode, appState, updateAppState);
+      if (result.success) {
+        addToast(result.message, 'success');
       }
+      return result;
+    },
+    [appState, updateAppState, addToast]
+  );
 
-      const result = migrateBlockFlowJSON(jsonStr);
-      if (result) {
-        const allBlocks: ScheduledBlock[] = [];
-        Object.values(result.scheduledBlocksByWeek).forEach((blocks: any) => {
-          allBlocks.push(...blocks);
-        });
-
-        updateAppState({
-          libraryBlocks: result.libraryBlocks,
-          scheduledBlocks: allBlocks,
-          templates: result.templates.length > 0 ? result.templates : appState.templates,
-          customCategories: result.customCategories.length > 0 ? result.customCategories : appState.customCategories,
-        });
-
-        addToast(`Successfully imported ${result.report.libraryCount} library blocks & ${result.report.activitiesCount} activities across ${result.report.weeksCount} weeks! 🎉`, 'success');
+  const importJSONBackup = useCallback(
+    (jsonStr: string, mode: 'replace' | 'merge' = 'replace') => {
+      const report = validateAndInspectBackup(jsonStr);
+      if (!report.isValid || !report.normalizedBundle) {
+        addToast(report.error || 'Invalid backup file format', 'error');
+        return false;
+      }
+      const result = applyUnifiedBackup(report.normalizedBundle, mode, appState, updateAppState);
+      if (result.success) {
+        addToast(result.message, 'success');
         return true;
       }
-    } catch (e) {
-      console.error('Failed to import JSON backup', e);
-    }
-    addToast('Invalid backup file format', 'error');
-    return false;
-  }, [appState.templates, appState.customCategories, updateAppState, addToast]);
+      return false;
+    },
+    [appState, updateAppState, addToast]
+  );
 
   const undo = useCallback(() => {
     if (canUndo) {
@@ -1013,6 +999,8 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     notificationsEnabled,
     exportJSONBackup,
     importJSONBackup,
+    inspectJSONBackup,
+    applyRestoredBackup,
     undo,
     redo,
     canUndo,
@@ -1067,6 +1055,8 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     notificationsEnabled,
     exportJSONBackup,
     importJSONBackup,
+    inspectJSONBackup,
+    applyRestoredBackup,
     undo,
     redo,
     canUndo,

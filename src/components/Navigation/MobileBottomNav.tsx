@@ -218,36 +218,36 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
       {/* ── FIXED BOTTOM NAVIGATION BAR (< 768px) ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-around h-16 px-1 select-none">
-        {/* 1. Dashboard */}
+        {/* 1. Today */}
         <button
           type="button"
-          onClick={() => onSelectView('dashboard')}
+          onClick={() => onSelectView('my-day')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-            currentView === 'dashboard'
-              ? 'text-[#3659C9] dark:text-[#4F73E3] font-semibold'
+            currentView === 'my-day'
+              ? 'text-indigo-600 dark:text-indigo-400 font-bold'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
-          title="Home Dashboard"
-          aria-label="Home Dashboard"
+          title="Today Schedule"
+          aria-label="Today Schedule"
         >
-          <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Dashboard</span>
+          <Sun className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Today</span>
         </button>
 
-        {/* 2. Calendar */}
+        {/* 2. Timetable */}
         <button
           type="button"
           onClick={() => onSelectView('calendar')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-            currentView === 'calendar'
-              ? 'text-[#3659C9] dark:text-[#4F73E3] font-semibold'
+            ['calendar', 'library', 'templates', 'resources'].includes(currentView)
+              ? 'text-indigo-600 dark:text-indigo-400 font-bold'
               : 'text-slate-400 hover:text-slate-200'
           }`}
-          title="Calendar & Timetable"
-          aria-label="Calendar & Timetable"
+          title="Timetable & Calendar"
+          aria-label="Timetable & Calendar"
         >
           <Calendar className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Calendar</span>
+          <span className="text-[10px] mt-0.5">Timetable</span>
         </button>
 
         {/* 3. Center ADD Floating Action Button */}
@@ -255,7 +255,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <button
             type="button"
             onClick={() => setShowQuickActions(true)}
-            className="w-12 h-12 rounded-full bg-[#3659C9] dark:bg-[#4F73E3] text-white shadow-lg flex items-center justify-center border-2 border-slate-900 active:scale-95 transition-transform"
+            className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center border-2 border-slate-900 active:scale-95 transition-transform"
             title="Quick Action Menu"
             aria-label="Quick Action Menu"
           >
@@ -263,20 +263,20 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           </button>
         </div>
 
-        {/* 4. Goals */}
+        {/* 4. Inbox & Notes */}
         <button
           type="button"
-          onClick={() => onSelectView('goals')}
+          onClick={() => onSelectView('task-inbox')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-            currentView === 'goals'
-              ? 'text-[#3659C9] dark:text-[#4F73E3] font-semibold'
+            ['task-inbox', 'thought-space', 'quick-add'].includes(currentView)
+              ? 'text-indigo-600 dark:text-indigo-400 font-bold'
               : 'text-slate-400 hover:text-slate-200'
           }`}
-          title="Goals & Planning"
-          aria-label="Goals & Planning"
+          title="Inbox & Notes"
+          aria-label="Inbox & Notes"
         >
-          <Target className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Goals</span>
+          <CheckSquare className="w-5 h-5" />
+          <span className="text-[10px] mt-0.5">Inbox</span>
         </button>
 
         {/* 5. Sections Menu */}
@@ -284,11 +284,11 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           type="button"
           onClick={() => (onOpenMobileMenu ? onOpenMobileMenu() : onSelectView('settings'))}
           className="flex flex-col items-center justify-center flex-1 py-1 transition-colors text-slate-400 hover:text-slate-200"
-          title="Browse All Sections"
-          aria-label="Browse All Sections"
+          title="Browse All 8 Sections"
+          aria-label="Browse All 8 Sections"
         >
           <Menu className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Sections</span>
+          <span className="text-[10px] mt-0.5">Menu</span>
         </button>
       </nav>
     </>
