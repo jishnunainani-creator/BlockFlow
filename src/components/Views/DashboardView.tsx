@@ -33,6 +33,11 @@ import { ContextHelp } from '../UI/ContextHelp';
 import { EmptyStateGuidance } from '../UI/EmptyStateGuidance';
 import PersonalTimeBudgetWidget from '../Analytics/PersonalTimeBudgetWidget';
 import ScheduleOptimizerModal from '../AI/ScheduleOptimizerModal';
+import { ScheduleAdjustmentModal } from '../Dashboard/ScheduleAdjustmentModal';
+import {
+  detectScheduleAdjustment,
+  ScheduleAdjustmentRecommendation,
+} from '../../utils/scheduleAdjustmentEngine';
 
 interface DashboardViewProps {
   onNavigate: (view: NavView) => void;
@@ -47,9 +52,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   userEmail,
   onStartFocusMode,
 }) => {
-  const { scheduledBlocks, currentWeekScheduledBlocks, addToast } = useTimetable();
+  const { scheduledBlocks, currentWeekScheduledBlocks, addToast, updateScheduledBlock } = useTimetable();
   const { dailyScores } = useExecution();
   const [isOptimizerOpen, setIsOptimizerOpen] = useState(false);
+  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] = useState(false);
+  const [dismissedRecommendationId, setDismissedRecommendationId] = useState<string | null>(null);
 
   const userName = userEmail ? userEmail.split('@')[0] : 'Guest';
 
@@ -57,6 +64,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const todayBlocks = React.useMemo(() => {
     return selectTodayBlocks(scheduledBlocks);
   }, [scheduledBlocks]);
+
+  // Evidence-based schedule adjustment recommendation derived strictly from verified execution overruns
+  const adjustmentRecommendation = React.useMemo(() => {
+    return detectScheduleAdjustment({ todayBlocks });
+  }, [todayBlocks]);
 
   // Canonical Execution Score derived from single source of truth selector
   const canonicalExecScore = React.useMemo(
@@ -92,8 +104,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }));
   }, [todayBlocks, completedMissionIds]);
 
-  const [adaptiveBannerOpen, setAdaptiveBannerOpen] = useState(true);
-
   const toggleMission = (id: string) => {
     setCompletedMissionIds((prev) => {
       const next = new Set(prev);
@@ -111,9 +121,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const completedMissionCount = missionItems.filter((i) => i.completed).length;
   const totalMissionMinutes = missionItems.reduce((acc, i) => acc + i.duration, 0);
 
-  const handleAcceptAdaptiveAdjustment = () => {
-    addToast('Schedule automatically adjusted! Execution Score improved ✨', 'success');
-    setAdaptiveBannerOpen(false);
+  const handleApplyAdjustment = () => {
+    if (!adjustmentRecommendation) return;
+    adjustmentRecommendation.affectedBlocks.forEach((ab) => {
+      updateScheduledBlock(ab.id, { startMinutes: ab.proposedStartMinutes });
+    });
+    addToast(
+      `Adjusted schedule: shifted ${adjustmentRecommendation.affectedBlocks.length} block(s) by ${adjustmentRecommendation.recommendedShiftMinutes}m ⏱️`,
+      'success'
+    );
+    setIsAdjustmentModalOpen(false);
+    setDismissedRecommendationId(adjustmentRecommendation.overrunBlockId);
   };
 
   return (
@@ -150,29 +168,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* ── ADAPTIVE DAY PLANNER NOTIFICATION BANNER ── */}
-      {adaptiveBannerOpen && (
-        <div className="p-4 rounded-lg bg-slate-800/40 border border-slate-700/60 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+      {/* ── EVIDENCE-BASED SCHEDULE ADJUSTMENT NOTIFICATION BANNER ── */}
+      {adjustmentRecommendation && dismissedRecommendationId !== adjustmentRecommendation.overrunBlockId && (
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-slate-800 text-slate-300 border border-slate-700/60 shrink-0">
+            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 shrink-0">
               <RefreshCcw className="w-4 h-4" />
             </div>
             <div>
               <span className="font-semibold text-white block text-sm">Schedule Adjustment Recommended</span>
-              <span className="text-slate-400">
-                Standup ran 35m longer than planned. Recommended: shift next blocks by 30 minutes to maintain balance.
+              <span className="text-slate-300">
+                {adjustmentRecommendation.explanation}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={handleAcceptAdaptiveAdjustment}
-              className="px-3 py-1.5 bg-[#3659C9] hover:bg-[#2B47A8] dark:bg-[#4F73E3] dark:hover:bg-[#6384ED] text-white font-medium text-xs rounded-lg transition-colors"
+              onClick={() => setIsAdjustmentModalOpen(true)}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-lg transition-colors shadow-xs"
             >
-              Accept Adjustment
+              Review Shift
             </button>
             <button
-              onClick={() => setAdaptiveBannerOpen(false)}
+              onClick={() => setDismissedRecommendationId(adjustmentRecommendation.overrunBlockId)}
               className="px-2.5 py-1.5 text-slate-400 hover:text-white text-xs font-medium"
             >
               Dismiss
@@ -411,6 +429,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         isOpen={isOptimizerOpen}
         onClose={() => setIsOptimizerOpen(false)}
       />
+
+      {/* Schedule Adjustment Review Modal */}
+      {adjustmentRecommendation && (
+        <ScheduleAdjustmentModal
+          isOpen={isAdjustmentModalOpen}
+          onClose={() => setIsAdjustmentModalOpen(false)}
+          recommendation={adjustmentRecommendation}
+          onApply={handleApplyAdjustment}
+        />
+      )}
     </div>
   );
 };

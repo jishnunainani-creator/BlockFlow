@@ -5,9 +5,9 @@ import {
   DEFAULT_SYNC_SETTINGS,
 } from '../types/storageState';
 import { idbGet, idbPut } from './indexedDbStore';
-import { loadTaskInbox } from '../utils/taskInboxStorage';
-import { loadAssignments } from '../utils/assignmentStorage';
-import { loadGoals, loadScheduledBlocks } from '../utils/storage';
+import { loadTaskInbox, saveTaskInbox } from '../utils/taskInboxStorage';
+import { loadAssignments, saveAssignments } from '../utils/assignmentStorage';
+import { loadGoals, saveGoals, loadScheduledBlocks, saveScheduledBlocks } from '../utils/storage';
 
 const SYNC_SETTINGS_STORAGE_KEY = 'blockflow_sync_settings_v1';
 
@@ -91,6 +91,62 @@ export function isCategorySyncActive(category: SyncCategory): boolean {
     settings.syncConsentGiven &&
     settings.syncCategories[category]
   );
+}
+
+/**
+ * Promotes or reverts all records in a category to a target storage state ('cloud_synced' | 'local_only').
+ * Called when a user consents to synchronize a category or disables synchronization.
+ * Excludes records explicitly registered in the local-only registry.
+ */
+export function stampCategoryRecordsStorageState(category: SyncCategory, state: StorageState): void {
+  switch (category) {
+    case 'timetable': {
+      const blocks = loadScheduledBlocks();
+      if (blocks.length > 0) {
+        const updated = blocks.map((b) => {
+          if (isRecordRegisteredLocalOnly('timetable', b.id)) return b;
+          return stampRecordStorageState(b, state);
+        });
+        saveScheduledBlocks(updated);
+      }
+      break;
+    }
+    case 'assignments': {
+      const assignments = loadAssignments();
+      if (assignments.length > 0) {
+        const updated = assignments.map((a) => {
+          if (isRecordRegisteredLocalOnly('assignments', a.id)) return a;
+          return stampRecordStorageState(a, state);
+        });
+        saveAssignments(updated);
+      }
+      break;
+    }
+    case 'goals': {
+      const goals = loadGoals();
+      if (goals.length > 0) {
+        const updated = goals.map((g) => {
+          if (isRecordRegisteredLocalOnly('goals', g.id)) return g;
+          return stampRecordStorageState(g, state);
+        });
+        saveGoals(updated);
+      }
+      break;
+    }
+    case 'tasks': {
+      const tasks = loadTaskInbox();
+      if (tasks.length > 0) {
+        const updated = tasks.map((t) => {
+          if (isRecordRegisteredLocalOnly('tasks', t.id)) return t;
+          return stampRecordStorageState(t, state);
+        });
+        saveTaskInbox(updated);
+      }
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 /**

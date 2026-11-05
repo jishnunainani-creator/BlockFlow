@@ -15,6 +15,7 @@ import {
   getStorageAuditSummary,
   StorageAuditSummary,
   loadSyncSettings,
+  stampCategoryRecordsStorageState,
 } from '../../lib/storageRepository';
 import {
   performSelectiveSync,
@@ -106,6 +107,13 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
     addToast('Starting selective cloud sync...', 'info');
 
     try {
+      // Ensure all consented categories have their local records stamped for cloud sync
+      (Object.keys(settings.syncCategories) as (keyof typeof settings.syncCategories)[]).forEach((cat) => {
+        if (settings.syncCategories[cat]) {
+          stampCategoryRecordsStorageState(cat, 'cloud_synced');
+        }
+      });
+
       const summary = await performSelectiveSync(currentUserId);
       if (summary.errors.length > 0) {
         addToast(`Sync finished with warnings: ${summary.errors[0]}`, 'warning');

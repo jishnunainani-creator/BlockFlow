@@ -28,7 +28,7 @@ import {
 import { generateAISmartSchedule } from '../utils/aiProductivityEngine';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { setActiveUserId } from '../utils/userScope';
-import { recordLocalTombstone } from '../lib/storageRepository';
+import { recordLocalTombstone, isCategorySyncActive } from '../lib/storageRepository';
 import {
   createUnifiedBackup,
   downloadBackupFile,
@@ -570,6 +570,8 @@ export const TimetableProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       weekId: currentWeekId,
       reminderMinutes: blockData.reminderMinutes || 15,
       status: blockData.status || 'not_started',
+      storageState: isCategorySyncActive('timetable') ? 'cloud_synced' : 'local_only',
+      updatedAt: Date.now(),
     };
 
     updateAppState((prev) => {

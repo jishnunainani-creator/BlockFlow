@@ -19,6 +19,7 @@ import {
   loadSyncSettings,
   saveSyncSettings,
   getStorageAuditSummary,
+  stampCategoryRecordsStorageState,
 } from '../../lib/storageRepository';
 import { performSelectiveSync } from '../../lib/selectiveSync';
 import { useTimetable } from '../../context/TimetableContext';
@@ -64,6 +65,15 @@ export const SyncConsentModal: React.FC<SyncConsentModalProps> = ({
 
     saveSyncSettings(updatedSettings);
 
+    // Apply storageState stamping to all records based on explicit category choice
+    (Object.keys(categories) as SyncCategory[]).forEach((cat) => {
+      if (categories[cat]) {
+        stampCategoryRecordsStorageState(cat, 'cloud_synced');
+      } else {
+        stampCategoryRecordsStorageState(cat, 'local_only');
+      }
+    });
+
     if (userId && updatedSettings.autoSyncEnabled) {
       addToast('Applying selective sync settings...', 'info');
       await performSelectiveSync(userId);
@@ -94,6 +104,12 @@ export const SyncConsentModal: React.FC<SyncConsentModalProps> = ({
     };
 
     saveSyncSettings(updatedSettings);
+
+    // Revert all category records to local_only
+    (['tasks', 'assignments', 'goals', 'timetable'] as SyncCategory[]).forEach((cat) => {
+      stampCategoryRecordsStorageState(cat, 'local_only');
+    });
+
     addToast('Confirmed: All productivity data remains 100% local on this device', 'info');
     onClose();
   };
