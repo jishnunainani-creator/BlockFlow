@@ -26,6 +26,7 @@ import { RestoreBackupModal } from '../Sync/RestoreBackupModal';
 import { BackupInspectionReport } from '../../utils/backupEngine';
 import { useTimetable } from '../../context/TimetableContext';
 import { getCurrentUser } from '../../lib/supabase';
+import { getActiveUserId } from '../../utils/userScope';
 
 interface PrivacyAndDataSectionProps {
   onExportJSON: () => void;
@@ -42,7 +43,7 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPurgingCloud, setIsPurgingCloud] = useState(false);
   const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => getActiveUserId());
   const [inspectionReport, setInspectionReport] = useState<BackupInspectionReport | null>(null);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const restoreFileRef = useRef<HTMLInputElement>(null);
@@ -92,7 +93,8 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
   }, []);
 
   const handleManualSync = async () => {
-    if (!currentUserId) {
+    const effectiveUserId = currentUserId || getActiveUserId();
+    if (!effectiveUserId) {
       addToast('Please sign in to run cloud synchronization', 'info');
       return;
     }
@@ -114,7 +116,7 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
         }
       });
 
-      const summary = await performSelectiveSync(currentUserId);
+      const summary = await performSelectiveSync(effectiveUserId);
       if (summary.errors.length > 0) {
         addToast(`Sync finished with warnings: ${summary.errors[0]}`, 'warning');
       } else {
@@ -132,11 +134,12 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
   };
 
   const handlePurgeCloudData = async () => {
-    if (!currentUserId) return;
+    const effectiveUserId = currentUserId || getActiveUserId();
+    if (!effectiveUserId) return;
 
     setIsPurgingCloud(true);
     try {
-      await purgeAllCloudCopiesPreserveLocal(currentUserId);
+      await purgeAllCloudCopiesPreserveLocal(effectiveUserId);
       addToast('All remote cloud data deleted. Local records preserved as Local-Only.', 'success');
       setShowPurgeConfirm(false);
       refreshAudit();
@@ -393,7 +396,7 @@ export const PrivacyAndDataSection: React.FC<PrivacyAndDataSectionProps> = ({
           setIsConsentModalOpen(false);
           refreshAudit();
         }}
-        userId={currentUserId}
+        userId={currentUserId || getActiveUserId()}
       />
 
       {/* Interactive Restore Modal */}

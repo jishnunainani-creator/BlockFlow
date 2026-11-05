@@ -23,6 +23,7 @@ import {
 } from '../../lib/storageRepository';
 import { performSelectiveSync } from '../../lib/selectiveSync';
 import { useTimetable } from '../../context/TimetableContext';
+import { getActiveUserId } from '../../utils/userScope';
 
 interface SyncConsentModalProps {
   isOpen: boolean;
@@ -74,9 +75,10 @@ export const SyncConsentModal: React.FC<SyncConsentModalProps> = ({
       }
     });
 
-    if (userId && updatedSettings.autoSyncEnabled) {
+    const effectiveUserId = userId || getActiveUserId();
+    if (effectiveUserId && updatedSettings.autoSyncEnabled) {
       addToast('Applying selective sync settings...', 'info');
-      await performSelectiveSync(userId);
+      await performSelectiveSync(effectiveUserId);
       addToast('Selective sync completed with privacy filters applied', 'success');
     } else {
       addToast('Storage preferences saved', 'success');
