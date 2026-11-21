@@ -11,6 +11,8 @@ import {
   BookOpen,
   CalendarCheck,
   AlertTriangle,
+  Compass,
+  Moon,
 } from 'lucide-react';
 import { formatDuration } from '../../utils/timeUtils';
 
@@ -27,6 +29,8 @@ interface MyDayHeaderProps {
   onOpenAddTask: () => void;
   onOpenQuickCapture?: () => void;
   onStartFocusMode?: () => void;
+  onOpenPlanDay?: () => void;
+  onOpenEndOfDay?: () => void;
 }
 
 export const MyDayHeader: React.FC<MyDayHeaderProps> = ({
@@ -42,6 +46,8 @@ export const MyDayHeader: React.FC<MyDayHeaderProps> = ({
   onOpenAddTask,
   onOpenQuickCapture,
   onStartFocusMode,
+  onOpenPlanDay,
+  onOpenEndOfDay,
 }) => {
   const now = new Date();
   const todayYMD = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -164,6 +170,28 @@ export const MyDayHeader: React.FC<MyDayHeaderProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          {onOpenPlanDay && (
+            <button
+              type="button"
+              onClick={onOpenPlanDay}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors shadow-2xs"
+            >
+              <Compass className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Plan Day</span>
+            </button>
+          )}
+
+          {onOpenEndOfDay && (
+            <button
+              type="button"
+              onClick={onOpenEndOfDay}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors shadow-2xs"
+            >
+              <Moon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <span>End Day</span>
+            </button>
+          )}
+
           {onOpenQuickCapture && (
             <button
               type="button"

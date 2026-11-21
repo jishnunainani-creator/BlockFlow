@@ -15,6 +15,12 @@ import { DailyScheduleList } from '../MyDay/DailyScheduleList';
 import { DailyTasksList } from '../MyDay/DailyTasksList';
 import { DailyAssignmentsList } from '../MyDay/DailyAssignmentsList';
 import { DailyGoalsList } from '../MyDay/DailyGoalsList';
+import { DailyGoalsCard } from '../DailyGoals/DailyGoalsCard';
+import { DailyGoalEditorModal } from '../DailyGoals/DailyGoalEditorModal';
+import { PlanMyDayModal } from '../DailyGoals/PlanMyDayModal';
+import { EndOfDayFlowModal } from '../Execution/EndOfDayFlowModal';
+import { DailyGoal } from '../../types/dailyGoals';
+import { loadDailyGoals, saveDailyGoals } from '../../utils/dailyGoalsStorage';
 import { AddScheduledBlockModal } from '../MyDay/AddScheduledBlockModal';
 import { AddTaskModal } from '../MyDay/AddTaskModal';
 import { EditScheduledBlockModal } from '../MyDay/EditScheduledBlockModal';
@@ -54,6 +60,7 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
   const [tasks, setTasks] = useState<TaskInboxItem[]>(() => loadTaskInbox());
   const [assignments, setAssignments] = useState<Assignment[]>(() => loadAssignments());
   const [goals, setGoals] = useState<Goal[]>(() => loadGoals());
+  const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>(() => loadDailyGoals());
 
   // Modal states
   const [isAddBlockOpen, setIsAddBlockOpen] = useState(false);
@@ -61,12 +68,21 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
   const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
   const [convertingCaptureItem, setConvertingCaptureItem] = useState<QuickCaptureItem | null>(null);
   const [editingBlock, setEditingBlock] = useState<ScheduledBlock | null>(null);
+  const [isDailyGoalEditorOpen, setIsDailyGoalEditorOpen] = useState(false);
+  const [editingDailyGoal, setEditingDailyGoal] = useState<DailyGoal | null>(null);
+  const [isPlanDayOpen, setIsPlanDayOpen] = useState(false);
+  const [isEndOfDayOpen, setIsEndOfDayOpen] = useState(false);
 
-  // Sync tasks, assignments, and goals on mount or focus
+  // Sync tasks, assignments, goals, and daily goals on mount or focus
   useEffect(() => {
     setTasks(loadTaskInbox());
     setAssignments(loadAssignments());
     setGoals(loadGoals());
+    setDailyGoals(loadDailyGoals());
+
+    const handleDailyGoalsChange = () => setDailyGoals(loadDailyGoals());
+    window.addEventListener('blockflow_daily_goals_updated', handleDailyGoalsChange);
+    return () => window.removeEventListener('blockflow_daily_goals_updated', handleDailyGoalsChange);
   }, []);
 
   // Filter scheduled blocks for the selected date using canonical selector
@@ -183,6 +199,40 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
     [deleteScheduledBlock, addToast]
   );
 
+  const handleSaveDailyGoal = useCallback((updatedGoal: DailyGoal) => {
+    setDailyGoals((prev) => {
+      const exists = prev.some((g) => g.id === updatedGoal.id);
+      const next = exists
+        ? prev.map((g) => (g.id === updatedGoal.id ? updatedGoal : g))
+        : [...prev, updatedGoal];
+      saveDailyGoals(next);
+      return next;
+    });
+  }, []);
+
+  const handleUpdateDailyGoalsList = useCallback((updatedList: DailyGoal[]) => {
+    setDailyGoals(updatedList);
+    saveDailyGoals(updatedList);
+  }, []);
+
+  const handleDeleteDailyGoal = useCallback((goalId: string) => {
+    setDailyGoals((prev) => {
+      const next = prev.filter((g) => g.id !== goalId);
+      saveDailyGoals(next);
+      return next;
+    });
+  }, []);
+
+  const handleToggleMustDo = useCallback((goalId: string) => {
+    setDailyGoals((prev) => {
+      const next = prev.map((g) =>
+        g.id === goalId ? { ...g, isMustDo: !g.isMustDo, updatedAt: Date.now() } : g
+      );
+      saveDailyGoals(next);
+      return next;
+    });
+  }, []);
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-6 select-none scrollbar-thin">
       {/* ── BREADCRUMB ── */}
@@ -202,6 +252,8 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
         onOpenAddTask={() => setIsAddTaskOpen(true)}
         onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
         onStartFocusMode={onStartFocusMode}
+        onOpenPlanDay={() => setIsPlanDayOpen(true)}
+        onOpenEndOfDay={() => setIsEndOfDayOpen(true)}
       />
 
       {/* ── MAIN 2-COLUMN COMMAND CENTRE WORKSPACE ── */}
@@ -231,8 +283,34 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
           />
         </div>
 
-        {/* Right Column: Priority Tasks, Assignments & SMART Goals */}
+        {/* Right Column: Priority Tasks, Assignments & Goals */}
         <div className="lg:col-span-5 xl:col-span-4 space-y-6">
+          {/* Today's Goals (Daily Goals & Reflection feature) */}
+          <DailyGoalsCard
+            dateStr={selectedYMD}
+            goals={dailyGoals}
+            scheduledBlocks={selectedDateBlocks}
+            onSaveGoal={handleSaveDailyGoal}
+            onUpdateGoalsList={handleUpdateDailyGoalsList}
+            onDeleteGoal={handleDeleteDailyGoal}
+            onOpenEditor={(g) => {
+              setEditingDailyGoal(g || null);
+              setIsDailyGoalEditorOpen(true);
+            }}
+            onOpenPlanDay={() => setIsPlanDayOpen(true)}
+            onStartFocus={
+              onStartFocusMode
+                ? (goal) =>
+                    onStartFocusMode({
+                      title: goal.title,
+                      goalId: goal.id,
+                      plannedDurationMinutes: goal.estimateMin || 25,
+                    })
+                : undefined
+            }
+            addToast={addToast}
+          />
+
           {/* Priority Tasks */}
           <DailyTasksList
             tasks={tasks}
@@ -331,6 +409,51 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
             setTasks(loadTaskInbox());
             setGoals(loadGoals());
           }}
+        />
+      )}
+
+      {/* Daily Goal Editor Modal */}
+      {isDailyGoalEditorOpen && (
+        <DailyGoalEditorModal
+          isOpen={isDailyGoalEditorOpen}
+          onClose={() => {
+            setIsDailyGoalEditorOpen(false);
+            setEditingDailyGoal(null);
+          }}
+          goal={editingDailyGoal}
+          dateStr={selectedYMD}
+          scheduledBlocks={selectedDateBlocks}
+          existingMustDoCount={dailyGoals.filter((g) => g.date === selectedYMD && g.isMustDo).length}
+          onSave={handleSaveDailyGoal}
+          onDelete={handleDeleteDailyGoal}
+        />
+      )}
+
+      {/* Plan My Day Modal */}
+      {isPlanDayOpen && (
+        <PlanMyDayModal
+          isOpen={isPlanDayOpen}
+          onClose={() => setIsPlanDayOpen(false)}
+          dateStr={selectedYMD}
+          goals={dailyGoals}
+          scheduledBlocks={selectedDateBlocks}
+          onToggleMustDo={handleToggleMustDo}
+          onOpenCreateGoal={() => {
+            setEditingDailyGoal(null);
+            setIsDailyGoalEditorOpen(true);
+          }}
+          onCompletePlan={() => {
+            addToast('Plan confirmed! Have a focused, productive day 🚀', 'success');
+          }}
+        />
+      )}
+
+      {/* End My Day Reflection Modal */}
+      {isEndOfDayOpen && (
+        <EndOfDayFlowModal
+          isOpen={isEndOfDayOpen}
+          onClose={() => setIsEndOfDayOpen(false)}
+          dateStr={selectedYMD}
         />
       )}
     </div>

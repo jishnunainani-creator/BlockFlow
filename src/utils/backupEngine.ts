@@ -61,9 +61,21 @@ import {
   savePlannerConfig,
 } from './adaptivePlannerStorage';
 import { migrateBlockFlowJSON } from './migration/dataMigrator';
+import { DailyGoal, PlanPeriod, DayReflection } from '../types/dailyGoals';
+import {
+  loadDailyGoals,
+  saveDailyGoals,
+  loadPlanPeriods,
+  savePlanPeriods,
+  loadDayReflections,
+  saveDayReflections,
+  normalizeDailyGoal,
+  normalizePlanPeriod,
+  normalizeDayReflection,
+} from './dailyGoalsStorage';
 
 export interface UnifiedBackupBundle {
-  version: '4.0';
+  version: '4.0' | '4.1';
   app: 'BlockFlow';
   exportedAt: string;
   timetable: {
@@ -90,6 +102,9 @@ export interface UnifiedBackupBundle {
     proposals: ProposedPlanItem[];
     config: ScheduleConstraintConfig | null;
   };
+  dailyGoals?: DailyGoal[];
+  planPeriods?: PlanPeriod[];
+  dayReflections?: Record<string, DayReflection>;
 }
 
 export interface BackupCounts {
@@ -102,6 +117,9 @@ export interface BackupCounts {
   assignments: number;
   thoughts: number;
   proposals: number;
+  dailyGoals?: number;
+  planPeriods?: number;
+  dayReflections?: number;
 }
 
 export interface BackupConflicts {
@@ -111,6 +129,8 @@ export interface BackupConflicts {
   taskCount: number;
   assignmentCount: number;
   thoughtCount: number;
+  dailyGoalCount?: number;
+  planPeriodCount?: number;
   totalConflicts: number;
 }
 
@@ -139,14 +159,14 @@ export interface TimetableStateSlice {
 }
 
 /**
- * Creates a complete unified v4.0 JSON backup bundle of the user's workspace.
+ * Creates a complete unified v4.1 JSON backup bundle of the user's workspace.
  */
 export function createUnifiedBackup(
   timetableState: TimetableStateSlice,
   resolution?: number
 ): UnifiedBackupBundle {
   return {
-    version: '4.0',
+    version: '4.1',
     app: 'BlockFlow',
     exportedAt: new Date().toISOString(),
     timetable: {
@@ -173,6 +193,9 @@ export function createUnifiedBackup(
       proposals: loadStoredProposals() || [],
       config: loadPlannerConfig() || null,
     },
+    dailyGoals: loadDailyGoals() || [],
+    planPeriods: loadPlanPeriods() || [],
+    dayReflections: loadDayReflections() || {},
   };
 }
 
@@ -253,6 +276,9 @@ export function validateAndInspectBackup(rawJson: string): BackupInspectionRepor
     assignments: normalized.assignments.items.length,
     thoughts: normalized.thoughts.length,
     proposals: normalized.planner.proposals.length,
+    dailyGoals: normalized.dailyGoals?.length || 0,
+    planPeriods: normalized.planPeriods?.length || 0,
+    dayReflections: Object.keys(normalized.dayReflections || {}).length,
   };
 
   return {
@@ -308,6 +334,17 @@ export function applyUnifiedBackup(
     saveStoredProposals(bundle.planner.proposals);
     if (bundle.planner.config) {
       savePlannerConfig(bundle.planner.config);
+    }
+
+    // 7. Daily Goals, Plan Periods & Day Reflections
+    if (bundle.dailyGoals) {
+      saveDailyGoals(bundle.dailyGoals.map((g) => normalizeDailyGoal(g)));
+    }
+    if (bundle.planPeriods) {
+      savePlanPeriods(bundle.planPeriods.map((p) => normalizePlanPeriod(p)));
+    }
+    if (bundle.dayReflections) {
+      saveDayReflections(bundle.dayReflections);
     }
   } else {
     // ── MERGE MODE ──
@@ -481,6 +518,60 @@ export function applyUnifiedBackup(
       mergedProposals.push({ ...p, id: finalId });
     });
     saveStoredProposals(mergedProposals);
+
+    // 10. Plan Periods Merge
+    if (bundle.planPeriods && bundle.planPeriods.length > 0) {
+      const existingPeriods = loadPlanPeriods();
+      const existingPeriodIds = new Set(existingPeriods.map((p) => p.id));
+      const periodIdRemap = new Map<string, string>();
+      const mergedPeriods = [...existingPeriods];
+
+      bundle.planPeriods.forEach((period, idx) => {
+        let finalId = period.id;
+        if (existingPeriodIds.has(period.id)) {
+          finalId = `${period.id}_m_${timestamp}_${idx}`;
+          periodIdRemap.set(period.id, finalId);
+        }
+        mergedPeriods.push(normalizePlanPeriod({ ...period, id: finalId }));
+      });
+      savePlanPeriods(mergedPeriods);
+
+      // Remap periodId in incoming daily goals
+      if (bundle.dailyGoals) {
+        bundle.dailyGoals = bundle.dailyGoals.map((g) => ({
+          ...g,
+          periodId: g.periodId ? periodIdRemap.get(g.periodId) || g.periodId : undefined,
+        }));
+      }
+    }
+
+    // 11. Daily Goals Merge
+    if (bundle.dailyGoals && bundle.dailyGoals.length > 0) {
+      const existingDailyGoals = loadDailyGoals();
+      const existingDailyGoalIds = new Set(existingDailyGoals.map((g) => g.id));
+      const mergedDailyGoals = [...existingDailyGoals];
+
+      bundle.dailyGoals.forEach((goal, idx) => {
+        let finalId = goal.id;
+        if (existingDailyGoalIds.has(goal.id)) {
+          finalId = `${goal.id}_m_${timestamp}_${idx}`;
+        }
+        mergedDailyGoals.push(normalizeDailyGoal({ ...goal, id: finalId }));
+      });
+      saveDailyGoals(mergedDailyGoals);
+    }
+
+    // 12. Day Reflections Merge
+    if (bundle.dayReflections && Object.keys(bundle.dayReflections).length > 0) {
+      const existingReflections = loadDayReflections();
+      const mergedReflections = { ...existingReflections };
+      Object.entries(bundle.dayReflections).forEach(([dateStr, ref]) => {
+        if (!mergedReflections[dateStr] || (ref.completedAt && ref.completedAt > (mergedReflections[dateStr].completedAt || 0))) {
+          mergedReflections[dateStr] = normalizeDayReflection(ref);
+        }
+      });
+      saveDayReflections(mergedReflections);
+    }
   }
 
   // Trigger reactive change events across all views
@@ -496,6 +587,9 @@ export function applyUnifiedBackup(
     assignments: bundle.assignments.items.length,
     thoughts: bundle.thoughts.length,
     proposals: bundle.planner.proposals.length,
+    dailyGoals: bundle.dailyGoals?.length || 0,
+    planPeriods: bundle.planPeriods?.length || 0,
+    dayReflections: Object.keys(bundle.dayReflections || {}).length,
   };
 
   const actionVerb = mode === 'replace' ? 'Restored & Replaced' : 'Merged';
@@ -513,10 +607,23 @@ export function applyUnifiedBackup(
  * Normalizes legacy v1/v2/v3 payloads or partial backups into a standard UnifiedBackupBundle.
  */
 function normalizeToUnifiedBundle(parsed: any): UnifiedBackupBundle {
-  // If already v4.0, ensure clean structures
-  if (parsed.version === '4.0' && parsed.timetable && parsed.tasks) {
+  const dailyGoals = Array.isArray(parsed.dailyGoals)
+    ? parsed.dailyGoals.map((g: any) => normalizeDailyGoal(g))
+    : [];
+  const planPeriods = Array.isArray(parsed.planPeriods)
+    ? parsed.planPeriods.map((p: any) => normalizePlanPeriod(p))
+    : [];
+  const dayReflections: Record<string, DayReflection> = {};
+  if (typeof parsed.dayReflections === 'object' && parsed.dayReflections !== null) {
+    Object.entries(parsed.dayReflections).forEach(([d, r]) => {
+      dayReflections[d] = normalizeDayReflection(r);
+    });
+  }
+
+  // If already v4.0 or v4.1, ensure clean structures
+  if ((parsed.version === '4.0' || parsed.version === '4.1') && parsed.timetable && parsed.tasks) {
     return {
-      version: '4.0',
+      version: parsed.version,
       app: 'BlockFlow',
       exportedAt: parsed.exportedAt || new Date().toISOString(),
       timetable: {
@@ -555,6 +662,9 @@ function normalizeToUnifiedBundle(parsed: any): UnifiedBackupBundle {
         proposals: Array.isArray(parsed.planner?.proposals) ? parsed.planner.proposals : [],
         config: parsed.planner?.config || null,
       },
+      dailyGoals,
+      planPeriods,
+      dayReflections,
     };
   }
 
@@ -613,6 +723,9 @@ function normalizeToUnifiedBundle(parsed: any): UnifiedBackupBundle {
       proposals: Array.isArray(parsed.proposals) ? parsed.proposals : [],
       config: parsed.plannerConfig || null,
     },
+    dailyGoals,
+    planPeriods,
+    dayReflections,
   };
 }
 
@@ -638,6 +751,8 @@ function inspectConflicts(bundle: UnifiedBackupBundle): BackupConflicts {
   const currentTasks = new Set(loadTaskInbox().map((t) => t.id));
   const currentAssignments = new Set(loadAssignments().map((a) => a.id));
   const currentThoughts = new Set(loadThoughts().map((t) => t.id));
+  const currentDailyGoals = new Set(loadDailyGoals().map((g) => g.id));
+  const currentPlanPeriods = new Set(loadPlanPeriods().map((p) => p.id));
 
   const libConflicts = bundle.timetable.libraryBlocks.filter((b) => currentLib.has(b.id)).length;
   const schedConflicts = bundle.timetable.scheduledBlocks.filter((b) => currentSched.has(b.id)).length;
@@ -645,6 +760,8 @@ function inspectConflicts(bundle: UnifiedBackupBundle): BackupConflicts {
   const taskConflicts = bundle.tasks.items.filter((t) => currentTasks.has(t.id)).length;
   const assignConflicts = bundle.assignments.items.filter((a) => currentAssignments.has(a.id)).length;
   const thoughtConflicts = bundle.thoughts.filter((t) => currentThoughts.has(t.id)).length;
+  const dailyGoalConflicts = (bundle.dailyGoals || []).filter((g) => currentDailyGoals.has(g.id)).length;
+  const planPeriodConflicts = (bundle.planPeriods || []).filter((p) => currentPlanPeriods.has(p.id)).length;
 
   return {
     libraryBlockCount: libConflicts,
@@ -653,13 +770,17 @@ function inspectConflicts(bundle: UnifiedBackupBundle): BackupConflicts {
     taskCount: taskConflicts,
     assignmentCount: assignConflicts,
     thoughtCount: thoughtConflicts,
+    dailyGoalCount: dailyGoalConflicts,
+    planPeriodCount: planPeriodConflicts,
     totalConflicts:
       libConflicts +
       schedConflicts +
       goalConflicts +
       taskConflicts +
       assignConflicts +
-      thoughtConflicts,
+      thoughtConflicts +
+      dailyGoalConflicts +
+      planPeriodConflicts,
   };
 }
 
@@ -674,6 +795,9 @@ function emptyCounts(): BackupCounts {
     assignments: 0,
     thoughts: 0,
     proposals: 0,
+    dailyGoals: 0,
+    planPeriods: 0,
+    dayReflections: 0,
   };
 }
 
@@ -685,6 +809,8 @@ function emptyConflicts(): BackupConflicts {
     taskCount: 0,
     assignmentCount: 0,
     thoughtCount: 0,
+    dailyGoalCount: 0,
+    planPeriodCount: 0,
     totalConflicts: 0,
   };
 }
@@ -696,4 +822,7 @@ function dispatchStorageChangeEvents(): void {
   window.dispatchEvent(new CustomEvent('blockflow_assignments_changed'));
   window.dispatchEvent(new CustomEvent('blockflow_thoughts_changed'));
   window.dispatchEvent(new CustomEvent('blockflow_adaptive_proposals_changed'));
+  window.dispatchEvent(new CustomEvent('blockflow_daily_goals_updated'));
+  window.dispatchEvent(new CustomEvent('blockflow_plan_periods_updated'));
+  window.dispatchEvent(new CustomEvent('blockflow_day_reflections_updated'));
 }

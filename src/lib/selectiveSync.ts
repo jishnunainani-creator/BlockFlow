@@ -18,6 +18,12 @@ import {
 import { loadTaskInbox, saveTaskInbox } from '../utils/taskInboxStorage';
 import { loadAssignments, saveAssignments } from '../utils/assignmentStorage';
 import { loadGoals, saveGoals, loadScheduledBlocks, saveScheduledBlocks } from '../utils/storage';
+import {
+  loadDailyGoals,
+  saveDailyGoals,
+  loadPlanPeriods,
+  savePlanPeriods,
+} from '../utils/dailyGoalsStorage';
 import { ScheduledBlock } from '../types/timetable';
 import { TaskInboxItem, Assignment } from '../types/executionOS';
 import { Goal } from '../types/timetable';
@@ -557,6 +563,133 @@ export async function performSelectiveSync(userId: string): Promise<SyncSummary>
           if (pullCount > 0) {
             saveGoals(updatedList);
             summary.downloadedCount += pullCount;
+          }
+        }
+
+        // 4C. SYNC DAILY GOALS & PLAN PERIODS
+        const localDailyGoals = loadDailyGoals();
+        const uploadableDailyGoals = filterRecordsForCloudUpload(localDailyGoals, 'goals', settings);
+        summary.skippedLocalCount += localDailyGoals.length - uploadableDailyGoals.length;
+
+        if (uploadableDailyGoals.length > 0) {
+          const dgPayload = uploadableDailyGoals.map((dg) => ({
+            user_id: userId,
+            id: dg.id,
+            date: dg.date,
+            period_id: dg.periodId || null,
+            title: dg.title,
+            notes: dg.notes || null,
+            color: dg.color,
+            priority: dg.priority,
+            is_must_do: dg.isMustDo,
+            start_time: dg.startTime || null,
+            end_time: dg.endTime || null,
+            estimate_min: dg.estimateMin || null,
+            actual_min: dg.actualMin || null,
+            measure: dg.measure,
+            status: dg.status,
+            carried_from_id: dg.carriedFromId || null,
+            carry_count: dg.carryCount || 0,
+            linked_block_id: dg.linkedBlockId || null,
+            linked_assignment_id: dg.linkedAssignmentId || null,
+            linked_smart_goal_id: dg.linkedSmartGoalId || null,
+            order: dg.order || 0,
+            storage_state: 'cloud_synced',
+            updated_at: new Date(dg.updatedAt || Date.now()).toISOString(),
+          }));
+
+          const { error: dgError } = await supabase
+            .from('daily_goals')
+            .upsert(dgPayload, { onConflict: 'user_id,id' });
+
+          if (dgError) {
+            summary.errors.push(`Daily goals upload error: ${dgError.message}`);
+          } else {
+            summary.uploadedCount += uploadableDailyGoals.length;
+          }
+        }
+
+        // Pull remote daily goals
+        const { data: remoteDailyGoals, error: dgPullError } = await supabase
+          .from('daily_goals')
+          .select('*')
+          .eq('user_id', userId);
+
+        if (!dgPullError && Array.isArray(remoteDailyGoals)) {
+          let updatedDailyList = [...loadDailyGoals()];
+          let dgPullCount = 0;
+
+          for (const remote of remoteDailyGoals) {
+            const recordId = remote.id;
+            if (isRecordTombstoned('goals', recordId) || isRecordRegisteredLocalOnly('goals', recordId)) {
+              continue;
+            }
+
+            const existingIdx = updatedDailyList.findIndex((g) => g.id === recordId);
+            const remoteUpdatedAt = remote.updated_at ? new Date(remote.updated_at).getTime() : 0;
+
+            if (existingIdx >= 0) {
+              const local = updatedDailyList[existingIdx];
+              if (getRecordStorageState(local) === 'local_only') continue;
+              const localUpdatedAt = local.updatedAt || local.createdAt || Date.now();
+              if (remoteUpdatedAt > localUpdatedAt) {
+                updatedDailyList[existingIdx] = {
+                  ...local,
+                  title: remote.title,
+                  date: remote.date,
+                  periodId: remote.period_id || undefined,
+                  notes: remote.notes || undefined,
+                  color: remote.color || 'indigo',
+                  priority: remote.priority || 'medium',
+                  isMustDo: Boolean(remote.is_must_do),
+                  startTime: remote.start_time || undefined,
+                  endTime: remote.end_time || undefined,
+                  estimateMin: remote.estimate_min || undefined,
+                  actualMin: remote.actual_min || undefined,
+                  measure: remote.measure || local.measure,
+                  status: remote.status || 'planned',
+                  carriedFromId: remote.carried_from_id || undefined,
+                  carryCount: remote.carry_count || 0,
+                  linkedBlockId: remote.linked_block_id || undefined,
+                  linkedAssignmentId: remote.linked_assignment_id || undefined,
+                  linkedSmartGoalId: remote.linked_smart_goal_id || undefined,
+                  order: remote.order ?? local.order,
+                  updatedAt: remoteUpdatedAt,
+                };
+                dgPullCount++;
+              }
+            } else {
+              updatedDailyList.push({
+                id: recordId,
+                date: remote.date,
+                periodId: remote.period_id || undefined,
+                title: remote.title,
+                notes: remote.notes || undefined,
+                color: remote.color || 'indigo',
+                priority: remote.priority || 'medium',
+                isMustDo: Boolean(remote.is_must_do),
+                startTime: remote.start_time || undefined,
+                endTime: remote.end_time || undefined,
+                estimateMin: remote.estimate_min || undefined,
+                actualMin: remote.actual_min || undefined,
+                measure: remote.measure || { type: 'check', current: 0 },
+                status: remote.status || 'planned',
+                carriedFromId: remote.carried_from_id || undefined,
+                carryCount: remote.carry_count || 0,
+                linkedBlockId: remote.linked_block_id || undefined,
+                linkedAssignmentId: remote.linked_assignment_id || undefined,
+                linkedSmartGoalId: remote.linked_smart_goal_id || undefined,
+                order: remote.order ?? 0,
+                createdAt: remoteUpdatedAt || Date.now(),
+                updatedAt: remoteUpdatedAt,
+              });
+              dgPullCount++;
+            }
+          }
+
+          if (dgPullCount > 0) {
+            saveDailyGoals(updatedDailyList);
+            summary.downloadedCount += dgPullCount;
           }
         }
       } catch (err: any) {

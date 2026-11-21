@@ -138,7 +138,7 @@ describe('PHASE 4: Transparent Storage, Backup Engine & Privacy Messaging', () =
 
     const backup = createUnifiedBackup(mockTimetableState, 30);
 
-    assert.strictEqual(backup.version, '4.0');
+    assert.strictEqual(backup.version, '4.1');
     assert.strictEqual(backup.app, 'BlockFlow');
     assert.strictEqual(backup.timetable.resolution, 30);
     assert.strictEqual(backup.timetable.libraryBlocks.length, 1);
@@ -153,19 +153,24 @@ describe('PHASE 4: Transparent Storage, Backup Engine & Privacy Messaging', () =
     assert.strictEqual(backup.thoughts.length, 1);
     assert.strictEqual(backup.thoughts[0].id, 'thought-1');
     assert.strictEqual(backup.planner.proposals.length, 1);
+    assert.ok(Array.isArray(backup.dailyGoals));
+    assert.ok(Array.isArray(backup.planPeriods));
+    assert.strictEqual(typeof backup.dayReflections, 'object');
   });
 
-  test('2. validateAndInspectBackup handles valid v4.0 and reports correct counts', () => {
+  test('2. validateAndInspectBackup handles valid v4.1 and reports correct counts', () => {
     const bundle = createUnifiedBackup(mockTimetableState, 15);
     const rawJson = JSON.stringify(bundle);
 
     const report = validateAndInspectBackup(rawJson);
 
     assert.strictEqual(report.isValid, true);
-    assert.strictEqual(report.version, '4.0');
+    assert.strictEqual(report.version, '4.1');
     assert.strictEqual(report.counts.libraryBlocks, 1);
     assert.strictEqual(report.counts.scheduledBlocks, 1);
     assert.strictEqual(report.counts.templates, 1);
+    assert.strictEqual(typeof report.counts.dailyGoals, 'number');
+    assert.strictEqual(typeof report.counts.planPeriods, 'number');
     assert.notStrictEqual(report.normalizedBundle, null);
   });
 

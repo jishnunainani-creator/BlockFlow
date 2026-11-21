@@ -7,8 +7,10 @@ import { ConflictBanner } from '../Conflict/ConflictBanner';
 import { MobileAddBlockSheet } from './MobileAddBlockSheet';
 import { ExportModal } from '../Export/ExportModal';
 import { PrintCalendar } from '../Export/PrintCalendar';
-import { Plus, Calendar, CalendarDays, LayoutGrid, Download, Bookmark, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, CalendarDays, LayoutGrid, Download, Bookmark, ChevronLeft, ChevronRight, Target } from 'lucide-react';
 import { BulkSaveToLibraryModal } from '../Library/BulkSaveToLibraryModal';
+import { DailyGoal } from '../../types/dailyGoals';
+import { loadDailyGoals } from '../../utils/dailyGoalsStorage';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -146,6 +148,49 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
   const daysWithDates = useMemo(() => getWeekDaysWithDates(currentWeekId), [currentWeekId]);
   const workDays      = useMemo(() => daysWithDates.filter((d) => d.index < 5), [daysWithDates]);
   const displayDays   = useMemo(() => (viewMode === 'workweek' ? workDays : daysWithDates), [viewMode, workDays, daysWithDates]);
+
+  const [dailyGoals, setDailyGoals] = useState<DailyGoal[]>(() => loadDailyGoals());
+
+  useEffect(() => {
+    const handleGoalsUpdated = () => setDailyGoals(loadDailyGoals());
+    window.addEventListener('blockflow_daily_goals_updated', handleGoalsUpdated);
+    return () => window.removeEventListener('blockflow_daily_goals_updated', handleGoalsUpdated);
+  }, []);
+
+  // Pre-index timed daily goals by date string
+  const timedGoalsByDate = useMemo(() => {
+    const map = new Map<string, DailyGoal[]>();
+    dailyGoals.forEach((g) => {
+      if (g.startTime && g.endTime && g.status !== 'skipped' && g.status !== 'carried') {
+        const list = map.get(g.date) || [];
+        list.push(g);
+        map.set(g.date, list);
+      }
+    });
+    return map;
+  }, [dailyGoals]);
+
+  const handleConvertGoalToBlock = useCallback((goal: DailyGoal, dayIndex: number) => {
+    if (!goal.startTime || !goal.endTime) return;
+    const [sh, sm] = goal.startTime.split(':').map(Number);
+    const [eh, em] = goal.endTime.split(':').map(Number);
+    const startMins = sh * 60 + sm;
+    const endMins = eh * 60 + em;
+    const duration = Math.max(15, endMins - startMins);
+
+    addScheduledBlock({
+      blockId: goal.linkedBlockId || `lib-dg-${goal.id}`,
+      title: goal.title,
+      color: '#6366F1',
+      priority: goal.priority,
+      dayOfWeek: dayIndex,
+      startMinutes: startMins,
+      duration,
+      icon: 'target',
+      status: 'scheduled',
+      goalId: goal.linkedSmartGoalId,
+    });
+  }, [addScheduledBlock]);
 
   // Pre-index blocks by day for O(1) column access
   const blocksByDay = useMemo(() => {
@@ -588,6 +633,49 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                       onFocusCard={handleFocusCard}
                     />
                   ))}
+
+                  {/* Timed Daily Goals (dashed chips distinct from scheduled blocks) */}
+                  {timedGoalsByDate.get(day.dateStr)?.map((goal) => {
+                    const [sh, sm] = goal.startTime!.split(':').map(Number);
+                    const [eh, em] = goal.endTime!.split(':').map(Number);
+                    const startMins = sh * 60 + sm;
+                    const endMins = eh * 60 + em;
+                    const duration = Math.max(15, endMins - startMins);
+                    const topPx = ((startMins - startHour * 60) / 60) * hourHeight;
+                    const heightPx = Math.max(26, (duration / 60) * hourHeight);
+
+                    return (
+                      <div
+                        key={goal.id}
+                        style={{
+                          top: `${Math.max(0, topPx)}px`,
+                          height: `${heightPx}px`,
+                        }}
+                        className="absolute left-1.5 right-1.5 rounded-xl border-2 border-dashed border-indigo-400/80 bg-indigo-50/80 dark:bg-indigo-950/60 p-2 flex flex-col justify-between overflow-hidden shadow-2xs z-10 transition-all hover:border-indigo-500 hover:bg-indigo-100/90 dark:hover:bg-indigo-900/60"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-bold text-indigo-900 dark:text-indigo-200 truncate flex items-center gap-1">
+                            <Target className="w-3 h-3 text-indigo-500 shrink-0" />
+                            <span className="truncate">{goal.title}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConvertGoalToBlock(goal, day.index);
+                            }}
+                            title="Convert to scheduled block"
+                            className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-600 hover:bg-indigo-500 text-white shrink-0 shadow-2xs transition-transform active:scale-95"
+                          >
+                            + Block
+                          </button>
+                        </div>
+                        <span className="text-[9px] font-mono font-medium text-indigo-600 dark:text-indigo-300">
+                          {goal.startTime}–{goal.endTime}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -760,6 +848,49 @@ export const TimetableGrid: React.FC<TimetableGridProps> = ({
                       onFocusCard={handleFocusCard}
                     />
                   ))}
+
+                  {/* Timed Daily Goals (mobile) */}
+                  {timedGoalsByDate.get(day.dateStr)?.map((goal) => {
+                    const [sh, sm] = goal.startTime!.split(':').map(Number);
+                    const [eh, em] = goal.endTime!.split(':').map(Number);
+                    const startMins = sh * 60 + sm;
+                    const endMins = eh * 60 + em;
+                    const duration = Math.max(15, endMins - startMins);
+                    const topPx = ((startMins - startHour * 60) / 60) * hourHeight;
+                    const heightPx = Math.max(26, (duration / 60) * hourHeight);
+
+                    return (
+                      <div
+                        key={goal.id}
+                        style={{
+                          top: `${Math.max(0, topPx)}px`,
+                          height: `${heightPx}px`,
+                        }}
+                        className="absolute left-1 right-1 rounded-lg border-2 border-dashed border-indigo-400/80 bg-indigo-50/80 dark:bg-indigo-950/60 p-1.5 flex flex-col justify-between overflow-hidden shadow-2xs z-10 transition-all hover:border-indigo-500"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold text-indigo-900 dark:text-indigo-200 truncate flex items-center gap-1">
+                            <Target className="w-2.5 h-2.5 text-indigo-500 shrink-0" />
+                            <span className="truncate">{goal.title}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConvertGoalToBlock(goal, day.index);
+                            }}
+                            title="Convert to scheduled block"
+                            className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-indigo-600 text-white shrink-0"
+                          >
+                            + Block
+                          </button>
+                        </div>
+                        <span className="text-[8px] font-mono font-medium text-indigo-600 dark:text-indigo-300">
+                          {goal.startTime}–{goal.endTime}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}

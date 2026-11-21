@@ -3,6 +3,8 @@ import { DualGoalMetrics, calculateGoalMetrics } from './goalEngine';
 import { getISOWeekString } from './timeUtils';
 import { ExecutionSession } from '../types/sessionLog';
 import { FocusSessionLog } from './focusStorage';
+import { DailyGoal, DayGoalStats } from '../types/dailyGoals';
+import { computeDayScore, checkTimeBudget } from './dailyGoalsEngine';
 
 export interface BlockCompletionStats {
   total: number;
@@ -367,5 +369,55 @@ export function selectFocusDuration(
     totalHours,
     count: validCount,
     avgDurationMinutes,
+  };
+}
+
+/**
+ * 7. DAILY GOAL STATS SELECTOR
+ * Canonical selector for daily goals across My Day, Dashboard, Analytics, and Execution Intelligence.
+ * Returns honest numbers with no invented defaults ("-" if no goals exist).
+ */
+export function selectDayGoalStats(params: {
+  dateStr: string;
+  goals: DailyGoal[];
+  scheduledBlocks?: ScheduledBlock[];
+}): DayGoalStats {
+  const { dateStr, goals, scheduledBlocks = [] } = params;
+  const dayGoals = (goals || []).filter((g) => g && g.date === dateStr);
+
+  const totalCount = dayGoals.length;
+  const completedCount = dayGoals.filter((g) => g.status === 'done').length;
+  const partialCount = dayGoals.filter((g) => g.status === 'partial').length;
+  const skippedCount = dayGoals.filter((g) => g.status === 'skipped').length;
+  const carriedCount = dayGoals.filter((g) => g.status === 'carried').length;
+  const plannedCount = dayGoals.filter((g) => g.status === 'planned' || g.status === 'in_progress').length;
+
+  const mustDoGoals = dayGoals.filter((g) => g.isMustDo);
+  const mustDoCount = mustDoGoals.length;
+  const mustDoCompletedCount = mustDoGoals.filter((g) => g.status === 'done').length;
+
+  const scoreResult = computeDayScore(dayGoals);
+  const budgetResult = checkTimeBudget({
+    goals: dayGoals,
+    scheduledBlocks,
+    dateStr,
+  });
+
+  return {
+    totalCount,
+    completedCount,
+    partialCount,
+    skippedCount,
+    carriedCount,
+    plannedCount,
+    mustDoCount,
+    mustDoCompletedCount,
+    earnedPoints: scoreResult.earnedPoints,
+    maxPoints: scoreResult.maxPoints,
+    scorePct: scoreResult.scorePct,
+    formattedScore: scoreResult.formattedScore,
+    plannedMinutes: budgetResult.plannedMinutes,
+    freeMinutes: budgetResult.freeMinutes,
+    isOverloaded: budgetResult.isOverloaded,
   };
 }

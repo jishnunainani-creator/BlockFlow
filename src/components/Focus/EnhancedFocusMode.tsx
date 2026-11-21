@@ -27,6 +27,12 @@ import {
 import { appendExecutionSession } from '../../utils/sessionStorage';
 import { loadTaskInbox, saveTaskInbox } from '../../utils/taskInboxStorage';
 import { TaskInboxItem } from '../../types/executionOS';
+import { DailyGoal } from '../../types/dailyGoals';
+import {
+  loadDailyGoals,
+  saveDailyGoals,
+  incrementSmartGoalProgress,
+} from '../../utils/dailyGoalsStorage';
 import {
   Play,
   Pause,
@@ -87,6 +93,7 @@ export default function EnhancedFocusMode({
   const [sessionTitle, setSessionTitle] = useState('Deep Work Session');
   const [linkedBlockId, setLinkedBlockId] = useState<string | undefined>(undefined);
   const [linkedTaskId, setLinkedTaskId] = useState<string | undefined>(undefined);
+  const [linkedGoalId, setLinkedGoalId] = useState<string | undefined>(undefined);
   const [plannedDurationMins, setPlannedDurationMins] = useState<number | undefined>(undefined);
 
   // Timer State
@@ -109,8 +116,9 @@ export default function EnhancedFocusMode({
   const [sessionRating, setSessionRating] = useState(5);
   const [finalActualMinutes, setFinalActualMinutes] = useState(25);
 
-  // Available Tasks & Blocks for selection
+  // Available Tasks, Goals & Blocks for selection
   const [inboxTasks, setInboxTasks] = useState<TaskInboxItem[]>([]);
+  const [todayDailyGoals, setTodayDailyGoals] = useState<DailyGoal[]>([]);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayBlocks = useMemo(() => {
     return currentWeekScheduledBlocks
@@ -122,11 +130,19 @@ export default function EnhancedFocusMode({
   const completionTriggeredRef = useRef(false);
   const originalTitleRef = useRef(typeof document !== 'undefined' ? document.title : 'BlockFlow');
 
-  // Load pending inbox tasks
+  // Load pending inbox tasks and daily goals
   useEffect(() => {
     if (isOpen) {
       const allTasks = loadTaskInbox();
       setInboxTasks(allTasks.filter((t) => t.status !== 'completed' && t.status !== 'archived'));
+
+      const allGoals = loadDailyGoals();
+      const todayStr = new Date().toISOString().split('T')[0];
+      setTodayDailyGoals(
+        allGoals.filter(
+          (g) => g.date === todayStr && g.status !== 'done' && g.status !== 'skipped' && g.status !== 'carried'
+        )
+      );
     }
   }, [isOpen]);
 
@@ -136,6 +152,7 @@ export default function EnhancedFocusMode({
       if (initialTarget.title) setSessionTitle(initialTarget.title);
       if (initialTarget.blockId) setLinkedBlockId(initialTarget.blockId);
       if (initialTarget.taskId) setLinkedTaskId(initialTarget.taskId);
+      if (initialTarget.goalId) setLinkedGoalId(initialTarget.goalId);
       if (initialTarget.plannedDurationMinutes) {
         setPlannedDurationMins(initialTarget.plannedDurationMinutes);
         setTotalTimerSeconds(initialTarget.plannedDurationMinutes * 60);
@@ -395,7 +412,31 @@ export default function EnhancedFocusMode({
     appendExecutionSession(result.executionSession);
     appendFocusSessionLog(result.focusSessionLog);
 
-    // 2. Conditionally mark linked item as completed
+    // 2. Conditionally mark linked item as completed and update logged time
+    if (linkedGoalId) {
+      const allDailyGoals = loadDailyGoals();
+      const updatedGoals = allDailyGoals.map((g) => {
+        if (g.id !== linkedGoalId) return g;
+        const newActual = (g.actualMin || 0) + result.actualDurationMinutes;
+        const willBeDone = markItemCompleted || g.status === 'done';
+        if (markItemCompleted && g.linkedSmartGoalId) {
+          const inc = g.measure.type === 'count' && g.measure.target ? g.measure.target : 1;
+          incrementSmartGoalProgress(g.linkedSmartGoalId, inc);
+        }
+        return {
+          ...g,
+          actualMin: newActual,
+          status: willBeDone ? ('done' as const) : g.status,
+          completedAt: willBeDone ? Date.now() : g.completedAt,
+          updatedAt: Date.now(),
+        };
+      });
+      saveDailyGoals(updatedGoals);
+      if (markItemCompleted) {
+        addToast(`Marked daily goal as completed! 🎯`, 'success');
+      }
+    }
+
     if (markItemCompleted) {
       if (linkedBlockId) {
         updateBlockStatus(linkedBlockId, 'completed');
@@ -458,6 +499,19 @@ export default function EnhancedFocusMode({
   };
 
   // ── Linked Task Selection ──
+  const handleSelectDailyGoal = (goal: DailyGoal) => {
+    setSessionTitle(goal.title);
+    setLinkedGoalId(goal.id);
+    setLinkedBlockId(undefined);
+    setLinkedTaskId(undefined);
+    const duration = goal.estimateMin || 25;
+    setPlannedDurationMins(duration);
+    setTotalTimerSeconds(duration * 60);
+    setSecondsRemaining(duration * 60);
+    setShowTaskPicker(false);
+    addToast(`Linked focus session to goal "${goal.title}" 🎯`, 'info');
+  };
+
   const handleSelectBlock = (block: (typeof todayBlocks)[0]) => {
     setSessionTitle(block.title);
     setLinkedBlockId(block.id);
@@ -870,6 +924,31 @@ export default function EnhancedFocusMode({
                 >
                   Apply
                 </button>
+              </div>
+            </div>
+
+            {/* Today's Daily Goals */}
+            <div className="space-y-1.5 pt-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Today's Daily Goals ({todayDailyGoals.length})
+              </span>
+              <div className="max-h-36 overflow-y-auto space-y-1.5 scrollbar-thin">
+                {todayDailyGoals.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">No daily goals for today.</p>
+                ) : (
+                  todayDailyGoals.map((g) => (
+                    <div
+                      key={g.id}
+                      onClick={() => handleSelectDailyGoal(g)}
+                      className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-emerald-500/50 cursor-pointer transition-colors flex items-center justify-between text-xs"
+                    >
+                      <span className="font-semibold text-slate-200 truncate">🎯 {g.title}</span>
+                      <span className="text-[10px] text-emerald-400 font-mono font-bold shrink-0">
+                        {g.estimateMin ? `${g.estimateMin}m` : 'Goal'}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 

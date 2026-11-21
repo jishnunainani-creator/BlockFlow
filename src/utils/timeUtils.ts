@@ -19,6 +19,7 @@ export function minutesToTimeStr(minutes: number): string {
 }
 
 export const formatMinutesToTimeString = minutesToTimeStr;
+export const formatMinutesToTime = minutesToTimeStr;
 
 export function timeStrToMinutes(timeStr: string): number {
   const [h, m] = timeStr.split(':').map(Number);
@@ -104,6 +105,7 @@ export function getWeekDaysWithDates(weekId: string) {
       dateNum,
       monthShort,
       dateFormatted: `${d.short}, ${monthShort} ${dateNum}`,
+      dateStr: dayYMD,
       isToday: dayYMD === todayYMD,
     };
   });

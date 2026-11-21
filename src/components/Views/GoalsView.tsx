@@ -8,6 +8,7 @@ import { GoalWizardModal } from '../Goals/GoalWizardModal';
 import { GoalDetailModal } from '../Goals/GoalDetailModal';
 import { PlanGoalScheduleModal } from '../Goals/PlanGoalScheduleModal';
 import { SmartOnboardingModal } from '../Goals/SmartOnboardingModal';
+import { PlanPeriodsView } from '../DailyGoals/PlanPeriodsView';
 import {
   Target,
   Plus,
@@ -39,6 +40,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onNavigate }) => {
 
   const [goals, setGoals] = useState<Goal[]>([]);
   const [activeTab, setActiveTab] = useState<TabFilter>('active');
+  const [planningMode, setPlanningMode] = useState<'smart' | 'periods'>('smart');
 
   // Modal states
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -145,7 +147,40 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onNavigate }) => {
         />
       )}
 
-      {/* ── HEADER ── */}
+      {/* ── SUB-TAB SEGMENTED CONTROLLER ── */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+        <button
+          type="button"
+          onClick={() => setPlanningMode('smart')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            planningMode === 'smart'
+              ? 'bg-[#3659C9] text-white shadow-xs'
+              : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+          }`}
+        >
+          <Target size={14} />
+          <span>SMART Goals</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setPlanningMode('periods')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            planningMode === 'periods'
+              ? 'bg-[#3659C9] text-white shadow-xs'
+              : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+          }`}
+        >
+          <Calendar size={14} />
+          <span>Plan Periods</span>
+        </button>
+      </div>
+
+      {planningMode === 'periods' ? (
+        <PlanPeriodsView scheduledBlocks={allBlocks} addToast={addToast} />
+      ) : (
+        <>
+          {/* ── HEADER ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -470,6 +505,8 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ onNavigate }) => {
             </button>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* ── SMART ONBOARDING GUIDE MODAL ── */}
