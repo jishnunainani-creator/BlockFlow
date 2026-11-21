@@ -412,7 +412,31 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
         />
       )}
 
-      {/* Daily Goal Editor Modal */}
+      {/* Plan My Day Modal */}
+      {isPlanDayOpen && (
+        <PlanMyDayModal
+          isOpen={isPlanDayOpen}
+          onClose={() => setIsPlanDayOpen(false)}
+          dateStr={selectedYMD}
+          goals={dailyGoals}
+          scheduledBlocks={selectedDateBlocks}
+          onToggleMustDo={handleToggleMustDo}
+          onSaveGoal={handleSaveDailyGoal}
+          onOpenCreateGoal={() => {
+            setEditingDailyGoal(null);
+            setIsDailyGoalEditorOpen(true);
+          }}
+          onEditGoal={(g) => {
+            setEditingDailyGoal(g);
+            setIsDailyGoalEditorOpen(true);
+          }}
+          onCompletePlan={() => {
+            addToast('Plan confirmed! Have a focused, productive day 🚀', 'success');
+          }}
+        />
+      )}
+
+      {/* Daily Goal Editor Modal (Rendered with z-[70] so it cleanly overlays PlanMyDayModal if opened from inside) */}
       {isDailyGoalEditorOpen && (
         <DailyGoalEditorModal
           isOpen={isDailyGoalEditorOpen}
@@ -426,25 +450,6 @@ export const MyDayView: React.FC<MyDayViewProps> = ({
           existingMustDoCount={dailyGoals.filter((g) => g.date === selectedYMD && g.isMustDo).length}
           onSave={handleSaveDailyGoal}
           onDelete={handleDeleteDailyGoal}
-        />
-      )}
-
-      {/* Plan My Day Modal */}
-      {isPlanDayOpen && (
-        <PlanMyDayModal
-          isOpen={isPlanDayOpen}
-          onClose={() => setIsPlanDayOpen(false)}
-          dateStr={selectedYMD}
-          goals={dailyGoals}
-          scheduledBlocks={selectedDateBlocks}
-          onToggleMustDo={handleToggleMustDo}
-          onOpenCreateGoal={() => {
-            setEditingDailyGoal(null);
-            setIsDailyGoalEditorOpen(true);
-          }}
-          onCompletePlan={() => {
-            addToast('Plan confirmed! Have a focused, productive day 🚀', 'success');
-          }}
         />
       )}
 
