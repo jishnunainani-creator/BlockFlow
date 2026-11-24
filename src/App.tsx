@@ -21,6 +21,7 @@ import { PlannerHubView } from './components/Views/PlannerHubView';
 import EnhancedFocusMode, { FocusSessionTarget } from './components/Focus/EnhancedFocusMode';
 import { AIScheduleModal } from './components/AI/AIScheduleModal';
 import { AICommandCenterModal } from './components/AI/AICommandCenterModal';
+import { GoogleWorkspaceSyncModal } from './components/Integrations/GoogleWorkspaceSyncModal';
 import { ImportWizardModal } from './components/Migration/ImportWizardModal';
 import { SettingsView } from './components/Views/SettingsView';
 import { PrivacyPolicyView } from './components/Legal/PrivacyPolicyView';
@@ -65,6 +66,7 @@ export function AppContent() {
   const [isAIScheduleOpen, setIsAIScheduleOpen] = useState(false);
   const [aiScheduleTab, setAiScheduleTab] = useState<'voice' | 'text' | 'import'>('voice');
   const [isAICommandCenterOpen, setIsAICommandCenterOpen] = useState(false);
+  const [isGoogleWorkspaceModalOpen, setIsGoogleWorkspaceModalOpen] = useState(false);
 
   // Import Wizard State
   const [isImportWizardOpen, setIsImportWizardOpen] = useState(false);
@@ -291,6 +293,7 @@ export function AppContent() {
             onOpenAISchedule={openAISchedule}
             onOpenAICommandCenter={() => setIsAICommandCenterOpen(true)}
             onOpenQuickCapture={() => setIsQuickCaptureOpen(true)}
+            onOpenGoogleWorkspaceSync={() => setIsGoogleWorkspaceModalOpen(true)}
             userEmail={userEmail}
             onOpenAuth={() => setShowAuthPage(true)}
             onOpenMobileMenu={() => setIsMobileNavOpen(true)}
@@ -359,6 +362,7 @@ export function AppContent() {
             userEmail={userEmail}
             onOpenAuth={() => setShowAuthPage(true)}
             onNavigate={handleNavigate}
+            onOpenGoogleWorkspaceSync={() => setIsGoogleWorkspaceModalOpen(true)}
           />
         )}
 
@@ -431,6 +435,12 @@ export function AppContent() {
       <AICommandCenterModal
         isOpen={isAICommandCenterOpen}
         onClose={() => setIsAICommandCenterOpen(false)}
+      />
+
+      {/* Google Workspace & Gmail Calendar Sync Modal */}
+      <GoogleWorkspaceSyncModal
+        isOpen={isGoogleWorkspaceModalOpen}
+        onClose={() => setIsGoogleWorkspaceModalOpen(false)}
       />
 
       {/* One-Time Data Import Wizard Modal */}

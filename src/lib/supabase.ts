@@ -63,14 +63,26 @@ export async function signInWithEmail(email: string, password: string) {
   return await supabase.auth.signInWithPassword({ email, password });
 }
 
-export async function signInWithOAuth(provider: 'google' | 'github') {
+export async function signInWithOAuth(
+  provider: 'google' | 'github',
+  scopes?: string,
+  queryParams?: Record<string, string>
+) {
   if (!supabase) throw new Error('Supabase is not configured.');
   return await supabase.auth.signInWithOAuth({
     provider,
     options: {
       redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      scopes,
+      queryParams,
     },
   });
+}
+
+export async function getGoogleProviderToken(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.provider_token ?? null;
 }
 
 export async function signOut() {

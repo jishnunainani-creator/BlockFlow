@@ -11,6 +11,7 @@ import {
   LayoutGrid,
   Bookmark,
   BookOpen,
+  Mail,
 } from 'lucide-react';
 
 export type CalendarTab = 'grid' | 'library' | 'templates' | 'resources';
@@ -21,6 +22,7 @@ interface CalendarViewProps {
   onOpenAISchedule?: (tab: 'voice' | 'text' | 'import') => void;
   onOpenAICommandCenter?: () => void;
   onOpenQuickCapture?: () => void;
+  onOpenGoogleWorkspaceSync?: () => void;
   userEmail?: string | null;
   onOpenAuth?: () => void;
   onOpenMobileMenu?: () => void;
@@ -37,6 +39,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onOpenAISchedule,
   onOpenAICommandCenter,
   onOpenQuickCapture,
+  onOpenGoogleWorkspaceSync,
   userEmail,
   onOpenAuth,
   onOpenMobileMenu,
@@ -79,6 +82,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         onOpenAISchedule={onOpenAISchedule}
         onOpenAICommandCenter={onOpenAICommandCenter}
         onOpenQuickCapture={onOpenQuickCapture}
+        onOpenGoogleWorkspaceSync={onOpenGoogleWorkspaceSync}
         userEmail={userEmail}
         onOpenAuth={onOpenAuth}
         onOpenMobileMenu={onOpenMobileMenu}
@@ -111,18 +115,32 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
 
         {activeTab === 'grid' && (
-          <button
-            type="button"
-            onClick={handleToggleLibrary}
-            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-              isLibraryOpen
-                ? 'bg-slate-800 border-slate-700 text-slate-200'
-                : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{isLibraryOpen ? 'Hide Library Drawer' : 'Show Library Drawer'}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenGoogleWorkspaceSync && (
+              <button
+                type="button"
+                onClick={onOpenGoogleWorkspaceSync}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 transition-all cursor-pointer shadow-2xs"
+                title="Sync Gmail & Calendar with Google Workspace"
+              >
+                <Mail className="w-3.5 h-3.5 text-red-400" />
+                <span>Sync Gmail</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleToggleLibrary}
+              className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                isLibraryOpen
+                  ? 'bg-slate-800 border-slate-700 text-slate-200'
+                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5 text-indigo-400" />
+              <span>{isLibraryOpen ? 'Hide Library Drawer' : 'Show Library Drawer'}</span>
+            </button>
+          </div>
         )}
       </div>
 

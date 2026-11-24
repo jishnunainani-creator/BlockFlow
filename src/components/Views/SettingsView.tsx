@@ -25,6 +25,7 @@ import {
   RotateCcw,
   Sparkles,
   AlertTriangle,
+  Mail,
 } from 'lucide-react';
 import { NavView } from '../Navigation/Sidebar';
 import { PageBreadcrumb } from '../Navigation/PageBreadcrumb';
@@ -34,9 +35,15 @@ interface SettingsViewProps {
   userEmail?: string | null;
   onOpenAuth: () => void;
   onNavigate?: (view: NavView) => void;
+  onOpenGoogleWorkspaceSync?: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAuth, onNavigate }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({
+  userEmail,
+  onOpenAuth,
+  onNavigate,
+  onOpenGoogleWorkspaceSync,
+}) => {
   const { resolution, setResolution, exportJSONBackup, clearCurrentWeek, addToast } = useTimetable();
   const { theme, setTheme } = useTheme();
   const { isDemoMode, activeProfile, loadDemoProfile, clearDemoData, startTour } = useDemo();
@@ -217,6 +224,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ userEmail, onOpenAut
               Monday
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* ── 3b. GOOGLE WORKSPACE & GMAIL INTEGRATION ── */}
+      <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-4 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center border border-red-500/20">
+              <Mail className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-white">Google Workspace &amp; Gmail Sync</h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  New
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Scan your Gmail inbox for lecture schedules, exam notices, and calendar invites (.ics) to import directly into your calendar.
+              </p>
+            </div>
+          </div>
+
+          {onOpenGoogleWorkspaceSync && (
+            <button
+              onClick={onOpenGoogleWorkspaceSync}
+              className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 transition-colors cursor-pointer shrink-0 shadow-xs"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>Open Gmail Sync</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import {
   Sparkles,
   Home,
   Zap,
+  Mail,
 } from 'lucide-react';
 
 import { ResolutionSelector } from '../Timetable/ResolutionSelector';
@@ -35,6 +36,7 @@ interface AppHeaderProps {
   onOpenAISchedule?: (tab: 'voice' | 'text' | 'import') => void;
   onOpenAICommandCenter?: () => void;
   onOpenQuickCapture?: () => void;
+  onOpenGoogleWorkspaceSync?: () => void;
   userEmail?: string | null;
   onOpenAuth?: () => void;
   onOpenMobileMenu?: () => void;
@@ -45,6 +47,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenAISchedule,
   onOpenAICommandCenter,
   onOpenQuickCapture,
+  onOpenGoogleWorkspaceSync,
   userEmail,
   onOpenAuth,
   onOpenMobileMenu,
@@ -409,6 +412,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 >
                   <Bot className="w-3.5 h-3.5 text-slate-400" />
                   <span>AI Command Center</span>
+                </button>
+              )}
+
+              {onOpenGoogleWorkspaceSync && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOverflowOpen(false);
+                    onOpenGoogleWorkspaceSync();
+                  }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <Mail className="w-3.5 h-3.5 text-red-400" />
+                  <span>Google Workspace Sync</span>
                 </button>
               )}
 
