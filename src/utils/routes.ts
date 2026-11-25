@@ -156,6 +156,13 @@ export const ROUTES: Record<NavView, RouteMeta> = {
     section: 'Inbox & Notes',
     breadcrumbLabel: 'Quick Capture',
   },
+  feedback: {
+    view: 'feedback',
+    path: '/feedback',
+    title: 'Feedback · BlockFlow',
+    section: 'Feedback',
+    breadcrumbLabel: 'Feedback',
+  },
 };
 
 export const PATH_TO_VIEW_MAP: Record<string, NavView> = {
@@ -192,6 +199,7 @@ export const PATH_TO_VIEW_MAP: Record<string, NavView> = {
   '/ai-insights': 'ai-insights',
   '/coach': 'ai-insights',
   '/settings': 'settings',
+  '/feedback': 'feedback',
   '/reminders': 'reminders',
   '/privacy': 'privacy-policy',
   '/privacy-policy': 'privacy-policy',

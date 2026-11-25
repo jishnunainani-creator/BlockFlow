@@ -24,6 +24,7 @@ import { AICommandCenterModal } from './components/AI/AICommandCenterModal';
 import { GoogleWorkspaceSyncModal } from './components/Integrations/GoogleWorkspaceSyncModal';
 import { ImportWizardModal } from './components/Migration/ImportWizardModal';
 import { SettingsView } from './components/Views/SettingsView';
+import { FeedbackView } from './components/Views/FeedbackView';
 import { PrivacyPolicyView } from './components/Legal/PrivacyPolicyView';
 import { TermsOfServiceView } from './components/Legal/TermsOfServiceView';
 import { ToastContainer } from './components/UI/ToastContainer';
@@ -363,6 +364,15 @@ export function AppContent() {
             onOpenAuth={() => setShowAuthPage(true)}
             onNavigate={handleNavigate}
             onOpenGoogleWorkspaceSync={() => setIsGoogleWorkspaceModalOpen(true)}
+          />
+        )}
+
+        {/* 9. User Feedback & Feature Requests */}
+        {currentView === 'feedback' && (
+          <FeedbackView
+            userEmail={userEmail}
+            onOpenAuth={() => setShowAuthPage(true)}
+            onNavigate={handleNavigate}
           />
         )}
 

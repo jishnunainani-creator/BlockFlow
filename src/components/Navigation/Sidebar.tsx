@@ -13,6 +13,7 @@ import {
   X,
   Sun,
   Sliders,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { getUnprocessedCount } from '../../utils/quickCaptureStorage';
 
@@ -35,6 +36,7 @@ export type NavView =
   | 'ai-insights'
   | 'reminders'
   | 'settings'
+  | 'feedback'
   | 'privacy-policy'
   | 'terms'
   | 'quick-add';
@@ -115,6 +117,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'focus', label: 'Focus', icon: Zap },
     { id: 'analytics', label: 'Insights', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'feedback', label: 'Feedback', icon: MessageSquarePlus },
   ], [unprocessedCount]);
 
   // Handle Escape to close mobile drawer
